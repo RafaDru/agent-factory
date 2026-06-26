@@ -1,0 +1,1 @@
+"""Protocolos de sinalização padronizados."""

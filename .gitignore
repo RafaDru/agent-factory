@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+*.coverage.*
+
+# Environment
+.env
+.venv/
+venv/
+env/
+
+# Agent Factory runtime
+.agent-events/
+.agent-factory/
+.agent-context/
+*.jsonl
+*.context.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+.agent-factory-test/
+
+# External projects (examples live in separate repos)
+pta-mobile/

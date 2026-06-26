@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Factory — Dashboard</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --border: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-badge.running {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent);
+        }
+
+        .status-badge.completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-badge.failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-card);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--success));
+            transition: width 0.3s ease;
+        }
+
+        .grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 10px 16px;
+            border: 1px solid var(--border);
+            width: 100%;
+            position: relative;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            overflow: hidden;
+        }
+
+        .card.running {
+            border-color: var(--accent);
+            box-shadow: 0 0 18px rgba(59, 130, 246, 0.25), inset 0 0 18px rgba(59, 130, 246, 0.05);
+            animation: pulse-border 1.5s ease-in-out infinite;
+        }
+
+        .card.running::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg,
+                transparent 0%,
+                rgba(59, 130, 246, 0.08) 50%,
+                transparent 100%);
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% {
+                border-color: var(--accent);
+                box-shadow: 0 0 18px rgba(59, 130, 246, 0.25), inset 0 0 18px rgba(59, 130, 246, 0.05);
+            }
+            50% {
+                border-color: rgba(59, 130, 246, 0.5);
+                box-shadow: 0 0 8px rgba(59, 130, 246, 0.1), inset 0 0 8px rgba(59, 130, 246, 0.02);
+            }
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 200%; }
+        }
+
+        .card.failed {
+            border-color: var(--error);
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), inset 0 0 20px rgba(239, 68, 68, 0.06);
+            animation: pulse-error 1.5s ease-in-out infinite;
+        }
+
+        .card.failed::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--error);
+            border-radius: 3px 0 0 3px;
+        }
+
+        @keyframes pulse-error {
+            0%, 100% {
+                border-color: var(--error);
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), inset 0 0 20px rgba(239, 68, 68, 0.06);
+            }
+            50% {
+                border-color: rgba(239, 68, 68, 0.4);
+                box-shadow: 0 0 8px rgba(239, 68, 68, 0.1), inset 0 0 8px rgba(239, 68, 68, 0.02);
+            }
+        }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .card-agent-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .card-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-title-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .agent-status {
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .agent-status.pending {
+            background: rgba(148, 163, 184, 0.2);
+            color: var(--text-secondary);
+        }
+
+        .agent-status.running {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent);
+        }
+
+        .agent-status.completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .agent-status.failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .card-stats {
+            display: flex;
+            gap: 10px;
+            margin: 2px 0 0 42px;
+        }
+
+        .stat-item {
+            font-size: 11px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .stat-item strong {
+            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            margin: 2px 0 0 36px;
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin: 4px 0 0 36px;
+        }
+
+        .context-bar-row {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            flex: 1;
+            max-width: 30%;
+        }
+
+        .context-bar-track {
+            flex: 1;
+            height: 6px;
+            background: var(--bg-card);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .context-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.4s ease;
+        }
+
+        .context-bar-label {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            min-width: 28px;
+            text-align: right;
+        }
+
+        .mini-chart {
+            width: 44px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .card-agent-log-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s, color 0.2s;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+
+        .card-agent-log-toggle:hover {
+            background: var(--bg-card);
+            color: var(--accent);
+        }
+
+        .card-agent-log-toggle .arrow {
+            font-size: 9px;
+            transition: transform 0.2s;
+        }
+
+        .card-agent-log-toggle .arrow.open {
+            transform: rotate(90deg);
+        }
+
+        .card-agent-log-toggle .log-icon {
+            font-size: 12px;
+        }
+
+        .card-agent-log-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .card-agent-log-content.open {
+            max-height: 260px;
+            overflow-y: auto;
+            margin-top: 4px;
+        }
+
+        .card-agent-log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 10px;
+        }
+
+        .card-agent-log-table td {
+            padding: 3px 8px;
+            vertical-align: top;
+            white-space: nowrap;
+        }
+
+        .card-agent-log-table tr:not(:last-child) td {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-agent-log-table td.col-time {
+            width: 50px;
+            color: var(--text-secondary);
+        }
+
+        .card-agent-log-table td.col-status {
+            width: 55px;
+        }
+
+        .card-agent-log-table td.col-msg {
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-agent-log-more {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 5px;
+            font-size: 10px;
+            color: var(--accent);
+            cursor: pointer;
+            user-select: none;
+            border-top: 1px solid var(--border);
+            transition: background 0.2s;
+        }
+
+        .card-agent-log-more:hover {
+            background: var(--bg-card);
+        }
+
+        .log-container.collapsed .log-content {
+            max-height: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .log-container .log-content {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 0;
+            transition: max-height 0.3s ease;
+        }
+
+        .log-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .log-toggle:hover {
+            opacity: 0.7;
+        }
+
+        .agent-log-badge {
+            font-size: 9px;
+            background: var(--bg-card);
+            padding: 1px 6px;
+            border-radius: 6px;
+            color: var(--text-secondary);
+        }
+
+        .log-container {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .log-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .log-content {
+            height: 300px;
+            overflow-y: auto;
+            padding: 0;
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            font-size: 12px;
+        }
+
+        .log-table th {
+            background: var(--bg-card);
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 2px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .log-table td {
+            padding: 6px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .log-table tr:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .log-table tr.success {
+            background: rgba(34, 197, 94, 0.05);
+        }
+
+        .log-table tr.error {
+            background: rgba(239, 68, 68, 0.05);
+        }
+
+        .log-table tr.warning {
+            background: rgba(245, 158, 11, 0.05);
+        }
+
+        .log-table .col-date {
+            width: 100px;
+            color: var(--text-secondary);
+        }
+
+        .log-table .col-time {
+            width: 80px;
+            color: var(--text-secondary);
+        }
+
+        .log-table .col-agent {
+            width: 120px;
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .log-table .col-task {
+            width: 150px;
+            color: var(--text-primary);
+        }
+
+        .log-table .col-status {
+            width: 100px;
+            text-align: center;
+        }
+
+        .log-table .col-description {
+            min-width: 200px;
+            color: var(--text-secondary);
+        }
+
+        .status-badge-table {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .status-badge-table.running {
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--accent);
+        }
+
+        .status-badge-table.completed {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+
+        .status-badge-table.failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--error);
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--error);
+        }
+
+        .connection-dot.connected {
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--error);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div>
+                <h1>Agent Factory</h1>
+                <p style="color: var(--text-secondary); margin-top: 4px;" id="project-name">Carregando...</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="connection-status">
+                    <div class="connection-dot" id="connection-dot"></div>
+                    <span id="connection-text">Desconectado</span>
+                </div>
+                <span class="status-badge" id="status-badge">—</span>
+            </div>
+        </header>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+
+        <div class="grid" id="agents-grid">
+            <!-- Agentes serão renderizados aqui -->
+        </div>
+
+        <div class="log-container collapsed" id="log-container">
+            <div class="log-header">
+                <span class="log-toggle" id="log-toggle">📋 Event Log <span id="log-arrow">▶</span></span>
+            </div>
+            <div class="log-content" id="log-content">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th class="col-date">Data</th>
+                            <th class="col-time">Hora</th>
+                            <th class="col-agent">Agente</th>
+                            <th class="col-task">Tarefa</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-description">Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody id="log-tbody">
+                        <!-- Logs serão adicionados aqui -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ─── State ─────────────────────────────────────────────────────
+        let events = [];
+        let agents = {};
+        let contextStats = {};
+        let currentProject = new URLSearchParams(window.location.search).get('project') || null;
+        let pollInterval = null;
+        let agentLogPages = {};
+
+        // ─── DOM Elements ──────────────────────────────────────────────
+        const projectName = document.getElementById('project-name');
+        const statusBadge = document.getElementById('status-badge');
+        const progressFill = document.getElementById('progress-fill');
+        const agentsGrid = document.getElementById('agents-grid');
+        const logTbody = document.getElementById('log-tbody');
+        const logContainer = document.getElementById('log-container');
+        const logToggle = document.getElementById('log-toggle');
+        const logArrow = document.getElementById('log-arrow');
+        const connectionDot = document.getElementById('connection-dot');
+        const connectionText = document.getElementById('connection-text');
+        const toast = document.getElementById('toast');
+
+        // ─── Initialize ────────────────────────────────────────────────
+        async function init() {
+            updateProjectDisplay();
+            await fetchStatus();
+            await fetchEvents();
+            await fetchContext();
+            
+            // Polling a cada 1 segundo
+            pollInterval = setInterval(async () => {
+                await fetchEvents();
+                await fetchStatus();
+                await fetchContext();
+            }, 1000);
+            
+            updateConnectionStatus(true);
+        }
+
+        // ─── Update Project Display ────────────────────────────────────
+        function updateProjectDisplay() {
+            const nameEl = document.getElementById('project-name');
+            if (currentProject) {
+                nameEl.textContent = `Projeto: ${currentProject}`;
+            } else {
+                nameEl.textContent = 'Nenhum projeto selecionado';
+            }
+        }
+
+        // ─── Fetch Status ──────────────────────────────────────────────
+        async function fetchStatus() {
+            try {
+                const url = currentProject
+                    ? `/api/status?project=${currentProject}`
+                    : '/api/status';
+                const response = await fetch(url);
+                const status = await response.json();
+                updateUI(status);
+            } catch (error) {
+                console.error('Erro ao buscar status:', error);
+            }
+        }
+
+        // ─── Fetch Events ──────────────────────────────────────────────
+        async function fetchEvents() {
+            try {
+                const url = currentProject
+                    ? `/api/events?project=${currentProject}`
+                    : '/api/events';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Apenas processar eventos novos
+                if (data.length > events.length) {
+                    const newEvents = data.slice(events.length);
+                    events = data;
+                    newEvents.forEach(event => handleEvent(event));
+                }
+            } catch (error) {
+                console.error('Erro ao buscar eventos:', error);
+            }
+        }
+
+        // ─── Fetch Context ─────────────────────────────────────────────
+        async function fetchContext() {
+            try {
+                const url = currentProject
+                    ? `/api/context?project=${currentProject}`
+                    : '/api/context';
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data && data.agents) {
+                    contextStats = data.agents;
+                }
+            } catch (error) {
+                console.error('Erro ao buscar contexto:', error);
+            }
+        }
+
+        // ─── Handle Event ──────────────────────────────────────────────
+        function handleEvent(event) {
+            // Atualizar agente
+            if (!agents[event.agent_id]) {
+                agents[event.agent_id] = {
+                    id: event.agent_id,
+                    role: event.agent_role,
+                    status: 'pending',
+                    messages: [],
+                    activations: 0,
+                    lastTask: null,
+                    lastTime: null,
+                    history: [],
+                    lastContext: null
+                };
+            }
+            
+            const agent = agents[event.agent_id];
+            agent.status = event.status;
+            agent.lastTask = event.task_id;
+            agent.lastTime = event.timestamp;
+            agent.lastError = event.error || null;
+
+            // Extrair métricas de contexto do evento
+            if (event.metrics && event.metrics.context) {
+                agent.lastContext = event.metrics.context;
+            }
+
+            agent.messages.push({
+                timestamp: event.timestamp,
+                message: event.message,
+                payload: event.payload,
+                error: event.error || null,
+            });
+
+            // Contar ativações (cada RUNNING é uma nova ativação)
+            if (event.status === 'running') {
+                agent.activations++;
+            }
+
+            // Histórico de status para gráfico de barras
+            agent.history.push(event.status);
+            if (agent.history.length > 100) {
+                agent.history.shift();
+            }
+
+            // Atualizar UI
+            updateAgentCard(agent);
+            addLogEntry(event);
+            
+            // Verificar se completou
+            if (event.status === 'completed' || event.status === 'failed') {
+                checkCompletion();
+            }
+        }
+
+        // ─── Update UI ─────────────────────────────────────────────────
+        function updateUI(status) {
+            projectName.textContent = status.project_id || 'Projeto';
+            
+            const phase = status.phase || 'unknown';
+            const progress = status.progress || 0;
+            
+            progressFill.style.width = `${progress}%`;
+            
+            // Status badge
+            if (phase.startsWith('completed')) {
+                statusBadge.textContent = 'Concluído';
+                statusBadge.className = 'status-badge completed';
+            } else if (phase.startsWith('failed')) {
+                statusBadge.textContent = 'Falhou';
+                statusBadge.className = 'status-badge failed';
+            } else if (phase === 'initializing' || phase === 'planned') {
+                statusBadge.textContent = 'Preparando';
+                statusBadge.className = 'status-badge running';
+            } else {
+                statusBadge.textContent = 'Executando';
+                statusBadge.className = 'status-badge running';
+            }
+        }
+
+        // ─── Update Agent Card ─────────────────────────────────────────
+        function updateAgentCard(agent) {
+            let card = document.getElementById(`agent-${agent.id}`);
+            
+            if (!card) {
+                card = document.createElement('div');
+                card.id = `agent-${agent.id}`;
+                card.className = 'card';
+                agentsGrid.appendChild(card);
+            }
+
+            // Destacar agentes em execução ou falha
+            card.classList.toggle('running', agent.status === 'running');
+            card.classList.toggle('failed', agent.status === 'failed');
+
+            const statusClass = agent.status;
+            const lastMessage = agent.messages[agent.messages.length - 1];
+            const lastError = agent.messages.slice().reverse().find(m => m.error)?.error;
+
+            // Emoji do agente
+            const agentEmojis = {
+                'coordenador': '🎯',
+                'frontend-mobile': '📱',
+                'visao-computacional': '👁️',
+                'ui-ux': '🎨',
+                'qa': '🧪',
+                'renderizacao': '🎬',
+                'agent-factory-dev': '⚙️'
+            };
+            const emoji = agentEmojis[agent.id] || '🤖';
+
+            // Mini chart de ativações (últimas 10)
+            const recentHistory = agent.history.slice(-10);
+            const barWidth = 3.5;
+            const barGap = 1;
+            let activationBars = '';
+            recentHistory.forEach((status, i) => {
+                const x = i * (barWidth + barGap);
+                const color = status === 'completed' ? 'var(--success)' :
+                              status === 'failed' ? 'var(--error)' :
+                              status === 'running' ? 'var(--accent)' : 'var(--text-secondary)';
+                activationBars += `<rect x="${x}" y="0" width="${barWidth}" height="14" rx="1" fill="${color}" opacity="0.7"/>`;
+            });
+
+            // Context bar (% real do ContextManager via event metrics, fallback p/ eventos)
+            const ctx = agent.lastContext || {};
+            const hasRealContext = ctx.status && ctx.status !== 'no_context';
+            const contextPct = hasRealContext ? (ctx.percentage || 0) : (() => {
+                const agentCnt = events.filter(e => e.agent_id === agent.id).length;
+                const allCounts = [...new Set(events.map(e => e.agent_id))].map(
+                    id => events.filter(e => e.agent_id === id).length
+                );
+                const maxCnt = Math.max(...allCounts, agentCnt, 1);
+                return (agentCnt / maxCnt) * 100;
+            })();
+            const usedKb = ctx.used_kb || 0;
+            const limitKb = ctx.limit_kb || 0;
+            const ctxStatus = ctx.status || 'no_context';
+            const barColor = hasRealContext
+                ? (ctxStatus === 'exhausted' ? 'var(--error)' :
+                   ctxStatus === 'warning' ? 'var(--warning)' : 'var(--success)')
+                : (contextPct > 80 ? 'var(--error)' : contextPct > 50 ? 'var(--warning)' : 'var(--success)');
+            const statusDotColor = hasRealContext
+                ? (ctxStatus === 'exhausted' ? 'var(--error)' :
+                   ctxStatus === 'warning' ? 'var(--warning)' :
+                   ctxStatus === 'ok' ? 'var(--success)' : 'var(--text-secondary)')
+                : 'transparent';
+
+            const agentEventCount = events.filter(e => e.agent_id === agent.id).length;
+
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="card-agent-icon">${emoji}</div>
+                    <div class="card-title-row">
+                        <span class="card-title">${agent.id}</span>
+                        <div class="card-title-right">
+                            <span class="stat-item">⚡ <strong>${agent.activations}</strong></span>
+                            <span class="stat-item">📨 <strong>${agent.messages.length}</strong></span>
+                            <span class="stat-item">${agent.role === 'coordinator' ? '🎯 coord' : agent.role === 'worker' ? '⚙️ worker' : '🔍 revis'}</span>
+                            <span class="agent-status ${statusClass}">${agent.status}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">${lastMessage ? lastMessage.message : 'Aguardando...'}${lastError ? `<span style="color:var(--error);font-weight:600;"> — ${lastError}</span>` : ''}</div>
+                <div class="card-bottom">
+                    <div class="context-bar-row">
+                        <div class="context-bar-track">
+                            <div class="context-bar-fill" style="width:${contextPct}%;background:${barColor};"></div>
+                        </div>
+                        <span class="context-bar-label">${Math.round(contextPct)}%</span>
+                        ${hasRealContext ? `<span style="font-size:9px;color:var(--text-secondary);white-space:nowrap;">${usedKb.toFixed(1)}/${limitKb}KB</span>
+                        <span style="font-size:10px;color:${statusDotColor};">●</span>` : ''}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:4px;">
+                        <svg class="mini-chart" viewBox="0 0 48 14">
+                            ${activationBars}
+                        </svg>
+                        <span class="card-agent-log-toggle" onclick="toggleAgentLog('${agent.id}')">
+                            <span class="arrow" id="agent-log-arrow-${agent.id}">▶</span>
+                            <span class="log-icon">📋</span>
+                            Event Log <span class="agent-log-badge">${agentEventCount}</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="card-agent-log-content" id="agent-log-content-${agent.id}">
+                    <table class="card-agent-log-table">
+                        <tbody id="agent-log-tbody-${agent.id}">
+                        </tbody>
+                    </table>
+                    <div class="card-agent-log-more" id="agent-log-more-${agent.id}" style="display:none;" onclick="showMoreAgentLog('${agent.id}')">
+                        ↓ Mostrar anteriores
+                    </div>
+                </div>
+            `;
+
+            // Popular log do agente com eventos existentes
+            const agentLogTbody = document.getElementById(`agent-log-tbody-${agent.id}`);
+            if (agentLogTbody && agentLogTbody.children.length === 0) {
+                const agentEvents = events.filter(e => e.agent_id === agent.id);
+                agentLogPages[agent.id] = 10;
+                const toShow = agentEvents.slice(-agentLogPages[agent.id]).reverse();
+                toShow.forEach(evt => addAgentLogEntry(evt, true));
+                updateAgentLogMore(agent.id, agentEvents.length);
+            }
+        }
+
+        // ─── Toggle Agent Log ─────────────────────────────────────────
+        function toggleAgentLog(agentId) {
+            const content = document.getElementById(`agent-log-content-${agentId}`);
+            const arrow = document.getElementById(`agent-log-arrow-${agentId}`);
+            const isOpen = content.classList.toggle('open');
+            arrow.classList.toggle('open', isOpen);
+        }
+
+        // ─── Add Log Entry ─────────────────────────────────────────────
+        function addLogEntry(event) {
+            const row = document.createElement('tr');
+            row.className = event.status === 'completed' ? 'success' : event.status === 'failed' ? 'error' : '';
+
+            // ── Add to main log ──
+            const timestamp = new Date(event.timestamp);
+            const date = timestamp.toLocaleDateString('pt-BR', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
+            const time = timestamp.toLocaleTimeString('pt-BR', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            });
+
+            const agentId = event.agent_id || '—';
+            const taskId = event.task_id || '—';
+            const status = event.status || '—';
+            const message = event.message || '';
+
+            const payload = event.payload || {};
+            const title = payload.title || taskId;
+            const observation = payload.observation || '';
+            const description = payload.description || message;
+
+            let descParts = [];
+            if (observation) descParts.push(observation);
+            if (description && description !== observation) descParts.push(description);
+            const fullDescription = descParts.join(' - ') || message || '—';
+
+            const statusClass = status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : 'running';
+
+            row.innerHTML = `
+                <td class="col-date">${date}</td>
+                <td class="col-time">${time}</td>
+                <td class="col-agent">${agentId}</td>
+                <td class="col-task">${title}</td>
+                <td class="col-status"><span class="status-badge-table ${statusClass}">${status}</span></td>
+                <td class="col-description">${fullDescription}</td>
+            `;
+
+            if (logTbody.firstChild) {
+                logTbody.insertBefore(row, logTbody.firstChild);
+            } else {
+                logTbody.appendChild(row);
+            }
+
+            // ── Add to agent log ──
+            addAgentLogEntry(event);
+        }
+
+        // ─── Add Agent Log Entry ──────────────────────────────────────
+        function addAgentLogEntry(event, skipLimit) {
+            const agentTbody = document.getElementById(`agent-log-tbody-${event.agent_id}`);
+            if (!agentTbody) return;
+
+            if (!skipLimit && agentLogPages[event.agent_id] !== undefined) {
+                if (agentTbody.children.length >= agentLogPages[event.agent_id]) {
+                    const totalEvents = events.filter(e => e.agent_id === event.agent_id).length;
+                    updateAgentLogMore(event.agent_id, totalEvents);
+                    // Remove o último item (mais antigo) para abrir espaço pro novo
+                    if (agentTbody.lastChild) {
+                        agentTbody.removeChild(agentTbody.lastChild);
+                    }
+                }
+            }
+
+            const timestamp = new Date(event.timestamp);
+            const timeOnly = timestamp.toLocaleTimeString('pt-BR', {
+                hour: '2-digit', minute: '2-digit'
+            });
+            const statusClass = event.status === 'completed' ? 'completed' : event.status === 'failed' ? 'failed' : 'running';
+            const message = event.message || '—';
+
+            const agentRow = document.createElement('tr');
+            agentRow.innerHTML = `
+                <td class="col-time">${timeOnly}</td>
+                <td class="col-status"><span class="status-badge-table ${statusClass}">${event.status}</span></td>
+                <td class="col-msg">${message}</td>
+            `;
+
+            if (agentTbody.firstChild) {
+                agentTbody.insertBefore(agentRow, agentTbody.firstChild);
+            } else {
+                agentTbody.appendChild(agentRow);
+            }
+
+            const badge = document.querySelector(`#agent-log-${event.agent_id} .agent-log-badge`);
+            if (badge) {
+                const totalEvents = events.filter(e => e.agent_id === event.agent_id).length;
+                badge.textContent = totalEvents;
+            }
+        }
+
+        // ─── Show More Agent Log ──────────────────────────────────────
+        function showMoreAgentLog(agentId) {
+            const prev = agentLogPages[agentId] || 10;
+            const pageSize = 10;
+            agentLogPages[agentId] = prev + pageSize;
+
+            const agentEvents = events.filter(e => e.agent_id === agentId);
+            const tbody = document.getElementById(`agent-log-tbody-${agentId}`);
+            if (tbody) {
+                tbody.innerHTML = '';
+                const toShow = agentEvents.slice(-agentLogPages[agentId]).reverse();
+                toShow.forEach(evt => addAgentLogEntry(evt, true));
+                updateAgentLogMore(agentId, agentEvents.length);
+            }
+        }
+
+        // ─── Update Agent Log More Button ─────────────────────────────
+        function updateAgentLogMore(agentId, total) {
+            const moreBtn = document.getElementById(`agent-log-more-${agentId}`);
+            if (!moreBtn) return;
+            const shown = agentLogPages[agentId] || 10;
+            moreBtn.style.display = shown < total ? 'flex' : 'none';
+            const remaining = total - shown;
+            moreBtn.textContent = `↓ Mais ${Math.min(remaining, 10)} de ${remaining} anteriores`;
+        }
+
+        // ─── Update Connection Status ──────────────────────────────────
+        function updateConnectionStatus(connected = true) {
+            if (connected) {
+                connectionDot.classList.add('connected');
+                connectionText.textContent = 'Online';
+            } else {
+                connectionDot.classList.remove('connected');
+                connectionText.textContent = 'Offline';
+            }
+        }
+
+        // ─── Check Completion ──────────────────────────────────────────
+        function checkCompletion() {
+            const allComplete = Object.values(agents).every(
+                agent => agent.status === 'completed' || agent.status === 'failed'
+            );
+            
+            if (allComplete && Object.keys(agents).length > 0) {
+                const hasFailed = Object.values(agents).some(
+                    agent => agent.status === 'failed'
+                );
+                
+                showToast(
+                    hasFailed 
+                        ? '⚠️ Execução concluída com falhas' 
+                        : '✅ Todas as tarefas concluídas!',
+                    hasFailed ? 'error' : 'success'
+                );
+            }
+        }
+
+        // ─── Show Toast ────────────────────────────────────────────────
+        function showToast(message, type = 'success') {
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            // Notificação do sistema
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Agent Factory', { body: message });
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
+        // ─── Request Notification Permission ───────────────────────────
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+
+        // ─── Event Log Toggle ─────────────────────────────────────────
+        logToggle.addEventListener('click', () => {
+            const isOpen = logContainer.classList.toggle('collapsed');
+            logArrow.textContent = isOpen ? '▶' : '▼';
+        });
+
+        // ─── Start ─────────────────────────────────────────────────────
+        init();
+    </script>
+</body>
+</html>
