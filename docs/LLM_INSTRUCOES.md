@@ -1,6 +1,6 @@
 # Agent Factory — Manual para Agentes LLM
 
-> Documentação técnica para agentes de IA consumirem durante automação.
+> Documentação técnica para agentes de IA se orientarem durante automação.
 > Cada seção é autocontida — consuma apenas o bloco relevante à sua tarefa.
 
 ---
@@ -11,31 +11,39 @@
 |---|-------|----------------|
 | 1 | [O que é o Agent Factory](#1-o-que-é-o-agent-factory) | Contexto geral do framework |
 | 2 | [Arquitetura do diretório](#2-arquitetura-do-diretório) | Onde cada coisa vive |
-| 3 | [Adicionar um agente](#3-adicionar-um-agente) | Criar um novo agente do zero |
-| 4 | [Alterar um agente](#4-alterar-um-agente) | Modificar lógica de agente existente |
-| 5 | [Remover um agente](#5-remover-um-agente) | Desregistrar e remover agente |
-| 6 | [Acionar um agente (execução)](#6-acionar-um-agente-execução) | Como executar tarefas em agentes |
-| 7 | [AgentFactoryDevAgent](#7-agentfactorydevagent) | Agente auxiliar para automatizar seções 3-6 |
+| 3 | [Criar um agente](#3-criar-um-agente) | Criar novo agente do zero |
+| 4 | [Registrar e executar](#4-registrar-e-executar) | Como rodar agentes |
+| 5 | [Pipeline (sequência de agentes)](#5-pipeline-sequência-de-agentes) | Playbook de execução |
+| 6 | [ContextInjector](#6-contextinjector) | Preparar contexto entre passos |
+| 7 | [LLMCache e CachedProvider](#7-llmcache-e-cachedprovider) | Evitar chamadas LLM repetidas |
+| 8 | [OrchestratorGraph](#8-orchestratograph) | Pipeline LangGraph embutido |
+| 9 | [Dashboard](#9-dashboard) | Monitoramento real-time |
+| 10 | [ContextManager](#10-contextmanager) | Rastreamento de tokens/KB |
+| 11 | [AgentLoader](#11-agentloader) | Carregar agentes sob demanda |
+| 12 | [Convenções](#12-convenções) | Nomes, estilos, regras |
 
 ---
 
 ## 1. O que é o Agent Factory
 
-Framework Python para **orquestração de agentes autônomos** com segregação de projetos, dashboard, persistência SQLite e integração com LLMs.
+Framework Python **v2.0.0-beta** para orquestração de agentes autônomos com segregação de projetos, dashboard real-time, rastreamento de contexto (tokens/KB), e integração com LLMs.
 
-**Versão atual:** v1.1.0  
-**Dependência principal:** `langgraph>=0.2.0`, `pydantic>=2.0.0`
+**Arquitetura:** Agent Factory é apenas a plataforma de execução. Agentes vivem em **projetos externos** e são carregados sob demanda via `AgentLoader`.
+
+**Stack:** `langgraph>=0.2.0`, `pydantic>=2.0.0`, `groq`, `ollama`
 
 ### Conceitos-base
 
 | Conceito | Descrição |
 |----------|-----------|
-| **Agente** | Classe que herda `AgentBase` e implementa `execute()` + `validate_input()` |
-| **Projeto** | Escopo isolado (`ProjectConfig`) com seus próprios agentes, eventos e contexto |
-| **EventNotifier** | Canal que emite eventos de agentes para dashboard + arquivos JSON |
-| **Registry** | Registro centralizado de projetos (`ProjectRegistry`) |
-| **Dashboard** | UI real-time via HTTP polling em `http://localhost:8080?project=<id>` |
-| **ContextStore** | Persistência SQLite de contexto entre sessões |
+| **AgentBase** | Classe abstrata que todo agente deve estender |
+| **ContextManager** | Mede tokens e KB do contexto, auto-comprime >80% |
+| **EventNotifier** | Emite eventos para JSONL + dashboard |
+| **Pipeline** | Sequência pré-definida de agentes (playbook) |
+| **ContextInjector** | Prepara/comprime contexto entre passos do pipeline |
+| **LLMCache** | Cache de respostas LLM (exato + SQLite) |
+| **AgentLoader** | Descobre e carrega agentes de projetos externos |
+| **Dashboard** | UI web real-time com cards, barras de contexto, logs |
 
 ---
 
@@ -45,55 +53,53 @@ Framework Python para **orquestração de agentes autônomos** com segregação 
 agent-factory/
 ├── src/
 │   ├── agents/
-│   │   ├── base.py          # AgentBase (ABC) + CoordinatorAgent
-│   │   ├── real.py           # SubprocessAgent + LLMAgent
-│   │   ├── factory_dev.py    # AgentFactoryDevAgent
-│   │   └── __init__.py       # Exporta AgentBase, CoordinatorAgent, SubprocessAgent, LLMAgent
+│   │   ├── base.py          # AgentBase (ABC), ContextManager, CoordinatorAgent
+│   │   └── real.py          # SubprocessAgent, LLMAgent, ReviewerAgent
 │   ├── protocols/
-│   │   ├── schema.py         # Pydantic: AgentEvent, TaskResult, ProjectConfig, etc.
-│   │   └── events.py         # EventNotifier
-│   ├── persistence/
-│   │   └── __init__.py       # ContextStore (SQLite)
-│   ├── llm/
-│   │   └── __init__.py       # LLM providers: Groq, Ollama, Mock
+│   │   ├── schema.py        # Pydantic: AgentEvent, TaskResult, OrchestratorState
+│   │   └── events.py        # EventNotifier (JSONL + SSE)
+│   ├── persistence/         # ContextStore (SQLite)
+│   ├── llm/                 # LLM providers: GroqProvider, OllamaProvider, MockProvider
+│   ├── orchestrator/
+│   │   ├── graph.py         # OrchestratorGraph (LangGraph: init→plan→execute→review→finalize)
+│   │   ├── pipeline.py      # Pipeline declarativo com steps + placeholders
+│   │   ├── context_injector.py # ContextInjector (select, truncate, summarize, compress)
+│   │   └── cache.py         # LLMCache + CachedProvider wrapper
 │   ├── dashboard/
-│   │   ├── server.py         # ThreadingHTTPServer + API REST
-│   │   └── index.html        # Dashboard UI
-│   └── registry.py           # ProjectRegistry (singleton global)
-├── projects/
-│   └── pta/
-│       ├── agents/
-│       │   └── __init__.py   # Agentes específicos do PTA
-│       ├── register.py       # Registro do projeto PTA
-│       └── run.py            # Script de execução do PTA
+│   │   ├── server.py        # ThreadingHTTPServer com API REST
+│   │   └── index.html       # Dashboard dark mode com context bars
+│   ├── registry.py          # ProjectRegistry (singleton)
+│   └── loader.py            # AgentLoader (carrega agentes de projetos externos)
+├── tests/                   # 56 testes pytest
+├── examples/                # Exemplos de uso
+├── projects/                # Configs de projetos externos
 ├── docs/
-│   ├── LLM_INSTRUCOES.md     # ← Este arquivo
-│   └── GUIA_INICIALIZACAO.md # Setup do dashboard
-├── start_dashboard.py        # Inicialização do dashboard
-└── run_demo.py               # Demo minimalista
+│   ├── LLM_INSTRUCOES.md    # ← Este arquivo
+│   └── historico/           # Registro de alterações arquiteturais
+├── pyproject.toml           # v2.0.0, MIT
+├── start_dashboard.py       # Dashboard standalone
+└── test_dashboard.py        # Dashboard + execução real
 ```
 
 ---
 
-## 3. Adicionar um agente
+## 3. Criar um agente
 
-### 3.1 Criar o arquivo do agente
-
-Crie em `src/agents/<nome>.py`:
+### 3.1 Classe do agente
 
 ```python
 """
-Agent Factory — MeuNovoAgente
+Agent Factory — MeuAgente
 """
 from typing import Any
-from .base import AgentBase, AgentRole
-from ..protocols.events import EventNotifier
+from src.agents.base import AgentBase, AgentRole
+from src.protocols.events import EventNotifier
 
 
-class MeuNovoAgente(AgentBase):
+class MeuAgente(AgentBase):
     def __init__(self, project_id: str, notifier: EventNotifier):
         super().__init__(
-            agent_id="meu-novo-agente",
+            agent_id="meu-agente",
             project_id=project_id,
             notifier=notifier,
             role=AgentRole.WORKER,
@@ -104,255 +110,387 @@ class MeuNovoAgente(AgentBase):
 
     def execute(self, task: dict[str, Any]) -> dict[str, Any]:
         action = task["action"]
-        if action == "fazer_algo":
-            return {"status": "feito", "dado": task.get("param", None)}
-        raise ValueError(f"Unknown action: {action}")
+        if action == "processar":
+            return {"status": "ok", "data": task.get("payload")}
+        raise ValueError(f"Ação desconhecida: {action}")
 ```
 
-**Regras do `execute()`:**
+**Obrigatório no `execute()`:**
 - Recebe `task: dict` e retorna `dict`
-- Emite eventos automaticamente via `self.notifier.emit()`
-- Pode acessar `self.agent_id`, `self.project_id`, `self.role`
+- Eventos são emitidos automaticamente via `self.notifier`
+- Métricas de contexto são incluídas automaticamente nos eventos
 
-### 3.2 Exportar no `__init__.py`
+### 3.2 Tipos de agente disponíveis
 
-Em `src/agents/__init__.py`, adicione:
-
-```python
-from .meu_novo_agente import MeuNovoAgente
-
-__all__ = [
-    "AgentBase",
-    "CoordinatorAgent",
-    "SubprocessAgent",
-    "LLMAgent",
-    "MeuNovoAgente",  # ← novo
-]
-```
-
-### 3.3 Registrar no projeto
-
-Em `projects/<projeto>/agents/__init__.py`:
-
-```python
-from src.agents.meu_novo_agente import MeuNovoAgente
-
-# Adicionar ao dicionário PTA_AGENTS do projeto
-PTA_AGENTS["meu-novo-agente"] = MeuNovoAgente
-```
-
-Ou programaticamente:
-
-```python
-from src.registry import get_registry
-
-notifier = get_registry().get_notifier("pta")
-agent = MeuNovoAgente("pta", notifier)
-```
+| Classe | Uso | Arquivo |
+|--------|-----|---------|
+| `AgentBase` | Classe base abstrata para agentes custom | `src/agents/base.py` |
+| `CoordinatorAgent` | Delega tarefas a workers registrados | `src/agents/base.py` |
+| `SubprocessAgent` | Executa código Python em subprocesso | `src/agents/real.py` |
+| `LLMAgent` | Toma decisões via LLM (Groq/Ollama) | `src/agents/real.py` |
+| `ReviewerAgent` | Revisa outputs de outros agentes | `src/agents/real.py` |
 
 ---
 
-## 4. Alterar um agente
+## 4. Registrar e executar
 
-Edite o arquivo do agente em `src/agents/<nome>.py`:
-
-| O que mudar | Onde |
-|-------------|------|
-| Lógica de `execute()` | Método `execute()` da classe |
-| Validação de input | Método `validate_input()` |
-| Ações disponíveis | Adicionar `elif action == "nova_acao"` no `execute()` |
-| Nome/ID do agente | Parâmetro `agent_id` no `__init__` |
-| Papel (role) | Parâmetro `role` no `__init__` (`WORKER`, `COORDINATOR`, `REVIEWER`) |
-
-**Para exportar novo agente no `__init__.py`:**
-
-```python
-# Antes
-from .agente_antigo import AgenteAntigo
-
-# Depois
-from .agente_novo import AgenteNovo
-```
-
-**Não é necessário reiniciar o servidor do dashboard** — as alterações são refletidas na próxima execução do agente (`run()`).
-
----
-
-## 5. Remover um agente
-
-### 5.1 Remover o arquivo
-
-```bash
-rm src/agents/<nome>.py
-```
-
-### 5.2 Limpar `__init__.py`
-
-Remova a importação e o `__all__` entry em `src/agents/__init__.py`.
-
-### 5.3 Remover do projeto
-
-Remova a entrada do dicionário de agentes em `projects/<projeto>/agents/__init__.py`.
-
-### 5.4 Desregistrar (se aplicável)
+### 4.1 Registro de projeto
 
 ```python
 from src.registry import get_registry
+from src.protocols.schema import ProjectConfig
 
 registry = get_registry()
-# Projeto inteiro (remove todos agentes do projeto)
-registry.unregister("project_id")
+config = ProjectConfig(
+    project_id="meu-projeto",
+    name="Meu Projeto",
+    description="Descrição",
+)
+project_id = registry.register(config)
+notifier = registry.get_notifier(project_id)
 ```
 
----
-
-## 6. Acionar um agente (execução)
-
-### 6.1 Diretamente (sem coordenador)
+### 4.2 Execução direta
 
 ```python
-from src.registry import get_registry
-
-notifier = get_registry().get_notifier("pta")
-agent = MeuNovoAgente("pta", notifier)
-
+agent = MeuAgente("meu-projeto", notifier)
 result = agent.run({
-    "task_id": "minha-task-1",
-    "action": "fazer_algo",
-    "param": "valor",
-})
-
-print(result.status)       # AgentStatus.COMPLETED
-print(result.output)       # dict com retorno do execute()
-print(result.summary)      # Resumo legível
-```
-
-### 6.2 Via Coordenador (delegação)
-
-```python
-coordenador = get_pta_agent("coordenador", "pta", notifier)
-coordenador.set_subordinates(agents_dict)
-
-result = coordenador.run({
-    "task_id": "task-orquestrada-1",
-    "task_type": "cv_task",          # Define qual worker recebe
-    "payload": {
-        "task_id": "cv-subtask-1",
-        "action": "detect_pose",
-    },
-})
-```
-
-**`task_type` disponíveis no PTA:**
-
-| task_type | Worker alvo |
-|-----------|-------------|
-| `cv_task` | visao-computacional |
-| `mobile_task` | frontend-mobile |
-| `ui_task` | ui-ux |
-| `qa_task` | qa |
-| `render_task` | renderizacao |
-| `body_mapping_v2` | Pipeline multi-fase |
-
-**Formato simplificado** (inferência automática):
-
-```python
-coordenador.run({
     "task_id": "task-1",
-    "message": "Classificar landmarks por tipo",
-    # task_type será inferido como "cv_task"
+    "action": "processar",
+    "payload": {"dado": "valor"},
+})
+print(result.status)  # AgentStatus.COMPLETED
+print(result.output)  # dict com retorno do execute()
+```
+
+### 4.3 Via CoordinatorAgent
+
+```python
+from src.agents.base import CoordinatorAgent
+
+coord = CoordinatorAgent("coord", "meu-projeto", notifier)
+coord.set_subordinates({"worker-a": agente_a, "worker-b": agente_b})
+
+result = coord.run({
+    "task_id": "task-1",
+    "task_type": "tipo_a",          # Define qual worker recebe
+    "payload": {"action": "executar"},
 })
 ```
 
-### 6.3 Via SubprocessAgent (execução de código real)
+### 4.4 Via SubprocessAgent (execução de código)
 
 ```python
 from src.agents.real import SubprocessAgent
 
-agent = SubprocessAgent("executor", "pta", notifier)
-
-result = agent.run({
-    "task_id": "code-task-1",
-    "code": "print('Olá mundo')",
+executor = SubprocessAgent("executor", "meu-projeto", notifier)
+result = executor.run({
+    "task_id": "code-1",
+    "code": "print('hello')",
     # ou "script": "caminho/para/script.py"
 })
 ```
 
-### 6.4 Via LLMAgent (decisão com IA)
+### 4.5 Via LLMAgent (decisão com IA)
 
 ```python
 from src.agents.real import LLMAgent
 from src.llm import get_provider
 
-agent = LLMAgent(
-    "analyst", "pta", notifier,
+analyst = LLMAgent(
+    "analyst", "meu-projeto", notifier,
     provider=get_provider("groq"),
-    system_prompt="Você é um analista.",
+    system_prompt="Você é um analista de dados.",
+)
+result = analyst.run({
+    "task_id": "llm-1",
+    "prompt": "Analise estes dados: ...",
+})
+```
+
+### 4.6 Com cache integrado (evita chamadas repetidas)
+
+```python
+from src.llm import get_provider
+from src.orchestrator.cache import LLMCache, CachedProvider
+
+cache = LLMCache(backend="sqlite", ttl=3600)
+provider = CachedProvider(get_provider("groq"), cache)
+
+analyst = LLMAgent("analyst", "meu-projeto", notifier, provider=provider)
+```
+
+---
+
+## 5. Pipeline (sequência de agentes)
+
+Define um playbook de execução: uma lista ordenada de steps, cada um mapeando um agente.
+
+### 5.1 Uso básico
+
+```python
+from src.orchestrator.pipeline import Pipeline, PipelineStep
+
+pipeline = Pipeline([
+    PipelineStep(id="codegen", agent_id="executor",
+                 input={"task_id": "gen-1", "spec": "{input.spec}"}),
+    PipelineStep(id="qa",      agent_id="tester",
+                 input={"task_id": "qa-1", "code": "{codegen.output.result}"}),
+    PipelineStep(id="review",  agent_id="reviewer",
+                 input={"task_id": "rv-1", "qa": "{qa.output.result}"},
+                 on_failure="skip"),
+])
+
+result = pipeline.run(agents, {"spec": "Criar função de soma"})
+# result.success, result.step_results, result.failed_steps
+```
+
+### 5.2 Placeholders
+
+O input de cada step pode referenciar outputs de steps anteriores via `{step_id.field}`.
+
+`{input.spec}` → valor do input inicial  
+`{codegen.output.result}` → resultado do step "codegen"  
+`{codegen.output.output.result}` → output.output do TaskResult
+
+### 5.3 Políticas de falha
+
+| Valor | Comportamento |
+|-------|---------------|
+| `"abort"` | (padrão) Para o pipeline todo |
+| `"skip"` | Pula o step, continua os próximos |
+| `"continue"` | Marca como falha mas continua |
+
+### 5.4 Pipeline a partir de dict
+
+```python
+pipeline = Pipeline.from_dict([
+    {"id": "a", "agent_id": "x", "input": {"task": "test"}},
+    {"id": "b", "agent_id": "y", "input": {"prev": "{a.result}"}},
+])
+```
+
+---
+
+## 6. ContextInjector
+
+Prepara o estado entre steps para evitar estouro de contexto.
+
+### 6.1 Estratégias
+
+| Estratégia | Descrição |
+|---|---|
+| `select` | Mantém só chaves relevantes (`keep_keys`) ou remove irrelevantes (`drop_keys`) |
+| `truncate` | Corta textos por limite de caracteres/tokens |
+| `summarize` | Usa LLM para resumir o estado preservando acordos |
+| `compress` | Usa `ContextManager.compress_text()` |
+
+### 6.2 Uso inline no Pipeline
+
+```python
+PipelineStep(id="qa_test", agent_id="tester",
+    input={"code": "{codegen.output.result}"},
+    inject={"strategy": "select", "keep_keys": ["input", "codegen"]},
+)
+```
+
+### 6.3 Uso direto
+
+```python
+from src.orchestrator.context_injector import ContextInjector
+
+injector = ContextInjector(llm_provider=my_llm)
+state = injector.inject(state, {"strategy": "summarize", "max_tokens": 2000})
+# Retorna: {"_summary": "...", "_strategy": "summarize"}
+```
+
+---
+
+## 7. LLMCache e CachedProvider
+
+Evita chamadas repetidas ao LLM para prompts já vistos.
+
+### 7.1 Cache standalone
+
+```python
+from src.orchestrator.cache import LLMCache
+
+cache = LLMCache(backend="sqlite", ttl=3600)  # ou "memory"
+
+# Cache hit
+response = cache.get(messages, "model-x", 0.7, 1024)
+if response:
+    print(response.content, "(cacheado)")
+
+# Cache miss
+cache.set(messages, "model-x", 0.7, 1024, llm_response)
+```
+
+### 7.2 CachedProvider (automático)
+
+```python
+from src.orchestrator.cache import LLMCache, CachedProvider
+from src.llm import get_provider
+
+cache = LLMCache(backend="memory", ttl=3600)
+provider = CachedProvider(get_provider("groq"), cache)
+
+# Transparente: hits retornam do cache, misses chamam a API
+response = provider.chat(messages=[{"role": "user", "content": "Olá"}])
+if response.usage.get("_cache") == "hit":
+    print("Resposta do cache!")
+```
+
+### 7.3 Estatísticas
+
+```python
+stats = cache.stats()
+# {"entries": 42, "total_hits": 150, "total_tokens_cached": 50000, "backend": "sqlite"}
+```
+
+---
+
+## 8. OrchestratorGraph
+
+Pipeline LangGraph embutido com nós fixos: `initialize → plan → execute → review → finalize`.
+
+```python
+from src.orchestrator.graph import OrchestratorGraph
+from src.protocols.schema import ProjectConfig
+
+config = ProjectConfig(project_id="meu-projeto", name="Meu Projeto")
+orchestrator = OrchestratorGraph(config)
+
+# Adicionar agentes ao grafo
+orchestrator.add_agent(agent_a)
+orchestrator.add_agent(agent_b)
+
+# Executar
+final_state = orchestrator.run({"tasks": [{"agent_id": "a", "task_id": "t1"}]})
+```
+
+O OrchestratorGraph itera sobre as tasks do estado e delega ao `agent_id` informado em cada task. Suporta ciclo de review com retry.
+
+---
+
+## 9. Dashboard
+
+Dashboard web real-time em `http://localhost:8080?project=<id>`.
+
+### Features do dashboard
+
+- **Cards horizontais**: nome, role, status, ativações, última mensagem
+- **Barra de contexto**: % real de tokens/KB com fallback por contagem de eventos
+- **Event Log por agente**: paginado (10 itens), expansível dentro do card
+- **Event Log global**: colapsável, com data/hora/agente/tarefa/status
+- **Animações**: borda pulsante azul (running) ou vermelha (failed)
+- **Context status**: bolinha colorida (ok/warning/exhausted) + KB usado/limite
+- **Mini-chart**: barras das últimas 10 ativações
+
+### Inicialização
+
+```python
+from src.dashboard.server import DashboardServer
+from src.protocols.events import EventNotifier
+from src.persistence import ContextStore
+
+notifier = EventNotifier("meu-projeto")
+store = ContextStore("meu-projeto")
+server = DashboardServer(notifier, port=8080, context_store=store)
+server.start()
+```
+
+---
+
+## 10. ContextManager
+
+Rastreia uso de contexto (tokens e KB) por agente com auto-compressão.
+
+### 10.1 Uso
+
+```python
+from src.agents.base import ContextManager
+
+cm = ContextManager(
+    context_file=Path(".agent-context/meu-agente.json"),
+    limit_kb=15.0,
+    token_limit=128000,
+    warn_at_percentage=80.0,
+    auto_compress=True,
 )
 
-result = agent.run({
-    "task_id": "llm-task-1",
-    "prompt": "Analise estes dados...",
-})
+usage = cm.get_usage()
+# {"used_kb": 2.3, "limit_kb": 15.0, "tokens": 580, "percentage": 15.3,
+#  "status": "ok", "needs_compression": False, ...}
+```
+
+### 10.2 Dados incluídos em cada evento
+
+```python
+event.metrics.context = {
+    "used_kb": 2.3,
+    "limit_kb": 10.0,
+    "tokens": 580,
+    "token_limit": 2000,
+    "percentage": 23.0,
+    "status": "ok",          # "ok" | "warning" | "exhausted" | "no_context"
+    "needs_compression": False,
+}
+```
+
+### 10.3 Growth trend
+
+```python
+trend = cm.get_growth_trend()
+# {"trend": "growing", "events_per_hour": 12.5,
+#  "projected_exhaustion_in_hours": 8.3, "sample_size": 5}
 ```
 
 ---
 
-## 7. AgentFactoryDevAgent
+## 11. AgentLoader
 
-Agente auxiliar que automatiza as seções 3-6 via tarefas.
-
-**ID:** `agent-factory-dev`  
-**Ações disponíveis:**
-
-| Ação | Descrição |
-|------|-----------|
-| `create_agent` | Cria esqueleto de novo agente |
-| `update_agent` | Marca alterações em agente existente |
-| `register_agent` | Registra agente no projeto |
-| `update_config` | Altera configuração do Agent Factory |
-| `list_agents` | Lista todos agentes registrados |
-
-**Exemplo de uso:**
+Carrega agentes sob demanda de projetos externos.
 
 ```python
-agent_factory_dev = AgentFactoryDevAgent("pta", notifier)
+from src.loader import AgentLoader
 
-result = agent_factory_dev.run({
-    "task_id": "dev-task-1",
-    "action": "create_agent",
-    "agent_id": "meu-novo-agente",
-    "agent_class": "MeuNovoAgente",
-    "description": "Agente que processa dados X",
-})
+# Carregar agente de projeto externo
+agent = AgentLoader.load("meu-projeto", "meu-agente")
+# AgentLoader descobre o arquivo, importa, instancia e retorna
 
-result = agent_factory_dev.run({
-    "task_id": "dev-task-2",
-    "action": "list_agents",
-})
+# Registrar referência para carregamento lazy
+from src.registry import get_registry
+registry = get_registry()
+refs = registry.list_agent_refs("meu-projeto")
 ```
 
 ---
 
-## Convenções
+## 12. Convenções
 
-- **IDs**: snake_case, hífen para separar palavras (`meu-novo-agente`)
-- **Classes**: PascalCase (`MeuNovoAgente`)
-- **Arquivos**: snake_case (`meu_novo_agente.py`)
-- **Actions**: snake_case (`fazer_algo`)
-- **Projetos**: sigla curta (`pta`, `demo`)
+| Regra | Padrão | Exemplo |
+|-------|--------|---------|
+| IDs de agente | snake_case com hífen | `meu-agente`, `visao-computacional` |
+| Nomes de classe | PascalCase | `MeuAgente`, `SubprocessAgent` |
+| Nomes de arquivo | snake_case | `meu_agente.py` |
+| Actions | snake_case | `processar_dados`, `detectar_pose` |
+| IDs de projeto | sigla curta | `pta`, `demo`, `meu-projeto` |
+| Task IDs | prefixo + número | `cv-1`, `mobile-2`, `qa-3` |
 
----
-
-## Referência rápida de imports
+### Imports rápidos
 
 ```python
-from src.agents.base import AgentBase, AgentRole, CoordinatorAgent
-from src.agents.real import SubprocessAgent, LLMAgent
-from src.agents.factory_dev import AgentFactoryDevAgent
+from src.agents.base import AgentBase, AgentRole, CoordinatorAgent, ContextManager
+from src.agents.real import SubprocessAgent, LLMAgent, ReviewerAgent
 from src.protocols.events import EventNotifier
 from src.protocols.schema import AgentEvent, AgentStatus, TaskResult, ProjectConfig
 from src.persistence import ContextStore
-from src.llm import get_provider
-from src.registry import get_registry, register_project
+from src.llm import get_provider, LLMProvider
+from src.registry import get_registry
+from src.loader import AgentLoader
+from src.orchestrator.pipeline import Pipeline, PipelineStep, PipelineResult
+from src.orchestrator.context_injector import ContextInjector, InjectorConfig
+from src.orchestrator.cache import LLMCache, CachedProvider
+from src.orchestrator.graph import OrchestratorGraph
 ```
