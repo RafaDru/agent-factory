@@ -36,7 +36,7 @@ class ContextManager:
     """
     
     CHARS_PER_TOKEN = 4
-    DEFAULT_TOKEN_LIMIT = 128000
+    DEFAULT_TOKEN_LIMIT = 32000
     
     def __init__(
         self,
@@ -100,7 +100,7 @@ class ContextManager:
         
         kb_percentage = round((size_kb / self.limit_kb) * 100, 1)
         token_percentage = round((tokens / self.token_limit) * 100, 1)
-        percentage = max(kb_percentage, token_percentage)
+        percentage = token_percentage
         
         if percentage < self.warn_at_percentage:
             status = "ok"
@@ -301,7 +301,7 @@ class AgentBase(ABC):
         role: AgentRole = AgentRole.WORKER,
         context_limit_kb: float = 15.0,
         context_file: Optional[str] = None,
-        token_limit: int = 128000,
+        token_limit: int = 32000,
         auto_compress: bool = True,
     ):
         self.agent_id = agent_id
