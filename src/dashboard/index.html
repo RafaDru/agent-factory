@@ -5,136 +5,642 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agent Factory — Dashboard</title>
     <style>
+        /* ═══════════════════════════════════════════════════════════════
+           DESIGN SYSTEM — Agent Factory Dashboard
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ─── Tokens ─────────────────────────────────────────────────── */
         :root {
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-card: #334155;
+            /* Surface */
+            --surface-bg: #0f172a;
+            --surface-raised: #1e293b;
+            --surface-overlay: #334155;
+            --surface-hover: #475569;
+
+            /* Text */
             --text-primary: #f8fafc;
             --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            /* Accent */
             --accent: #3b82f6;
+            --accent-light: #60a5fa;
+            --accent-bg: rgba(59, 130, 246, 0.12);
+
+            /* Semantic */
             --success: #22c55e;
+            --success-bg: rgba(34, 197, 94, 0.12);
             --warning: #f59e0b;
+            --warning-bg: rgba(245, 158, 11, 0.12);
             --error: #ef4444;
-            --border: #475569;
+            --error-bg: rgba(239, 68, 68, 0.12);
+
+            /* Border */
+            --border: #334155;
+            --border-subtle: #1e293b;
+
+            /* Spacing */
+            --sp-1: 4px;
+            --sp-2: 8px;
+            --sp-3: 12px;
+            --sp-4: 16px;
+            --sp-5: 20px;
+            --sp-6: 24px;
+            --sp-8: 32px;
+
+            /* Radius */
+            --radius-sm: 6px;
+            --radius-md: 8px;
+            --radius-lg: 12px;
+            --radius-xl: 16px;
+            --radius-full: 9999px;
+
+            /* Shadow */
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+
+            /* Layout */
+            --header-h: 56px;
+            --sidebar-w: 56px;
+            --sidebar-w-expanded: 240px;
+
+            /* Typography */
+            --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            --font-mono: 'Cascadia Code', 'Fira Code', monospace;
+
+            /* Transitions */
+            --transition-fast: 150ms ease;
+            --transition-normal: 250ms ease;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* ─── Reset ──────────────────────────────────────────────────── */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { overflow-x: hidden; width: 100%; height: 100%; }
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: var(--bg-primary);
+            font-family: var(--font-sans);
+            background: var(--surface-bg);
             color: var(--text-primary);
-            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 24px;
-        }
+        /* ═══════════════════════════════════════════════════════════════
+           LAYOUT — AppShell
+           ═══════════════════════════════════════════════════════════════ */
 
-        header {
+        .app {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 32px;
-            padding-bottom: 16px;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* ─── Header (fixed, full-width) ────────────────────────────── */
+        .app-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-h);
+            background: var(--surface-raised);
             border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--sp-4);
+            gap: var(--sp-4);
+            z-index: 100;
         }
 
-        h1 {
-            font-size: 24px;
-            font-weight: 600;
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            min-width: 0;
         }
 
-        .status-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
+        .header-hamburger {
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 18px;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background var(--transition-fast), color var(--transition-fast);
+            flex-shrink: 0;
+        }
+        .header-hamburger:hover {
+            background: var(--surface-overlay);
+            color: var(--text-primary);
         }
 
-        .status-badge.running {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent);
+        .header-brand {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
         }
-
-        .status-badge.completed {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--success);
+        .header-brand h1 {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
         }
-
-        .status-badge.failed {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--error);
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: var(--bg-card);
-            border-radius: 4px;
+        .header-brand .header-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
             overflow: hidden;
-            margin-bottom: 24px;
+            text-overflow: ellipsis;
+        }
+
+        .header-center {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--sp-3);
+            min-width: 0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            flex-shrink: 0;
+        }
+
+        /* ─── Body (sidebar + content) ──────────────────────────────── */
+        .app-body {
+            display: flex;
+            flex: 1;
+            margin-top: var(--header-h);
+            overflow: hidden;
+        }
+
+        /* ─── Sidebar ───────────────────────────────────────────────── */
+        .sidebar {
+            width: var(--sidebar-w);
+            min-width: var(--sidebar-w);
+            height: 100%;
+            background: var(--surface-raised);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: width var(--transition-normal), min-width var(--transition-normal);
+            overflow: hidden;
+            z-index: 90;
+        }
+
+        .sidebar.expanded {
+            width: var(--sidebar-w-expanded);
+            min-width: var(--sidebar-w-expanded);
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: var(--sp-2) 0;
+        }
+
+        .sidebar-section { margin-top: var(--sp-2); }
+
+        .sidebar-section-title {
+            padding: var(--sp-2) var(--sp-4);
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }
+
+        .sidebar-section-title .sec-icon {
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            padding: var(--sp-2) var(--sp-4);
+            margin: 1px var(--sp-2);
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+            border-left: 3px solid transparent;
+        }
+
+        .sidebar-item:hover {
+            background: var(--surface-overlay);
+            color: var(--text-primary);
+        }
+
+        .sidebar-item.active {
+            color: var(--accent-light);
+            background: var(--accent-bg);
+            border-left-color: var(--accent);
+        }
+
+        .sidebar-item .item-icon {
+            width: 24px;
+            text-align: center;
+            flex-shrink: 0;
+            font-size: 14px;
+        }
+
+        .sidebar-item .item-label {
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .sidebar.expanded .sidebar-item .item-label,
+        .sidebar.expanded .sidebar-section-title .sec-label {
+            opacity: 1;
+        }
+
+        .sidebar-item .item-badge {
+            margin-left: auto;
+            background: var(--accent);
+            color: white;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: var(--radius-full);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .sidebar.expanded .sidebar-item .item-badge { opacity: 1; }
+
+        .sidebar-divider {
+            height: 1px;
+            background: var(--border);
+            margin: var(--sp-2) var(--sp-4);
+        }
+
+        /* Settings */
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--sp-2);
+            padding: var(--sp-1) var(--sp-4) var(--sp-1) var(--sp-4);
+            margin: 1px var(--sp-2);
+            border-radius: var(--radius-md);
+        }
+
+        .setting-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+            flex: 1;
+        }
+
+        .sidebar.expanded .setting-label { opacity: 1; }
+
+        .toggle-switch {
+            position: relative;
+            width: 32px;
+            height: 18px;
+            flex-shrink: 0;
+            opacity: 0;
+            transition: opacity var(--transition-fast);
+        }
+
+        .sidebar.expanded .toggle-switch { opacity: 1; }
+
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--border);
+            border-radius: 9px;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 14px;
+            height: 14px;
+            left: 2px;
+            bottom: 2px;
+            background: white;
+            border-radius: 50%;
+            transition: transform var(--transition-fast);
+        }
+
+        .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(14px); }
+
+        /* Project dots */
+        .project-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .project-dot.afd { background: var(--accent); }
+        .project-dot.pta { background: var(--success); }
+
+        /* ─── Content ────────────────────────────────────────────────── */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: var(--sp-6);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════
+           COMPONENTS
+           ═══════════════════════════════════════════════════════════════ */
+
+        /* ─── Status Badge ───────────────────────────────────────────── */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-1);
+            padding: var(--sp-1) var(--sp-3);
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            font-weight: 600;
+            line-height: 1;
+        }
+        .badge.running { background: var(--accent-bg); color: var(--accent-light); }
+        .badge.ready { background: rgba(148,163,184,0.12); color: var(--text-secondary); }
+        .badge.completed { background: var(--success-bg); color: var(--success); }
+        .badge.failed { background: var(--error-bg); color: var(--error); }
+        .badge.pending { background: rgba(148,163,184,0.12); color: var(--text-secondary); }
+
+        .last-exec {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            letter-spacing: 0.2px;
+            background: rgba(148,163,184,0.08);
+            color: var(--text-muted);
+        }
+        .last-exec.completed { background: var(--success-bg); color: var(--success); }
+        .last-exec.failed { background: var(--error-bg); color: var(--error); }
+        .last-exec.stopped { background: rgba(234,179,8,0.12); color: var(--warning); }
+
+        .badge-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        .badge.running .badge-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* ─── Connection Status ──────────────────────────────────────── */
+        .conn-status {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .conn-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            transition: background var(--transition-fast);
+        }
+        .conn-dot.connected { background: var(--success); }
+        .conn-dot.error { background: var(--error); }
+
+        /* ─── Progress Bar ───────────────────────────────────────────── */
+        .progress {
+            width: 100%;
+            height: 4px;
+            background: var(--surface-overlay);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: var(--sp-5);
         }
 
         .progress-fill {
             height: 100%;
             background: linear-gradient(90deg, var(--accent), var(--success));
-            transition: width 0.3s ease;
+            border-radius: 2px;
+            transition: width 0.4s ease;
         }
 
-        .grid {
+        /* ─── Project Bar ────────────────────────────────────────────── */
+        .project-bar {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            margin-bottom: var(--sp-5);
+            flex-wrap: wrap;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-1);
+            padding: var(--sp-1) var(--sp-3);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-full);
+            font-size: 12px;
+            color: var(--text-secondary);
+            background: transparent;
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+        .pill:hover { border-color: var(--accent); color: var(--text-primary); }
+        .pill.active {
+            background: var(--accent-bg);
+            border-color: var(--accent);
+            color: var(--accent-light);
+        }
+        .pill-count {
+            font-size: 10px;
+            font-weight: 700;
+            opacity: 0.7;
+        }
+
+        .view-toggle {
+            display: flex;
+            margin-left: auto;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        .view-btn {
+            padding: var(--sp-1) var(--sp-3);
+            font-size: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        .view-btn:hover { color: var(--text-primary); }
+        .view-btn.active {
+            background: var(--accent-bg);
+            color: var(--accent-light);
+        }
+
+        /* ─── Overview Card ──────────────────────────────────────────── */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-5);
+        }
+
+        .overview-card {
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: var(--sp-4);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        .overview-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .oc-header {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            margin-bottom: var(--sp-3);
+        }
+        .oc-title {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .oc-counts {
+            display: flex;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-3);
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .oc-counts .num { font-weight: 700; color: var(--text-primary); }
+        .oc-counts .num.running { color: var(--accent-light); }
+        .oc-counts .num.failed { color: var(--error); }
+        .oc-counts .num.stopped { color: var(--warning); }
+
+        .oc-bar {
+            display: flex;
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            background: var(--surface-overlay);
+        }
+        .oc-bar .seg { height: 100%; transition: width 0.3s; }
+        .oc-bar .seg.running { background: var(--accent); }
+        .oc-bar .seg.completed { background: var(--success); }
+        .oc-bar .seg.failed { background: var(--error); }
+        .oc-bar .seg.stopped { background: var(--warning); }
+        .oc-bar .seg.pending { background: var(--text-muted); }
+
+        /* ─── Section Header ─────────────────────────────────────────── */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            padding: var(--sp-2) var(--sp-3);
+            margin-bottom: var(--sp-2);
+            border-radius: var(--radius-md);
+            background: var(--surface-overlay);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .section-count {
+            margin-left: auto;
+            font-weight: 400;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ─── Agent Card ─────────────────────────────────────────────── */
+        .agent-grid {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-bottom: 24px;
+            gap: var(--sp-2);
+            margin-bottom: var(--sp-5);
         }
 
-        .card {
-            background: var(--bg-secondary);
-            border-radius: 10px;
-            padding: 10px 16px;
+        .agent-card {
+            background: var(--surface-raised);
             border: 1px solid var(--border);
-            width: 100%;
+            border-radius: var(--radius-lg);
+            padding: var(--sp-3) var(--sp-4);
             position: relative;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            transition: border-color 0.3s, box-shadow 0.3s;
             overflow: hidden;
         }
 
-        .card.running {
-            border-color: var(--accent);
-            box-shadow: 0 0 18px rgba(59, 130, 246, 0.25), inset 0 0 18px rgba(59, 130, 246, 0.05);
-            animation: pulse-border 1.5s ease-in-out infinite;
+        .agent-card.running {
+            border-color: var(--accent-light);
+            box-shadow: 0 0 20px rgba(96,165,250,0.3), inset 0 0 20px rgba(96,165,250,0.06);
+            animation: pulse-card 1.5s ease-in-out infinite;
+            background: linear-gradient(135deg, var(--surface-raised), rgba(59,130,246,0.04));
         }
 
-        .card.running::before {
+        .agent-card.running::before {
             content: '';
             position: absolute;
             top: 0;
             left: -100%;
             width: 60%;
             height: 100%;
-            background: linear-gradient(90deg,
-                transparent 0%,
-                rgba(59, 130, 246, 0.08) 50%,
-                transparent 100%);
+            background: linear-gradient(90deg, transparent, rgba(96,165,250,0.1), transparent);
             animation: shimmer 2s ease-in-out infinite;
         }
 
-        @keyframes pulse-border {
-            0%, 100% {
-                border-color: var(--accent);
-                box-shadow: 0 0 18px rgba(59, 130, 246, 0.25), inset 0 0 18px rgba(59, 130, 246, 0.05);
-            }
-            50% {
-                border-color: rgba(59, 130, 246, 0.5);
-                box-shadow: 0 0 8px rgba(59, 130, 246, 0.1), inset 0 0 8px rgba(59, 130, 246, 0.02);
-            }
+        .agent-card.failed {
+            border-color: var(--error);
+            box-shadow: 0 0 20px rgba(239,68,68,0.25), inset 0 0 20px rgba(239,68,68,0.04);
+            animation: pulse-error 1.5s ease-in-out infinite;
+            background: linear-gradient(135deg, var(--surface-raised), rgba(239,68,68,0.04));
+        }
+
+        @keyframes pulse-card {
+            0%, 100% { box-shadow: 0 0 20px rgba(96,165,250,0.3), inset 0 0 20px rgba(96,165,250,0.06); }
+            50% { box-shadow: 0 0 10px rgba(96,165,250,0.15), inset 0 0 10px rgba(96,165,250,0.03); }
+        }
+
+        @keyframes pulse-error {
+            0%, 100% { box-shadow: 0 0 20px rgba(239,68,68,0.25), inset 0 0 20px rgba(239,68,68,0.04); }
+            50% { box-shadow: 0 0 8px rgba(239,68,68,0.1), inset 0 0 8px rgba(239,68,68,0.02); }
         }
 
         @keyframes shimmer {
@@ -142,50 +648,22 @@
             100% { left: 200%; }
         }
 
-        .card.failed {
-            border-color: var(--error);
-            box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), inset 0 0 20px rgba(239, 68, 68, 0.06);
-            animation: pulse-error 1.5s ease-in-out infinite;
-        }
-
-        .card.failed::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 3px;
-            height: 100%;
-            background: var(--error);
-            border-radius: 3px 0 0 3px;
-        }
-
-        @keyframes pulse-error {
-            0%, 100% {
-                border-color: var(--error);
-                box-shadow: 0 0 20px rgba(239, 68, 68, 0.3), inset 0 0 20px rgba(239, 68, 68, 0.06);
-            }
-            50% {
-                border-color: rgba(239, 68, 68, 0.4);
-                box-shadow: 0 0 8px rgba(239, 68, 68, 0.1), inset 0 0 8px rgba(239, 68, 68, 0.02);
-            }
-        }
-
         .card-top {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: var(--sp-2);
             width: 100%;
         }
 
-        .card-agent-icon {
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
-            background: var(--bg-card);
+        .card-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: var(--radius-md);
+            background: var(--surface-overlay);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 15px;
             flex-shrink: 0;
         }
 
@@ -204,65 +682,30 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .agent-card.running .card-title { color: var(--accent-light); }
 
-        .card-title-right {
+        .card-meta {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: var(--sp-2);
             flex-shrink: 0;
         }
 
-        .agent-status {
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-size: 9px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-
-        .agent-status.pending {
-            background: rgba(148, 163, 184, 0.2);
-            color: var(--text-secondary);
-        }
-
-        .agent-status.running {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent);
-        }
-
-        .agent-status.completed {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--success);
-        }
-
-        .agent-status.failed {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--error);
-        }
-
-        .card-stats {
-            display: flex;
-            gap: 10px;
-            margin: 2px 0 0 42px;
-        }
-
-        .stat-item {
+        .card-stat {
             font-size: 11px;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 2px;
         }
-
-        .stat-item strong {
+        .card-stat strong {
             color: var(--text-primary);
             font-size: 12px;
             font-weight: 600;
         }
 
         .card-body {
-            margin: 2px 0 0 36px;
+            margin: var(--sp-1) 0 0 40px;
             font-size: 11px;
             color: var(--text-secondary);
             white-space: nowrap;
@@ -274,384 +717,493 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 6px;
-            margin: 4px 0 0 36px;
+            gap: var(--sp-2);
+            margin: var(--sp-2) 0 0 40px;
         }
 
-        .context-bar-row {
+        /* Context Bar */
+        .ctx-bar {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: var(--sp-1);
             flex: 1;
             max-width: 30%;
         }
 
-        .context-bar-track {
+        .ctx-track {
             flex: 1;
             height: 6px;
-            background: var(--bg-card);
+            background: var(--surface-overlay);
             border-radius: 3px;
             overflow: hidden;
         }
 
-        .context-bar-fill {
+        .ctx-fill {
             height: 100%;
             border-radius: 3px;
             transition: width 0.4s ease;
         }
 
-        .context-bar-label {
+        .ctx-label {
             font-size: 9px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            white-space: nowrap;
+            font-weight: 700;
+            color: var(--text-muted);
             min-width: 28px;
             text-align: right;
         }
 
+        /* Mini Chart */
         .mini-chart {
             width: 44px;
             height: 14px;
             flex-shrink: 0;
         }
 
-        .card-agent-log-toggle {
+        /* Provider Toggle */
+        .provider-btn {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: var(--sp-1);
+            padding: 2px 8px;
+            border-radius: var(--radius-full);
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-muted);
+            transition: all var(--transition-fast);
+            white-space: nowrap;
+        }
+        .provider-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .provider-btn.local { border-color: var(--success); color: var(--success); background: var(--success-bg); }
+        .provider-btn.cloud { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+
+        /* Agent Log Toggle */
+        .log-toggle-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--sp-1);
             padding: 2px 6px;
             font-size: 10px;
             font-weight: 500;
-            color: var(--text-secondary);
+            color: var(--text-muted);
             cursor: pointer;
-            user-select: none;
-            transition: background 0.2s, color 0.2s;
-            border-radius: 6px;
+            border-radius: var(--radius-md);
             white-space: nowrap;
+            transition: all var(--transition-fast);
         }
+        .log-toggle-btn:hover { background: var(--surface-overlay); color: var(--accent); }
+        .log-toggle-btn .arrow { font-size: 9px; transition: transform var(--transition-fast); }
+        .log-toggle-btn .arrow.open { transform: rotate(90deg); }
 
-        .card-agent-log-toggle:hover {
-            background: var(--bg-card);
-            color: var(--accent);
-        }
-
-        .card-agent-log-toggle .arrow {
-            font-size: 9px;
-            transition: transform 0.2s;
-        }
-
-        .card-agent-log-toggle .arrow.open {
-            transform: rotate(90deg);
-        }
-
-        .card-agent-log-toggle .log-icon {
-            font-size: 12px;
-        }
-
-        .card-agent-log-content {
+        /* Agent Log Content */
+        .agent-log {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease;
+            margin-top: 0;
         }
+        .agent-log.open { max-height: 300px; overflow-y: auto; }
 
-        .card-agent-log-content.open {
-            max-height: 260px;
-            overflow-y: auto;
-            margin-top: 4px;
-        }
-
-        .card-agent-log-table {
+        .agent-log table {
             width: 100%;
             border-collapse: collapse;
-            font-family: 'Cascadia Code', 'Fira Code', monospace;
-            font-size: 10px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            margin-top: var(--sp-2);
         }
-
-        .card-agent-log-table td {
-            padding: 3px 8px;
-            vertical-align: top;
+        .agent-log td {
+            padding: var(--sp-1) var(--sp-2);
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
             white-space: nowrap;
         }
-
-        .card-agent-log-table tr:not(:last-child) td {
-            border-bottom: 1px solid var(--border);
-        }
-
-        .card-agent-log-table td.col-time {
-            width: 50px;
-            color: var(--text-secondary);
-        }
-
-        .card-agent-log-table td.col-status {
-            width: 55px;
-        }
-
-        .card-agent-log-table td.col-msg {
-            color: var(--text-secondary);
+        .agent-log td:first-child { color: var(--text-muted); }
+        .agent-log td:nth-child(2) { color: var(--text-muted); font-size: 10px; }
+        .agent-log td:last-child {
+            white-space: normal;
             overflow: hidden;
             text-overflow: ellipsis;
+            max-width: 200px;
         }
 
-        .card-agent-log-more {
-            display: flex;
+        .agent-log-more {
+            display: none;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            padding: 5px;
-            font-size: 10px;
+            padding: var(--sp-1);
+            font-size: 11px;
             color: var(--accent);
             cursor: pointer;
-            user-select: none;
-            border-top: 1px solid var(--border);
-            transition: background 0.2s;
+            border-radius: var(--radius-md);
+            transition: background var(--transition-fast);
         }
+        .agent-log-more:hover { background: var(--accent-bg); }
 
-        .card-agent-log-more:hover {
-            background: var(--bg-card);
-        }
-
-        .log-container.collapsed .log-content {
-            max-height: 0;
-            padding: 0;
+        /* ─── Event Log (Global) ─────────────────────────────────────── */
+        .event-log {
+            background: var(--surface-raised);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
             overflow: hidden;
         }
 
-        .log-container .log-content {
+        .event-log-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--sp-3) var(--sp-4);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: background var(--transition-fast);
+        }
+        .event-log-header:hover { background: var(--surface-overlay); }
+
+        .event-log-body {
             max-height: 300px;
             overflow-y: auto;
-            padding: 0;
-            transition: max-height 0.3s ease;
+            overflow-x: hidden;
         }
+        .event-log.collapsed .event-log-body { display: none; }
 
-        .log-toggle {
-            cursor: pointer;
-            user-select: none;
-        }
-
-        .log-toggle:hover {
-            opacity: 0.7;
-        }
-
-        .agent-log-badge {
-            font-size: 9px;
-            background: var(--bg-card);
-            padding: 1px 6px;
-            border-radius: 6px;
-            color: var(--text-secondary);
-        }
-
-        .log-container {
-            background: var(--bg-secondary);
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-        }
-
-        .log-header {
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--border);
-            font-weight: 600;
-            margin: 0;
-        }
-
-        .log-content {
-            height: 300px;
-            overflow-y: auto;
-            padding: 0;
-        }
-
-        .log-table {
+        .event-log table {
             width: 100%;
             border-collapse: collapse;
-            font-family: 'Cascadia Code', 'Fira Code', monospace;
-            font-size: 12px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            table-layout: fixed;
         }
-
-        .log-table th {
-            background: var(--bg-card);
-            padding: 8px 12px;
+        .event-log th {
+            background: var(--surface-overlay);
+            padding: var(--sp-2) var(--sp-3);
             text-align: left;
             font-weight: 600;
-            color: var(--text-secondary);
-            border-bottom: 2px solid var(--border);
+            color: var(--text-muted);
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
             position: sticky;
             top: 0;
             z-index: 1;
         }
-
-        .log-table td {
-            padding: 6px 12px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: top;
-        }
-
-        .log-table tr:hover {
-            background: rgba(59, 130, 246, 0.05);
-        }
-
-        .log-table tr.success {
-            background: rgba(34, 197, 94, 0.05);
-        }
-
-        .log-table tr.error {
-            background: rgba(239, 68, 68, 0.05);
-        }
-
-        .log-table tr.warning {
-            background: rgba(245, 158, 11, 0.05);
-        }
-
-        .log-table .col-date {
-            width: 100px;
+        .event-log td {
+            padding: var(--sp-2) var(--sp-3);
+            border-bottom: 1px solid var(--border-subtle);
             color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+        .event-log tr:hover { background: rgba(59,130,246,0.04); }
+        .event-log tr.success td:first-child { border-left: 3px solid var(--success); }
+        .event-log tr.error td:first-child { border-left: 3px solid var(--error); }
 
-        .log-table .col-time {
-            width: 80px;
-            color: var(--text-secondary);
-        }
+        .event-log .col-date { width: 80px; color: var(--text-muted); }
+        .event-log .col-time { width: 70px; color: var(--text-muted); }
+        .event-log .col-duration { width: 55px; color: var(--text-muted); font-size: 10px; }
+        .event-log .col-agent { width: 100px; color: var(--accent-light); font-weight: 500; }
+        .event-log .col-task { width: 120px; }
+        .event-log .col-status { width: 80px; text-align: center; }
+        .event-log .col-desc { min-width: 0; }
 
-        .log-table .col-agent {
-            width: 120px;
-            color: var(--accent);
-            font-weight: 500;
-        }
-
-        .log-table .col-task {
-            width: 150px;
-            color: var(--text-primary);
-        }
-
-        .log-table .col-status {
-            width: 100px;
-            text-align: center;
-        }
-
-        .log-table .col-description {
-            min-width: 200px;
-            color: var(--text-secondary);
-        }
-
-        .status-badge-table {
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 11px;
-            font-weight: 500;
-        }
-
-        .status-badge-table.running {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--accent);
-        }
-
-        .status-badge-table.completed {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--success);
-        }
-
-        .status-badge-table.failed {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--error);
-        }
-
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-        }
-
-        .connection-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--error);
-        }
-
-        .connection-dot.connected {
-            background: var(--success);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
+        /* ─── Toast ──────────────────────────────────────────────────── */
         .toast {
             position: fixed;
             bottom: 24px;
             right: 24px;
-            padding: 16px 24px;
-            border-radius: 12px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: var(--sp-3) var(--sp-5);
+            border-radius: var(--radius-lg);
+            font-size: 14px;
+            font-weight: 500;
             transform: translateY(100px);
             opacity: 0;
             transition: all 0.3s ease;
             z-index: 1000;
+            box-shadow: var(--shadow-lg);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: var(--success); color: white; }
+        .toast.error { background: var(--error); color: white; }
+
+        /* ─── Empty State ────────────────────────────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: var(--sp-8);
+            color: var(--text-muted);
+            font-size: 14px;
         }
 
-        .toast.show {
-            transform: translateY(0);
-            opacity: 1;
+        /* ─── Orchestration View ──────────────────────────────────────── */
+        .orch-container {
+            display: none;
+            padding: var(--sp-4) 0;
+        }
+        .orch-chain {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: var(--sp-4);
+            margin-bottom: var(--sp-3);
+        }
+        .orch-root {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-3);
+            margin-bottom: var(--sp-2);
+            padding-bottom: var(--sp-2);
+            border-bottom: 1px solid var(--border);
+        }
+        .orch-node {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: var(--radius-sm);
+            background: var(--surface-overlay);
+        }
+        .orch-node.completed { border-left: 3px solid var(--success); }
+        .orch-node.failed { border-left: 3px solid var(--error); }
+        .orch-node.running { border-left: 3px solid var(--accent); }
+        .orch-badge {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: rgba(148,163,184,0.1);
+        }
+        .orch-badge.completed { background: var(--success-bg); color: var(--success); }
+        .orch-badge.failed { background: var(--error-bg); color: var(--error); }
+        .orch-badge.running { background: var(--accent-bg); color: var(--accent-light); animation: pulse-dot 1.5s ease-in-out infinite; }
+        .orch-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+        .orch-children {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-left: 20px;
+        }
+        .orch-child {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+        }
+        .orch-connector {
+            width: 14px;
+            height: 2px;
+            background: var(--text-muted);
+            opacity: 0.3;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .orch-connector::before {
+            content: '';
+            position: absolute;
+            left: -4px;
+            top: -3px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-muted);
+            opacity: 0.4;
+        }
+        .orch-node-wrap {
+            display: flex;
+            align-items: center;
+            gap: var(--sp-2);
+            flex-wrap: wrap;
+        }
+        .orch-task {
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--surface-overlay);
+            padding: 1px 6px;
+            border-radius: 6px;
+        }
+        .view-toggle .view-btn { margin: 0 2px; }
+
+        /* ═══════════════════════════════════════════════════════════════
+           RESPONSIVE
+           ═══════════════════════════════════════════════════════════════ */
+
+        @media (max-width: 900px) {
+            .sidebar.expanded { width: 56px; min-width: 56px; }
+            .sidebar.expanded .sidebar-title,
+            .sidebar.expanded .sec-label,
+            .sidebar.expanded .item-label,
+            .sidebar.expanded .item-badge,
+            .sidebar.expanded .setting-label,
+            .sidebar.expanded .toggle-switch { opacity: 0 !important; pointer-events: none; }
+
+            .content { padding: var(--sp-3); }
+            .overview-grid { grid-template-columns: 1fr; }
+            .card-bottom { flex-wrap: wrap; }
+            .ctx-bar { max-width: 100%; }
+            .card-body, .card-bottom { margin-left: 0; }
+
+            .event-log .col-date,
+            .event-log .col-time { display: none; }
         }
 
-        .toast.success {
-            border-color: var(--success);
-        }
-
-        .toast.error {
-            border-color: var(--error);
+        @media (max-width: 600px) {
+            .sidebar { width: 0; min-width: 0; border: none; }
+            .sidebar.expanded { width: 200px; min-width: 200px; border-right: 1px solid var(--border); }
+            .header-center { display: none; }
+            .project-bar { flex-wrap: wrap; }
+            .card-body { white-space: normal; }
+            .event-log .col-duration,
+            .event-log .col-task { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div>
-                <h1>Agent Factory</h1>
-                <p style="color: var(--text-secondary); margin-top: 4px;" id="project-name">Carregando...</p>
-            </div>
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div class="connection-status">
-                    <div class="connection-dot" id="connection-dot"></div>
-                    <span id="connection-text">Desconectado</span>
+    <div class="app">
+        <!-- ═══ HEADER ═══════════════════════════════════════════════ -->
+        <header class="app-header">
+            <div class="header-left">
+                <button class="header-hamburger" onclick="toggleSidebar()">☰</button>
+                <div class="header-brand">
+                    <h1>Agent Factory</h1>
+                    <span class="header-subtitle" id="project-name">Carregando...</span>
                 </div>
-                <span class="status-badge" id="status-badge">—</span>
+            </div>
+            <div class="header-center">
+                <div class="progress" style="max-width: 300px;">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="conn-status">
+                    <div class="conn-dot" id="connection-dot"></div>
+                    <span id="connection-text">Offline</span>
+                </div>
+                <span class="badge running" id="status-badge">
+                    <span class="badge-dot"></span>
+                    —
+                </span>
             </div>
         </header>
 
-        <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
-        </div>
+        <!-- ═══ BODY ═════════════════════════════════════════════════ -->
+        <div class="app-body">
+            <!-- ─── Sidebar ──────────────────────────────────────────── -->
+            <nav class="sidebar" id="sidebar">
+                <div class="sidebar-nav">
+                    <!-- Projetos -->
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">
+                            <span class="sec-icon">📁</span>
+                            <span class="sec-label">Projetos</span>
+                        </div>
+                        <div class="sidebar-item active" data-sidebar-project="" onclick="sidebarSelectProject('')">
+                            <span class="item-icon">📊</span>
+                            <span class="item-label">Todos</span>
+                            <span class="item-badge" id="sidebar-badge-all"></span>
+                        </div>
+                        <div class="sidebar-item" data-sidebar-project="agent-factory-dev" onclick="sidebarSelectProject('agent-factory-dev')">
+                            <span class="project-dot afd"></span>
+                            <span class="item-label">AFD</span>
+                            <span class="item-badge" id="sidebar-badge-afd"></span>
+                        </div>
+                        <div class="sidebar-item" data-sidebar-project="pta" onclick="sidebarSelectProject('pta')">
+                            <span class="project-dot pta"></span>
+                            <span class="item-label">PTA</span>
+                            <span class="item-badge" id="sidebar-badge-pta"></span>
+                        </div>
+                    </div>
 
-        <div class="grid" id="agents-grid">
-            <!-- Agentes serão renderizados aqui -->
-        </div>
+                    <div class="sidebar-divider"></div>
 
-        <div class="log-container collapsed" id="log-container">
-            <div class="log-header">
-                <span class="log-toggle" id="log-toggle">📋 Event Log <span id="log-arrow">▶</span></span>
-            </div>
-            <div class="log-content" id="log-content">
-                <table class="log-table">
-                    <thead>
-                        <tr>
-                            <th class="col-date">Data</th>
-                            <th class="col-time">Hora</th>
-                            <th class="col-agent">Agente</th>
-                            <th class="col-task">Tarefa</th>
-                            <th class="col-status">Status</th>
-                            <th class="col-description">Descrição</th>
-                        </tr>
-                    </thead>
-                    <tbody id="log-tbody">
-                        <!-- Logs serão adicionados aqui -->
-                    </tbody>
-                </table>
-            </div>
+                    <!-- Configurações -->
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title">
+                            <span class="sec-icon">⚙️</span>
+                            <span class="sec-label">Configurações</span>
+                        </div>
+                        <div class="setting-row">
+                            <span class="item-icon">📋</span>
+                            <span class="setting-label">Event Log Global</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-log-global" checked onchange="toggleSetting('showGlobalLog', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <span class="item-icon">📊</span>
+                            <span class="setting-label">Visão Geral</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-overview" checked onchange="toggleSetting('showOverview', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <span class="item-icon">📝</span>
+                            <span class="setting-label">Log por Agente</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-agent-log" checked onchange="toggleSetting('showAgentLog', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="setting-row">
+                            <span class="item-icon">⏱️</span>
+                            <span class="setting-label">Duração nos Logs</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="toggle-duration" checked onchange="toggleSetting('showDuration', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- ─── Content ──────────────────────────────────────────── -->
+            <main class="content">
+                <div class="project-bar" id="project-bar">
+                    <button class="pill active" data-project="" onclick="selectProject('')">
+                        📊 Todos <span class="pill-count" id="pill-all-count"></span>
+                    </button>
+                    <div class="view-toggle">
+                        <button class="view-btn active" id="view-overview-btn" onclick="setView('overview')">📋 Visão Geral</button>
+                        <button class="view-btn" id="view-detail-btn" onclick="setView('detail')">📑 Detalhes</button>
+                        <button class="view-btn" id="view-orch-btn" onclick="setView('orchestration')">🔀 Orquestração</button>
+                    </div>
+                </div>
+
+                <div id="overview-container" class="overview-grid"></div>
+
+                <div class="agent-grid" id="agents-grid"></div>
+
+                <div id="orch-container" class="orch-container"></div>
+
+                <div class="event-log collapsed" id="log-container">
+                    <div class="event-log-header" id="log-toggle">
+                        📋 Event Log <span id="log-arrow" style="margin-left:8px;font-size:11px;">▶</span>
+                    </div>
+                    <div class="event-log-body" id="log-content">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-date">Data</th>
+                                    <th class="col-time">Hora</th>
+                                    <th class="col-duration">Duração</th>
+                                    <th class="col-agent">Agente</th>
+                                    <th class="col-task">Tarefa</th>
+                                    <th class="col-status">Status</th>
+                                    <th class="col-desc">Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody id="log-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
         </div>
     </div>
 
@@ -665,6 +1217,15 @@
         let currentProject = new URLSearchParams(window.location.search).get('project') || null;
         let pollInterval = null;
         let agentLogPages = {};
+        let viewMode = 'overview';
+        let selectedProject = currentProject || '';
+        let settings = {
+            showGlobalLog: true,
+            showOverview: true,
+            showAgentLog: true,
+            autoScroll: true,
+            showDuration: true,
+        };
 
         // ─── DOM Elements ──────────────────────────────────────────────
         const projectName = document.getElementById('project-name');
@@ -685,33 +1246,23 @@
             await fetchStatus();
             await fetchEvents();
             await fetchContext();
-            
-            // Polling a cada 1 segundo
+            renderAll();
             pollInterval = setInterval(async () => {
                 await fetchEvents();
                 await fetchStatus();
                 await fetchContext();
             }, 1000);
-            
             updateConnectionStatus(true);
         }
 
-        // ─── Update Project Display ────────────────────────────────────
         function updateProjectDisplay() {
             const nameEl = document.getElementById('project-name');
-            if (currentProject) {
-                nameEl.textContent = `Projeto: ${currentProject}`;
-            } else {
-                nameEl.textContent = 'Nenhum projeto selecionado';
-            }
+            nameEl.textContent = currentProject ? `Projeto: ${currentProject}` : 'Todos os projetos';
         }
 
-        // ─── Fetch Status ──────────────────────────────────────────────
         async function fetchStatus() {
             try {
-                const url = currentProject
-                    ? `/api/status?project=${currentProject}`
-                    : '/api/status';
+                const url = currentProject ? `/api/status?project=${currentProject}` : '/api/status';
                 const response = await fetch(url);
                 const status = await response.json();
                 updateUI(status);
@@ -720,68 +1271,151 @@
             }
         }
 
-        // ─── Fetch Events ──────────────────────────────────────────────
         async function fetchEvents() {
             try {
-                const url = currentProject
-                    ? `/api/events?project=${currentProject}`
-                    : '/api/events';
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                // Apenas processar eventos novos
-                if (data.length > events.length) {
-                    const newEvents = data.slice(events.length);
-                    events = data;
+                let allNewEvents = [];
+                let allProviders = {};
+
+                if (currentProject) {
+                    const response = await fetch(`/api/events?project=${currentProject}`);
+                    const data = await response.json();
+                    allNewEvents = data.events || [];
+                    allProviders = data.providers || {};
+                } else {
+                    // Try per-project fetches first
+                    const projects = ['agent-factory-dev', 'pta'];
+                    for (const proj of projects) {
+                        try {
+                            const response = await fetch(`/api/events?project=${proj}`);
+                            const data = await response.json();
+                            const projEvents = data.events || [];
+                            console.log(`[Dashboard] Fetched ${projEvents.length} events from ${proj}`);
+                            allNewEvents = allNewEvents.concat(projEvents);
+                            Object.assign(allProviders, data.providers || {});
+                        } catch (e) {
+                            console.warn(`Erro ao buscar eventos de ${proj}:`, e);
+                        }
+                    }
+                    // Fallback: if per-project fetches failed, try merged endpoint
+                    if (allNewEvents.length === 0) {
+                        try {
+                            const response = await fetch('/api/events');
+                            const data = await response.json();
+                            allNewEvents = data.events || data;
+                            allProviders = data.providers || {};
+                            console.log(`[Dashboard] Fallback merged: ${allNewEvents.length} events`);
+                        } catch (e) {
+                            console.error('Fallback fetch failed:', e);
+                        }
+                    }
+                }
+
+                Object.keys(allProviders).forEach(id => {
+                    Object.keys(agents).forEach(key => {
+                        if (agents[key].id === id) agents[key].provider = allProviders[id];
+                    });
+                });
+
+                const seen = new Set(events.map(e => e.event_id));
+                const newEvents = allNewEvents.filter(e => !seen.has(e.event_id));
+
+                if (newEvents.length > 0) {
+                    events = allNewEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                    console.log(`[Dashboard] Processing ${newEvents.length} new events, total: ${events.length}`);
                     newEvents.forEach(event => handleEvent(event));
                 }
+
+                postProcessAgents();
+                renderAll();
             } catch (error) {
                 console.error('Erro ao buscar eventos:', error);
             }
         }
 
-        // ─── Fetch Context ─────────────────────────────────────────────
+        function postProcessAgents() {
+            const STALE_MS = 5 * 60 * 1000;
+            const now = Date.now();
+
+            Object.keys(agents).forEach(key => {
+                const a = agents[key];
+
+                // No events at all
+                if (!a.lastTime || a.messages.length === 0) {
+                    a.status = 'ready';
+                    a.lastExecution = a.lastExecution || 'none';
+                    return;
+                }
+
+                // Stale running → stopped
+                if (a.status === 'running') {
+                    const age = now - new Date(a.lastTime).getTime();
+                    if (age > STALE_MS) {
+                        a.status = 'ready';
+                        a.lastExecution = 'stopped';
+                    }
+                }
+
+                // Ensure lastExecution is set
+                if (!a.lastExecution || a.lastExecution === 'none') {
+                    const hasTerminal = a.history.some(s => s === 'completed' || s === 'failed');
+                    a.lastExecution = hasTerminal ? 'stopped' : 'none';
+                }
+            });
+        }
+
         async function fetchContext() {
             try {
-                const url = currentProject
-                    ? `/api/context?project=${currentProject}`
-                    : '/api/context';
+                const url = currentProject ? `/api/context?project=${currentProject}` : '/api/context';
                 const response = await fetch(url);
                 const data = await response.json();
-                if (data && data.agents) {
-                    contextStats = data.agents;
-                }
+                if (data && data.agents) contextStats = data.agents;
             } catch (error) {
                 console.error('Erro ao buscar contexto:', error);
             }
         }
 
-        // ─── Handle Event ──────────────────────────────────────────────
         function handleEvent(event) {
-            // Atualizar agente
-            if (!agents[event.agent_id]) {
-                agents[event.agent_id] = {
+            const agentKey = (event.project_id || 'outros') + ':' + event.agent_id;
+
+            if (!agents[agentKey]) {
+                agents[agentKey] = {
                     id: event.agent_id,
+                    agentKey: agentKey,
                     role: event.agent_role,
-                    status: 'pending',
+                    status: 'ready',
+                    lastExecution: 'none',
                     messages: [],
                     activations: 0,
                     lastTask: null,
                     lastTime: null,
                     history: [],
-                    lastContext: null
+                    lastContext: null,
+                    project_id: event.project_id || 'unknown',
+                    source: event.project_id || 'outros',
+                    provider: 'auto',
                 };
             }
-            
-            const agent = agents[event.agent_id];
-            agent.status = event.status;
-            agent.lastTask = event.task_id;
-            agent.lastTime = event.timestamp;
-            agent.lastError = event.error || null;
 
-            // Extrair métricas de contexto do evento
-            if (event.metrics && event.metrics.context) {
-                agent.lastContext = event.metrics.context;
+            const agent = agents[agentKey];
+            const eventTime = new Date(event.timestamp).getTime();
+            const agentTime = agent.lastTime ? new Date(agent.lastTime).getTime() : 0;
+
+            if (eventTime >= agentTime) {
+                agent.lastTask = event.task_id;
+                agent.lastTime = event.timestamp;
+                agent.lastError = event.error || null;
+
+                if (event.metrics && event.metrics.context) {
+                    agent.lastContext = event.metrics.context;
+                }
+
+                // Operational status vs last execution result
+                if (event.status === 'completed' || event.status === 'failed') {
+                    agent.lastExecution = event.status;
+                    agent.status = 'ready';
+                } else if (event.status === 'running') {
+                    agent.status = 'running';
+                }
             }
 
             agent.messages.push({
@@ -791,224 +1425,611 @@
                 error: event.error || null,
             });
 
-            // Contar ativações (cada RUNNING é uma nova ativação)
-            if (event.status === 'running') {
-                agent.activations++;
+            if (eventTime >= agentTime) {
+                if (event.status === 'running') agent.activations++;
+                agent.history.push(event.status);
+                if (agent.history.length > 100) agent.history.shift();
             }
 
-            // Histórico de status para gráfico de barras
-            agent.history.push(event.status);
-            if (agent.history.length > 100) {
-                agent.history.shift();
-            }
-
-            // Atualizar UI
             updateAgentCard(agent);
             addLogEntry(event);
-            
-            // Verificar se completou
+
             if (event.status === 'completed' || event.status === 'failed') {
                 checkCompletion();
             }
         }
 
-        // ─── Update UI ─────────────────────────────────────────────────
         function updateUI(status) {
             projectName.textContent = status.project_id || 'Projeto';
-            
             const phase = status.phase || 'unknown';
             const progress = status.progress || 0;
-            
             progressFill.style.width = `${progress}%`;
-            
-            // Status badge
+
             if (phase.startsWith('completed')) {
-                statusBadge.textContent = 'Concluído';
-                statusBadge.className = 'status-badge completed';
+                statusBadge.innerHTML = '<span class="badge-dot"></span> Concluído';
+                statusBadge.className = 'badge completed';
             } else if (phase.startsWith('failed')) {
-                statusBadge.textContent = 'Falhou';
-                statusBadge.className = 'status-badge failed';
+                statusBadge.innerHTML = '<span class="badge-dot"></span> Falhou';
+                statusBadge.className = 'badge failed';
             } else if (phase === 'initializing' || phase === 'planned') {
-                statusBadge.textContent = 'Preparando';
-                statusBadge.className = 'status-badge running';
+                statusBadge.innerHTML = '<span class="badge-dot"></span> Preparando';
+                statusBadge.className = 'badge running';
             } else {
-                statusBadge.textContent = 'Executando';
-                statusBadge.className = 'status-badge running';
+                statusBadge.innerHTML = '<span class="badge-dot"></span> Executando';
+                statusBadge.className = 'badge running';
             }
         }
 
-        // ─── Update Agent Card ─────────────────────────────────────────
-        function updateAgentCard(agent) {
-            let card = document.getElementById(`agent-${agent.id}`);
-            
-            if (!card) {
-                card = document.createElement('div');
-                card.id = `agent-${agent.id}`;
-                card.className = 'card';
-                agentsGrid.appendChild(card);
-            }
+        function setView(mode) {
+            viewMode = mode;
+            document.getElementById('view-overview-btn').classList.toggle('active', mode === 'overview');
+            document.getElementById('view-detail-btn').classList.toggle('active', mode === 'detail');
+            document.getElementById('view-orch-btn').classList.toggle('active', mode === 'orchestration');
+            renderAll();
+        }
 
-            // Destacar agentes em execução ou falha
-            card.classList.toggle('running', agent.status === 'running');
-            card.classList.toggle('failed', agent.status === 'failed');
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('expanded');
+        }
 
-            const statusClass = agent.status;
-            const lastMessage = agent.messages[agent.messages.length - 1];
-            const lastError = agent.messages.slice().reverse().find(m => m.error)?.error;
+        function sidebarSelectProject(projectId) {
+            document.querySelectorAll('.sidebar-item[data-sidebar-project]').forEach(el => {
+                el.classList.toggle('active', el.dataset.sidebarProject === projectId);
+            });
+            selectProject(projectId);
+        }
 
-            // Emoji do agente
-            const agentEmojis = {
-                'coordenador': '🎯',
-                'frontend-mobile': '📱',
-                'visao-computacional': '👁️',
-                'ui-ux': '🎨',
-                'qa': '🧪',
-                'renderizacao': '🎬',
-                'agent-factory-dev': '⚙️'
+        function toggleSetting(key, value) {
+            settings[key] = value;
+            renderAll();
+        }
+
+        function updateSidebarBadges() {
+            const groups = getProjectGroups();
+            let total = 0;
+            Object.keys(groups).forEach(src => {
+                total += groups[src].agents.length;
+                const key = src === 'agent-factory-dev' ? 'afd' : src;
+                const badge = document.getElementById(`sidebar-badge-${key}`);
+                if (badge) badge.textContent = groups[src].agents.length || '';
+            });
+            const allBadge = document.getElementById('sidebar-badge-all');
+            if (allBadge) allBadge.textContent = total || '';
+        }
+
+        function selectProject(projectId) {
+            selectedProject = projectId;
+            document.querySelectorAll('.pill[data-project]').forEach(p => {
+                p.classList.toggle('active', p.dataset.project === projectId);
+            });
+            if (projectId) setView('detail');
+            renderAll();
+        }
+
+        function getProjectGroups() {
+            const groups = {};
+            Object.keys(agents).forEach(key => {
+                const a = agents[key];
+                const src = a.source || 'outros';
+                if (!groups[src]) groups[src] = { agents: [], events: 0, running: 0, failed: 0, completed: 0 };
+                groups[src].agents.push(a);
+                const evts = events.filter(e => e.project_id === src && e.agent_id === a.id);
+                groups[src].events += evts.length;
+                groups[src].running += evts.filter(e => e.status === 'running').length;
+                groups[src].failed += evts.filter(e => e.status === 'failed').length;
+                groups[src].completed += evts.filter(e => e.status === 'completed').length;
+            });
+            return groups;
+        }
+
+        function getFilteredAgentIds() {
+            const keys = Object.keys(agents);
+            if (!selectedProject) return keys;
+            return keys.filter(key => agents[key].source === selectedProject);
+        }
+
+        function buildOrchestrationTree() {
+            const delegRegex = /^Delegando tarefa (\w+) para subordinado$/;
+            const taskToAgent = {
+                'cv_task': 'visao-computacional',
+                'render_task': 'renderizacao',
+                'mobile_task': 'frontend-mobile',
+                'generic': null,
             };
-            const emoji = agentEmojis[agent.id] || '🤖';
 
-            // Mini chart de ativações (últimas 10)
-            const recentHistory = agent.history.slice(-10);
-            const barWidth = 3.5;
-            const barGap = 1;
-            let activationBars = '';
-            recentHistory.forEach((status, i) => {
-                const x = i * (barWidth + barGap);
-                const color = status === 'completed' ? 'var(--success)' :
-                              status === 'failed' ? 'var(--error)' :
-                              status === 'running' ? 'var(--accent)' : 'var(--text-secondary)';
-                activationBars += `<rect x="${x}" y="0" width="${barWidth}" height="14" rx="1" fill="${color}" opacity="0.7"/>`;
+            const delegevts = events.filter(e => delegRegex.test(e.message));
+            const chainsByKey = {};
+
+            delegevts.forEach(evt => {
+                const m = evt.message.match(delegRegex);
+                if (!m) return;
+                const taskType = m[1];
+                const workerId = taskToAgent[taskType];
+                const evtTime = new Date(evt.timestamp).getTime();
+
+                // Find worker events by agent_id + timestamp proximity (task_ids are unpredictable)
+                const workerEvts = events.filter(e =>
+                    e.agent_id !== evt.agent_id &&
+                    Math.abs(new Date(e.timestamp).getTime() - evtTime) < 3000 &&
+                    (workerId ? e.agent_id === workerId : true)
+                );
+
+                const workerAgent = workerEvts.length > 0 ? workerEvts[0].agent_id : (workerId || 'unknown');
+                const workerStatuses = [...new Set(workerEvts.map(e => e.status))];
+                const finalStatus = workerStatuses.includes('failed') ? 'failed'
+                    : workerStatuses.includes('completed') ? 'completed'
+                    : workerStatuses.includes('running') ? 'running' : 'pending';
+
+                // Group by root agent + rounded timestamp to handle "n/a" task_ids
+                const roundedTs = new Date(Math.floor(evtTime / 60000) * 60000).toISOString();
+                const chainKey = evt.agent_id + '|' + (evt.task_id === 'n/a' ? roundedTs : evt.task_id) + '|' + evt.project_id;
+
+                if (!chainsByKey[chainKey]) {
+                    const rootEvts = evt.task_id === 'n/a'
+                        ? events.filter(e => e.agent_id === evt.agent_id && Math.abs(new Date(e.timestamp).getTime() - evtTime) < 60000)
+                        : events.filter(e => e.agent_id === evt.agent_id && e.task_id === evt.task_id);
+
+                    const rootStatuses = [...new Set(rootEvts.map(e => e.status))];
+                    const rootStatus = rootStatuses.includes('failed') ? 'failed'
+                        : rootStatuses.includes('completed') ? 'completed'
+                        : rootStatuses.includes('running') ? 'running' : 'pending';
+
+                    chainsByKey[chainKey] = {
+                        rootAgent: evt.agent_id,
+                        rootTaskId: evt.task_id === 'n/a' ? roundedTs : evt.task_id,
+                        project: evt.project_id || 'unknown',
+                        status: rootStatus,
+                        timestamp: evt.timestamp,
+                        delegations: [],
+                    };
+                }
+
+                const chain = chainsByKey[chainKey];
+                const dup = chain.delegations.some(d => d.taskType === taskType && d.timestamp === evt.timestamp);
+                if (dup) return;
+
+                chain.delegations.push({
+                    taskType: taskType,
+                    workerId: workerAgent,
+                    workerTaskId: workerEvts.length > 0 ? workerEvts[0].task_id : null,
+                    status: finalStatus,
+                    message: evt.message,
+                    timestamp: evt.timestamp,
+                });
             });
 
-            // Context bar (% real do ContextManager via event metrics, fallback p/ eventos)
-            const ctx = agent.lastContext || {};
-            const hasRealContext = ctx.status && ctx.status !== 'no_context';
-            const contextPct = hasRealContext ? (ctx.percentage || 0) : (() => {
-                const agentCnt = events.filter(e => e.agent_id === agent.id).length;
-                const allCounts = [...new Set(events.map(e => e.agent_id))].map(
-                    id => events.filter(e => e.agent_id === id).length
-                );
-                const maxCnt = Math.max(...allCounts, agentCnt, 1);
-                return (agentCnt / maxCnt) * 100;
-            })();
-            const usedKb = ctx.used_kb || 0;
-            const limitKb = ctx.limit_kb || 0;
-            const ctxStatus = ctx.status || 'no_context';
-            const barColor = hasRealContext
-                ? (ctxStatus === 'exhausted' ? 'var(--error)' :
-                   ctxStatus === 'warning' ? 'var(--warning)' : 'var(--success)')
-                : (contextPct > 80 ? 'var(--error)' : contextPct > 50 ? 'var(--warning)' : 'var(--success)');
-            const statusDotColor = hasRealContext
-                ? (ctxStatus === 'exhausted' ? 'var(--error)' :
-                   ctxStatus === 'warning' ? 'var(--warning)' :
-                   ctxStatus === 'ok' ? 'var(--success)' : 'var(--text-secondary)')
-                : 'transparent';
+            return Object.values(chainsByKey).filter(c => c.delegations.length > 0);
+        }
 
-            const agentEventCount = events.filter(e => e.agent_id === agent.id).length;
+        function renderOrchestration() {
+            const container = document.getElementById('orch-container');
+            const chains = buildOrchestrationTree();
 
-            card.innerHTML = `
-                <div class="card-top">
-                    <div class="card-agent-icon">${emoji}</div>
-                    <div class="card-title-row">
-                        <span class="card-title">${agent.id}</span>
-                        <div class="card-title-right">
-                            <span class="stat-item">⚡ <strong>${agent.activations}</strong></span>
-                            <span class="stat-item">📨 <strong>${agent.messages.length}</strong></span>
-                            <span class="stat-item">${agent.role === 'coordinator' ? '🎯 coord' : agent.role === 'worker' ? '⚙️ worker' : '🔍 revis'}</span>
-                            <span class="agent-status ${statusClass}">${agent.status}</span>
+            if (chains.length === 0) {
+                container.innerHTML = '<div class="empty-state">Nenhuma orquestração encontrada — aguardando dados de coordenação</div>';
+                return;
+            }
+
+            const agentEmojis = {
+                'coordenador': '🎯', 'frontend-mobile': '📱', 'visao-computacional': '👁️',
+                'renderizacao': '🎬', 'ui-ux': '🎨', 'qa': '🧪', 'code-executor': '🤖',
+                'research': '🔬', 'agent-factory-dev': '⚙️', 'unknown': '❓',
+            };
+            const sourceLabels = {
+                'agent-factory-dev': '⚙️ Agent Factory',
+                'pta': '🌱 PTA',
+                'outros': '📦 Outros',
+            };
+            const statusIcons = {
+                'completed': '✅', 'failed': '❌', 'running': '⚡', 'pending': '⏳',
+            };
+            const statusColors = {
+                'completed': 'var(--success)', 'failed': 'var(--error)',
+                'running': 'var(--accent)', 'pending': 'var(--text-muted)',
+            };
+
+            let html = '';
+
+            // Group chains by project
+            const byProject = {};
+            chains.forEach(c => {
+                const p = c.project;
+                if (!byProject[p]) byProject[p] = [];
+                byProject[p].push(c);
+            });
+
+            Object.keys(byProject).sort().forEach(proj => {
+                const projectChains = byProject[proj];
+                html += `<div class="section-header">${sourceLabels[proj] || '📦 ' + proj} <span class="section-count">${projectChains.length} ${projectChains.length > 1 ? 'orquestrações' : 'orquestração'}</span></div>`;
+
+                projectChains.forEach((chain, ci) => {
+                    const rootEmoji = agentEmojis[chain.rootAgent] || '🤖';
+                    const rootStatusIcon = statusIcons[chain.status] || '⏳';
+
+                    html += `<div class="orch-chain">
+                        <div class="orch-root">
+                            <span class="orch-node ${chain.status}">
+                                ${rootEmoji} ${chain.rootAgent}
+                                <span class="orch-badge ${chain.status}">${rootStatusIcon} ${chain.status}</span>
+                            </span>
+                            <span class="orch-time">${chain.timestamp}</span>
                         </div>
-                    </div>
-                </div>
-                <div class="card-body">${lastMessage ? lastMessage.message : 'Aguardando...'}${lastError ? `<span style="color:var(--error);font-weight:600;"> — ${lastError}</span>` : ''}</div>
-                <div class="card-bottom">
-                    <div class="context-bar-row">
-                        <div class="context-bar-track">
-                            <div class="context-bar-fill" style="width:${contextPct}%;background:${barColor};"></div>
-                        </div>
-                        <span class="context-bar-label">${Math.round(contextPct)}%</span>
-                        ${hasRealContext ? `<span style="font-size:9px;color:var(--text-secondary);white-space:nowrap;">${usedKb.toFixed(1)}/${limitKb}KB</span>
-                        <span style="font-size:10px;color:${statusDotColor};">●</span>` : ''}
-                    </div>
-                    <div style="display:flex;align-items:center;gap:4px;">
-                        <svg class="mini-chart" viewBox="0 0 48 14">
-                            ${activationBars}
-                        </svg>
-                        <span class="card-agent-log-toggle" onclick="toggleAgentLog('${agent.id}')">
-                            <span class="arrow" id="agent-log-arrow-${agent.id}">▶</span>
-                            <span class="log-icon">📋</span>
-                            Event Log <span class="agent-log-badge">${agentEventCount}</span>
-                        </span>
-                    </div>
-                </div>
-                <div class="card-agent-log-content" id="agent-log-content-${agent.id}">
-                    <table class="card-agent-log-table">
-                        <tbody id="agent-log-tbody-${agent.id}">
-                        </tbody>
-                    </table>
-                    <div class="card-agent-log-more" id="agent-log-more-${agent.id}" style="display:none;" onclick="showMoreAgentLog('${agent.id}')">
-                        ↓ Mostrar anteriores
-                    </div>
-                </div>
-            `;
+                        <div class="orch-children">`;
 
-            // Popular log do agente com eventos existentes
-            const agentLogTbody = document.getElementById(`agent-log-tbody-${agent.id}`);
-            if (agentLogTbody && agentLogTbody.children.length === 0) {
-                const agentEvents = events.filter(e => e.agent_id === agent.id);
-                agentLogPages[agent.id] = 10;
-                const toShow = agentEvents.slice(-agentLogPages[agent.id]).reverse();
-                toShow.forEach(evt => addAgentLogEntry(evt, true));
-                updateAgentLogMore(agent.id, agentEvents.length);
+                    chain.delegations.forEach(d => {
+                        const workerEmoji = agentEmojis[d.workerId] || '🤖';
+                        const icon = statusIcons[d.status] || '⏳';
+                        const color = statusColors[d.status] || 'var(--text-muted)';
+
+                        html += `<div class="orch-child">
+                            <div class="orch-connector"></div>
+                            <div class="orch-node-wrap">
+                                <span class="orch-node ${d.status}">
+                                    ${workerEmoji} ${d.workerId}
+                                    <span class="orch-badge ${d.status}">${icon} ${d.status}</span>
+                                </span>
+                                <span class="orch-task">📋 ${d.taskType}</span>
+                            </div>
+                        </div>`;
+                    });
+
+                    html += `</div></div>`;
+                });
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderOverview() {
+            const container = document.getElementById('overview-container');
+            if (!settings.showOverview) { container.innerHTML = ''; return; }
+            const groups = getProjectGroups();
+            const sourceLabels = {
+                'agent-factory-dev': { icon: '⚙️', label: 'Agent Factory' },
+                'pta': { icon: '🌱', label: 'PTA' },
+                'outros': { icon: '📦', label: 'Outros Projetos' },
+            };
+
+            let html = '';
+            Object.keys(groups).sort().forEach(src => {
+                const meta = sourceLabels[src] || { icon: '📦', label: src };
+                const g = groups[src];
+                const total = g.agents.length;
+                const running = g.agents.filter(a => a.status === 'running').length;
+                const failed = g.agents.filter(a => a.lastExecution === 'failed').length;
+                const completed = g.agents.filter(a => a.lastExecution === 'completed').length;
+                const stopped = g.agents.filter(a => a.lastExecution === 'stopped').length;
+                const pending = total - running - failed - completed - stopped;
+
+                const pctRunning = total ? (running / total) * 100 : 0;
+                const pctCompleted = total ? (completed / total) * 100 : 0;
+                const pctFailed = total ? (failed / total) * 100 : 0;
+                const pctStopped = total ? (stopped / total) * 100 : 0;
+
+                html += `<div class="overview-card" onclick="selectProject('${src}')">
+                    <div class="oc-header">
+                        <span>${meta.icon}</span>
+                        <span class="oc-title">${meta.label}</span>
+                    </div>
+                    <div class="oc-counts">
+                        <span>🤖 <span class="num">${total}</span></span>
+                        <span>⚡ <span class="num running">${running}</span></span>
+                        <span>❌ <span class="num failed">${failed}</span></span>
+                        <span>✅ <span class="num">${completed}</span></span>
+                        <span>⏹️ <span class="num stopped">${stopped}</span></span>
+                        <span>📨 <span class="num">${g.events}</span></span>
+                    </div>
+                    <div class="oc-bar">
+                        <div class="seg running" style="width:${pctRunning}%"></div>
+                        <div class="seg completed" style="width:${pctCompleted}%"></div>
+                        <div class="seg failed" style="width:${pctFailed}%"></div>
+                        <div class="seg stopped" style="width:${pctStopped}%"></div>
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+
+            // Build project pills dynamically
+            const bar = document.getElementById('project-bar');
+            while (bar.children.length > 2) {
+                if (bar.children[1] && !bar.children[1].classList.contains('view-toggle')) {
+                    bar.removeChild(bar.children[1]);
+                } else break;
+            }
+
+            const sortedSrcs = Object.keys(groups).sort();
+            sortedSrcs.forEach(src => {
+                const meta = sourceLabels[src] || { icon: '📦', label: src };
+                const g = groups[src];
+                const running = g.agents.filter(a => a.status === 'running').length;
+                const pill = document.createElement('button');
+                pill.className = 'pill' + (selectedProject === src ? ' active' : '');
+                pill.dataset.project = src;
+                pill.onclick = () => selectProject(src);
+                pill.innerHTML = `${meta.icon} ${meta.label} <span class="pill-count">${g.agents.length}</span>${running ? ` <span style="color:var(--accent-light);">+${running}</span>` : ''}`;
+                bar.insertBefore(pill, bar.lastElementChild);
+            });
+
+            const allPill = bar.querySelector('[data-project=""]');
+            if (allPill) allPill.classList.toggle('active', !selectedProject);
+
+            document.getElementById('pill-all-count').textContent = `(${Object.keys(agents).length})`;
+        }
+
+        function renderAll() {
+            renderOverview();
+            const overviewEl = document.getElementById('overview-container');
+            const gridEl = document.getElementById('agents-grid');
+            const orchEl = document.getElementById('orch-container');
+            if (viewMode === 'detail') {
+                overviewEl.style.display = 'none';
+                gridEl.style.display = 'flex';
+                orchEl.style.display = 'none';
+                renderAgentGrid();
+            } else if (viewMode === 'orchestration') {
+                overviewEl.style.display = 'none';
+                gridEl.style.display = 'none';
+                orchEl.style.display = 'block';
+                renderOrchestration();
+            } else {
+                overviewEl.style.display = 'grid';
+                gridEl.style.display = 'none';
+                orchEl.style.display = 'none';
+            }
+            updateSidebarBadges();
+        }
+
+        function updateAgentCard(agent) {
+            const card = document.getElementById(`agent-${agent.agentKey}`);
+            if (!card) return;
+
+            const isRunning = agent.status === 'running';
+            const execClass = agent.lastExecution || 'none';
+            const execLabels = { completed: '✅ Completed', failed: '❌ Failed', stopped: '⏹️ Stopped', none: '—' };
+
+            card.classList.toggle('running', isRunning);
+            card.classList.toggle('failed', execClass === 'failed');
+
+            const title = card.querySelector('.card-title');
+            if (title) title.textContent = agent.id;
+
+            const badge = card.querySelector('.badge');
+            if (badge) {
+                badge.className = `badge ${isRunning ? 'running' : 'ready'}`;
+                badge.innerHTML = `<span class="badge-dot"></span> ${isRunning ? 'Running' : 'Ready'}`;
+            }
+
+            const lastExecEl = card.querySelector('.last-exec');
+            if (lastExecEl) {
+                lastExecEl.className = `last-exec ${execClass}`;
+                lastExecEl.textContent = execLabels[execClass] || execClass;
+            }
+
+            const body = card.querySelector('.card-body');
+            if (body) {
+                const lastMessage = agent.messages[agent.messages.length - 1];
+                const lastError = agent.messages.slice().reverse().find(m => m.error)?.error;
+                body.innerHTML = `${lastMessage ? lastMessage.message : 'Aguardando...'}${lastError ? ' <span style="color:var(--error);font-weight:600;">— ' + lastError + '</span>' : ''}`;
+            }
+
+            const ctxBar = card.querySelector('.ctx-bar');
+            if (ctxBar) {
+                const ctx = agent.lastContext || {};
+                const hasRealContext = ctx.status && ctx.status !== 'no_context';
+                const contextPct = hasRealContext ? (ctx.percentage || 0) : (() => {
+                    const agentCnt = events.filter(e => e.project_id === agent.source && e.agent_id === agent.id).length;
+                    const allCounts = [...new Set(events.filter(e => e.project_id === agent.source).map(e => e.agent_id))].map(id => events.filter(e => e.project_id === agent.source && e.agent_id === id).length);
+                    return (agentCnt / Math.max(...allCounts, agentCnt, 1)) * 100;
+                })();
+                const ctxStatus = ctx.status || 'no_context';
+                const barColor = hasRealContext
+                    ? (ctxStatus === 'exhausted' ? 'var(--error)' : ctxStatus === 'warning' ? 'var(--warning)' : 'var(--success)')
+                    : (contextPct > 80 ? 'var(--error)' : contextPct > 50 ? 'var(--warning)' : 'var(--success)');
+                const fill = ctxBar.querySelector('.ctx-fill');
+                if (fill) fill.style.width = `${contextPct}%`;
+                fill.style.background = barColor;
+                const label = ctxBar.querySelector('.ctx-label');
+                if (label) label.textContent = `${Math.round(contextPct)}%`;
+            }
+
+            const providerBtn = card.querySelector('.provider-btn');
+            if (providerBtn) {
+                const provider = agent.provider || 'auto';
+                providerBtn.className = `provider-btn ${provider === 'local_multi' ? 'local' : provider === 'cloud' ? 'cloud' : ''}`;
+                providerBtn.innerHTML = provider === 'local_multi' ? '🖥️ Local' : provider === 'cloud' ? '☁️ Cloud' : '🔄 Auto';
+            }
+
+            const logBadge = card.querySelector('.agent-log-badge');
+            if (logBadge) {
+                const count = events.filter(e => e.project_id === agent.source && e.agent_id === agent.id).length;
+                logBadge.textContent = count;
             }
         }
 
-        // ─── Toggle Agent Log ─────────────────────────────────────────
-        function toggleAgentLog(agentId) {
-            const content = document.getElementById(`agent-log-content-${agentId}`);
-            const arrow = document.getElementById(`agent-log-arrow-${agentId}`);
+        function renderAgentGrid() {
+            const agentIds = getFilteredAgentIds();
+            if (agentIds.length === 0) {
+                agentsGrid.innerHTML = '<div class="empty-state">Nenhum agente neste projeto</div>';
+                return;
+            }
+
+            const groups = {};
+            agentIds.forEach(key => {
+                const a = agents[key];
+                const src = a.source || 'outros';
+                if (!groups[src]) groups[src] = [];
+                groups[src].push(a);
+            });
+
+            const sourceLabels = {
+                'agent-factory-dev': { icon: '⚙️', label: 'Agent Factory' },
+                'pta': { icon: '🌱', label: 'PTA' },
+                'outros': { icon: '📦', label: 'Outros Projetos' },
+            };
+
+            let html = '';
+            Object.keys(groups).sort().forEach(src => {
+                const meta = sourceLabels[src] || { icon: '📦', label: src };
+                const list = groups[src];
+                html += `<div class="section-header">${meta.icon} ${meta.label} <span class="section-count">${list.length} agente${list.length > 1 ? 's' : ''}</span></div>`;
+                html += `<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">`;
+                list.forEach(agent => {
+                    const statusClass = agent.status;
+                    const lastMessage = agent.messages[agent.messages.length - 1];
+                    const lastError = agent.messages.slice().reverse().find(m => m.error)?.error;
+                    const agentEmojis = {
+                        'coordenador': '🎯', 'frontend-mobile': '📱', 'visao-computacional': '👁️',
+                        'ui-ux': '🎨', 'qa': '🧪', 'renderizacao': '🎬', 'agent-factory-dev': '⚙️'
+                    };
+                    const emoji = agentEmojis[agent.id] || '🤖';
+                    const recentHistory = agent.history.slice(-10);
+                    const barWidth = 3.5, barGap = 1;
+                    let activationBars = '';
+                    recentHistory.forEach((s, i) => {
+                        const x = i * (barWidth + barGap);
+                        const color = s === 'completed' ? 'var(--success)' : s === 'failed' ? 'var(--error)' : s === 'running' ? 'var(--accent)' : 'var(--text-muted)';
+                        activationBars += `<rect x="${x}" y="0" width="${barWidth}" height="14" rx="1" fill="${color}" opacity="0.7"/>`;
+                    });
+                    const ctx = agent.lastContext || {};
+                    const hasRealContext = ctx.status && ctx.status !== 'no_context';
+                    const contextPct = hasRealContext ? (ctx.percentage || 0) : (() => {
+                        const agentCnt = events.filter(e => e.project_id === agent.source && e.agent_id === agent.id).length;
+                        const allCounts = [...new Set(events.filter(e => e.project_id === agent.source).map(e => e.agent_id))].map(id => events.filter(e => e.project_id === agent.source && e.agent_id === id).length);
+                        return (agentCnt / Math.max(...allCounts, agentCnt, 1)) * 100;
+                    })();
+                    const ctxStatus = ctx.status || 'no_context';
+                    const barColor = hasRealContext
+                        ? (ctxStatus === 'exhausted' ? 'var(--error)' : ctxStatus === 'warning' ? 'var(--warning)' : 'var(--success)')
+                        : (contextPct > 80 ? 'var(--error)' : contextPct > 50 ? 'var(--warning)' : 'var(--success)');
+                    const statusDotColor = hasRealContext
+                        ? (ctxStatus === 'exhausted' ? 'var(--error)' : ctxStatus === 'warning' ? 'var(--warning)' : ctxStatus === 'ok' ? 'var(--success)' : 'var(--text-muted)')
+                        : 'transparent';
+                    const usedKb = ctx.used_kb || 0;
+                    const limitKb = ctx.limit_kb || 0;
+                    const agentEventCount = events.filter(e => e.project_id === agent.source && e.agent_id === agent.id).length;
+                    const provider = agent.provider || 'auto';
+
+                    html += `<div class="agent-card ${agent.status === 'running' ? 'running' : ''} ${(agent.lastExecution || '') === 'failed' ? 'failed' : ''}" id="agent-${agent.agentKey}">
+                        <div class="card-top">
+                            <div class="card-icon">${emoji}</div>
+                            <div class="card-title-row">
+                                <span class="card-title">${agent.id}</span>
+                                <div class="card-meta">
+                                    <span class="card-stat">⚡ <strong>${agent.activations}</strong></span>
+                                    <span class="card-stat">📨 <strong>${agent.messages.length}</strong></span>
+                                    <span class="card-stat">${agent.role === 'coordinator' ? '🎯' : agent.role === 'worker' ? '⚙️' : '🔍'}</span>
+                                    <span class="badge ${agent.status === 'running' ? 'running' : 'ready'}">${agent.status === 'running' ? 'Running' : 'Ready'}</span>
+                                    <span class="last-exec ${agent.lastExecution || 'none'}">${({'completed':'✅ Completed','failed':'❌ Failed','stopped':'⏹️ Stopped','none':'—'})[agent.lastExecution] || agent.lastExecution}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">${lastMessage ? lastMessage.message : 'Aguardando...'}${lastError ? ' <span style="color:var(--error);font-weight:600;">— ' + lastError + '</span>' : ''}</div>
+                        <div class="card-bottom">
+                            <div class="ctx-bar">
+                                <div class="ctx-track">
+                                    <div class="ctx-fill" style="width:${contextPct}%;background:${barColor};"></div>
+                                </div>
+                                <span class="ctx-label">${Math.round(contextPct)}%</span>
+                                ${hasRealContext ? '<span style="font-size:9px;color:var(--text-muted);white-space:nowrap;">' + usedKb.toFixed(1) + '/' + limitKb + 'KB</span><span style="font-size:10px;color:' + statusDotColor + ';">●</span>' : ''}
+                            </div>
+                            <div style="display:flex;align-items:center;gap:4px;">
+                                <svg class="mini-chart" viewBox="0 0 48 14">${activationBars}</svg>
+                                <button class="provider-btn ${provider === 'local_multi' ? 'local' : provider === 'cloud' ? 'cloud' : ''}" onclick="toggleProvider('${agent.agentKey}')" title="Clique para alternar provider">
+                                    ${provider === 'local_multi' ? '🖥️ Local' : provider === 'cloud' ? '☁️ Cloud' : '🔄 Auto'}
+                                </button>
+                                <span class="log-toggle-btn" onclick="toggleAgentLog('${agent.agentKey}')">
+                                    <span class="arrow" id="agent-log-arrow-${agent.agentKey}">▶</span>
+                                    📋 <span style="font-size:9px;background:var(--surface-overlay);padding:1px 5px;border-radius:8px;">${agentEventCount}</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="agent-log" id="agent-log-content-${agent.agentKey}">
+                            <table>
+                                <tbody id="agent-log-tbody-${agent.agentKey}"></tbody>
+                            </table>
+                            <div class="agent-log-more" id="agent-log-more-${agent.agentKey}" onclick="showMoreAgentLog('${agent.agentKey}')">↓ Mostrar anteriores</div>
+                        </div>
+                    </div>`;
+                });
+                html += `</div>`;
+            });
+
+            agentsGrid.innerHTML = html;
+
+            agentIds.forEach(key => {
+                const tbody = document.getElementById(`agent-log-tbody-${key}`);
+                if (tbody && tbody.children.length === 0) {
+                    const a = agents[key];
+                    const agentEvents = events.filter(e => e.project_id === a.source && e.agent_id === a.id);
+                    agentLogPages[key] = 10;
+                    agentEvents.slice(-10).reverse().forEach(evt => addAgentLogEntry(evt, true));
+                    updateAgentLogMore(key, agentEvents.length);
+                }
+            });
+        }
+
+        async function toggleProvider(agentKey) {
+            const agent = agents[agentKey];
+            if (!agent) return;
+            const cycle = { 'auto': 'local_multi', 'local_multi': 'cloud', 'cloud': 'auto' };
+            const next = cycle[agent.provider || 'auto'] || 'auto';
+            try {
+                await fetch(`/api/agent/${encodeURIComponent(agent.id)}/provider`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: next }),
+                });
+                agent.provider = next;
+                renderAll();
+            } catch (e) {
+                console.error('Erro ao trocar provider:', e);
+            }
+        }
+
+        function toggleAgentLog(agentKey) {
+            const content = document.getElementById(`agent-log-content-${agentKey}`);
+            const arrow = document.getElementById(`agent-log-arrow-${agentKey}`);
             const isOpen = content.classList.toggle('open');
             arrow.classList.toggle('open', isOpen);
         }
 
-        // ─── Add Log Entry ─────────────────────────────────────────────
         function addLogEntry(event) {
+            if (settings.showAgentLog) addAgentLogEntry(event);
+            if (!settings.showGlobalLog) return;
+
             const row = document.createElement('tr');
             row.className = event.status === 'completed' ? 'success' : event.status === 'failed' ? 'error' : '';
 
-            // ── Add to main log ──
             const timestamp = new Date(event.timestamp);
-            const date = timestamp.toLocaleDateString('pt-BR', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            });
-            const time = timestamp.toLocaleTimeString('pt-BR', {
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            });
+            const date = timestamp.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const time = timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
             const agentId = event.agent_id || '—';
-            const taskId = event.task_id || '—';
-            const status = event.status || '—';
-            const message = event.message || '';
-
             const payload = event.payload || {};
-            const title = payload.title || taskId;
+            const title = payload.title || event.task_id || '—';
             const observation = payload.observation || '';
-            const description = payload.description || message;
+            const description = payload.description || event.message || '';
+            const status = event.status || '—';
+
+            const duration = event.metrics?.duration_seconds;
+            const durationDisplay = settings.showDuration
+                ? (duration != null ? (duration >= 60 ? `${(duration/60).toFixed(1)}m` : `${duration.toFixed(1)}s`) : '—')
+                : '';
 
             let descParts = [];
             if (observation) descParts.push(observation);
             if (description && description !== observation) descParts.push(description);
-            const fullDescription = descParts.join(' - ') || message || '—';
-
-            const statusClass = status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : 'running';
+            const fullDescription = descParts.join(' - ') || event.message || '—';
 
             row.innerHTML = `
                 <td class="col-date">${date}</td>
                 <td class="col-time">${time}</td>
+                <td class="col-duration">${durationDisplay}</td>
                 <td class="col-agent">${agentId}</td>
                 <td class="col-task">${title}</td>
-                <td class="col-status"><span class="status-badge-table ${statusClass}">${status}</span></td>
-                <td class="col-description">${fullDescription}</td>
+                <td class="col-status"><span class="badge ${status === 'completed' ? 'completed' : status === 'failed' ? 'failed' : 'running'}">${status}</span></td>
+                <td class="col-desc">${fullDescription}</td>
             `;
 
             if (logTbody.firstChild) {
@@ -1016,39 +2037,36 @@
             } else {
                 logTbody.appendChild(row);
             }
-
-            // ── Add to agent log ──
-            addAgentLogEntry(event);
         }
 
-        // ─── Add Agent Log Entry ──────────────────────────────────────
         function addAgentLogEntry(event, skipLimit) {
-            const agentTbody = document.getElementById(`agent-log-tbody-${event.agent_id}`);
+            const agentKey = (event.project_id || 'outros') + ':' + event.agent_id;
+            const agentTbody = document.getElementById(`agent-log-tbody-${agentKey}`);
             if (!agentTbody) return;
 
-            if (!skipLimit && agentLogPages[event.agent_id] !== undefined) {
-                if (agentTbody.children.length >= agentLogPages[event.agent_id]) {
-                    const totalEvents = events.filter(e => e.agent_id === event.agent_id).length;
-                    updateAgentLogMore(event.agent_id, totalEvents);
-                    // Remove o último item (mais antigo) para abrir espaço pro novo
-                    if (agentTbody.lastChild) {
-                        agentTbody.removeChild(agentTbody.lastChild);
-                    }
+            if (!skipLimit && agentLogPages[agentKey] !== undefined) {
+                if (agentTbody.children.length >= agentLogPages[agentKey]) {
+                    const totalEvents = events.filter(e => e.project_id === event.project_id && e.agent_id === event.agent_id).length;
+                    updateAgentLogMore(agentKey, totalEvents);
+                    if (agentTbody.lastChild) agentTbody.removeChild(agentTbody.lastChild);
                 }
             }
 
             const timestamp = new Date(event.timestamp);
-            const timeOnly = timestamp.toLocaleTimeString('pt-BR', {
-                hour: '2-digit', minute: '2-digit'
-            });
+            const timeOnly = timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             const statusClass = event.status === 'completed' ? 'completed' : event.status === 'failed' ? 'failed' : 'running';
             const message = event.message || '—';
+            const agentDuration = event.metrics?.duration_seconds;
+            const agentDurationDisplay = agentDuration != null
+                ? (agentDuration >= 60 ? `${(agentDuration/60).toFixed(1)}m` : `${agentDuration.toFixed(1)}s`)
+                : '—';
 
             const agentRow = document.createElement('tr');
             agentRow.innerHTML = `
-                <td class="col-time">${timeOnly}</td>
-                <td class="col-status"><span class="status-badge-table ${statusClass}">${event.status}</span></td>
-                <td class="col-msg">${message}</td>
+                <td>${timeOnly}</td>
+                <td>${settings.showDuration ? agentDurationDisplay : ''}</td>
+                <td><span class="badge ${statusClass}" style="font-size:9px;padding:1px 5px;">${event.status}</span></td>
+                <td>${message}</td>
             `;
 
             if (agentTbody.firstChild) {
@@ -1056,98 +2074,62 @@
             } else {
                 agentTbody.appendChild(agentRow);
             }
-
-            const badge = document.querySelector(`#agent-log-${event.agent_id} .agent-log-badge`);
-            if (badge) {
-                const totalEvents = events.filter(e => e.agent_id === event.agent_id).length;
-                badge.textContent = totalEvents;
-            }
         }
 
-        // ─── Show More Agent Log ──────────────────────────────────────
-        function showMoreAgentLog(agentId) {
-            const prev = agentLogPages[agentId] || 10;
-            const pageSize = 10;
-            agentLogPages[agentId] = prev + pageSize;
+        function showMoreAgentLog(agentKey) {
+            const prev = agentLogPages[agentKey] || 10;
+            agentLogPages[agentKey] = prev + 10;
 
-            const agentEvents = events.filter(e => e.agent_id === agentId);
-            const tbody = document.getElementById(`agent-log-tbody-${agentId}`);
+            const a = agents[agentKey];
+            const agentEvents = events.filter(e => e.project_id === a.source && e.agent_id === a.id);
+            const tbody = document.getElementById(`agent-log-tbody-${agentKey}`);
             if (tbody) {
                 tbody.innerHTML = '';
-                const toShow = agentEvents.slice(-agentLogPages[agentId]).reverse();
-                toShow.forEach(evt => addAgentLogEntry(evt, true));
-                updateAgentLogMore(agentId, agentEvents.length);
+                agentEvents.slice(-agentLogPages[agentKey]).reverse().forEach(evt => addAgentLogEntry(evt, true));
+                updateAgentLogMore(agentKey, agentEvents.length);
             }
         }
 
-        // ─── Update Agent Log More Button ─────────────────────────────
-        function updateAgentLogMore(agentId, total) {
-            const moreBtn = document.getElementById(`agent-log-more-${agentId}`);
+        function updateAgentLogMore(agentKey, total) {
+            const moreBtn = document.getElementById(`agent-log-more-${agentKey}`);
             if (!moreBtn) return;
-            const shown = agentLogPages[agentId] || 10;
+            const shown = agentLogPages[agentKey] || 10;
             moreBtn.style.display = shown < total ? 'flex' : 'none';
             const remaining = total - shown;
             moreBtn.textContent = `↓ Mais ${Math.min(remaining, 10)} de ${remaining} anteriores`;
         }
 
-        // ─── Update Connection Status ──────────────────────────────────
-        function updateConnectionStatus(connected = true) {
-            if (connected) {
-                connectionDot.classList.add('connected');
-                connectionText.textContent = 'Online';
-            } else {
-                connectionDot.classList.remove('connected');
-                connectionText.textContent = 'Offline';
-            }
-        }
-
-        // ─── Check Completion ──────────────────────────────────────────
         function checkCompletion() {
-            const allComplete = Object.values(agents).every(
-                agent => agent.status === 'completed' || agent.status === 'failed'
-            );
-            
+            const allComplete = Object.values(agents).every(a => a.status === 'completed' || a.status === 'failed');
             if (allComplete && Object.keys(agents).length > 0) {
-                const hasFailed = Object.values(agents).some(
-                    agent => agent.status === 'failed'
-                );
-                
-                showToast(
-                    hasFailed 
-                        ? '⚠️ Execução concluída com falhas' 
-                        : '✅ Todas as tarefas concluídas!',
-                    hasFailed ? 'error' : 'success'
-                );
+                const hasFailed = Object.values(agents).some(a => a.status === 'failed');
+                showToast(hasFailed ? '⚠️ Execução concluída com falhas' : '✅ Todas as tarefas concluídas!', hasFailed ? 'error' : 'success');
             }
         }
 
-        // ─── Show Toast ────────────────────────────────────────────────
+        function updateConnectionStatus(connected) {
+            connectionDot.className = 'conn-dot' + (connected ? ' connected' : ' error');
+            connectionText.textContent = connected ? 'Online' : 'Offline';
+        }
+
         function showToast(message, type = 'success') {
             toast.textContent = message;
             toast.className = `toast ${type} show`;
-            
-            // Notificação do sistema
             if ('Notification' in window && Notification.permission === 'granted') {
                 new Notification('Agent Factory', { body: message });
             }
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 5000);
+            setTimeout(() => { toast.classList.remove('show'); }, 5000);
         }
 
-        // ─── Request Notification Permission ───────────────────────────
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
 
-        // ─── Event Log Toggle ─────────────────────────────────────────
         logToggle.addEventListener('click', () => {
             const isOpen = logContainer.classList.toggle('collapsed');
             logArrow.textContent = isOpen ? '▶' : '▼';
         });
 
-        // ─── Start ─────────────────────────────────────────────────────
         init();
     </script>
 </body>

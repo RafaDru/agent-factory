@@ -25,6 +25,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     
     notifiers: dict[str, EventNotifier] = {}
     context_stores: dict[str, Any] = {}
+    agent_providers: dict[str, str] = {}  # agent_id → "local_multi" | "cloud" | "auto"
     
     def do_GET(self):
         parsed = urlparse(self.path)
@@ -42,8 +43,68 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._serve_context(project_id)
         elif path == "/api/projects":
             self._serve_projects()
+        elif path.startswith("/api/agent/") and path.endswith("/provider"):
+            self._serve_agent_provider(path)
+        elif path == "/api/debug":
+            self._serve_debug()
         else:
             self.send_error(404)
+    
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+        
+        if path.startswith("/api/agent/") and path.endswith("/provider"):
+            self._post_agent_provider(path)
+        else:
+            self.send_error(404)
+    
+    def _serve_agent_provider(self, path: str):
+        """GET: retorna o provider configurado para um agente."""
+        import re
+        m = re.match(r"/api/agent/(.+)/provider", path)
+        if not m:
+            self.send_error(400)
+            return
+        agent_id = m.group(1)
+        provider = self.agent_providers.get(agent_id, "auto")
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps({"agent_id": agent_id, "provider": provider}).encode("utf-8"))
+    
+    def _post_agent_provider(self, path: str):
+        """POST: atualiza o provider de um agente."""
+        import re
+        m = re.match(r"/api/agent/(.+)/provider", path)
+        if not m:
+            self.send_error(400)
+            return
+        agent_id = m.group(1)
+        
+        content_len = int(self.headers.get("Content-Length", 0))
+        if content_len == 0:
+            self.send_error(400, "Body required")
+            return
+        
+        body = json.loads(self.rfile.read(content_len))
+        provider = body.get("provider", "auto")
+        valid = ("auto", "local_multi", "cloud")
+        if provider not in valid:
+            self.send_error(400, f"Provider inválido. Opções: {valid}")
+            return
+        
+        self.agent_providers[agent_id] = provider
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps({
+            "agent_id": agent_id,
+            "provider": provider,
+            "previous": self.agent_providers.get(agent_id, "auto"),
+        }).encode("utf-8"))
     
     def _serve_dashboard(self):
         """Serve o HTML do dashboard."""
@@ -77,19 +138,35 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         return None
     
     def _serve_events(self, project_id: Optional[str] = None):
-        """Serve eventos em JSON."""
-        notifier = self._get_notifier(project_id)
-        if notifier:
-            events = notifier.get_events()
-            data = [e.model_dump(mode="json") for e in events]
+        """Serve eventos em JSON, incluindo provider config por agente."""
+        if project_id:
+            notifier = self._get_notifier(project_id)
+            notifiers = [notifier] if notifier else []
         else:
-            data = []
+            notifiers = list(self.notifiers.values())
+        
+        all_events = []
+        for n in notifiers:
+            try:
+                evts = n.get_events()
+                all_events.extend(evts)
+            except Exception as e:
+                print(f"[Dashboard] Erro ao ler eventos de {n.project_id}: {e}")
+        
+        print(f"[Dashboard] _serve_events project={project_id} notifiers={list(self.notifiers.keys())} events_per_notifier={[len(n.get_events()) for n in self.notifiers.values()]} total={len(all_events)}")
+        
+        all_events.sort(key=lambda e: e.timestamp, reverse=True)
+        
+        result = {
+            "events": [e.model_dump(mode="json") for e in all_events],
+            "providers": dict(self.agent_providers),
+        }
         
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
+        self.wfile.write(json.dumps(result, default=str).encode("utf-8"))
     
     def _serve_status(self, project_id: Optional[str] = None):
         """Serve status atual em JSON."""
@@ -172,6 +249,26 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def log_message(self, format, *args):
         """Suprimir logs padrao."""
         pass
+
+    def _serve_debug(self):
+        """Debug: retorna info dos notifiers."""
+        info = {}
+        for key, n in self.notifiers.items():
+            try:
+                evts = n.get_events()
+                info[key] = {"event_count": len(evts), "file": str(n._events_file), "file_exists": n._events_file.exists()}
+            except Exception as e:
+                info[key] = {"error": str(e), "file": str(n._events_file)}
+        data = {
+            "notifier_keys": list(self.notifiers.keys()),
+            "notifier_count": len(self.notifiers),
+            "details": info,
+        }
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
 
 
 class DashboardServer:

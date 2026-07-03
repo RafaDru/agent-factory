@@ -37,6 +37,14 @@ class ContextManager:
     
     CHARS_PER_TOKEN = 4
     DEFAULT_TOKEN_LIMIT = 32000
+
+    COMPRESSION_PROMPT = """Resuma cada seção do contexto abaixo preservando:
+1. Decisões e acordos contratuais
+2. Dados numéricos e métricas
+3. Restrições e regras de negócio
+4. Dependências entre tarefas
+
+Seja conciso. Remova repetições."""
     
     def __init__(
         self,
@@ -45,13 +53,17 @@ class ContextManager:
         token_limit: int = DEFAULT_TOKEN_LIMIT,
         warn_at_percentage: float = 80.0,
         auto_compress: bool = True,
+        llm_provider: Optional[Any] = None,
     ):
         self.context_file = context_file
         self.limit_kb = limit_kb
         self.token_limit = token_limit
         self.warn_at_percentage = warn_at_percentage
         self.auto_compress = auto_compress
+        self.llm_provider = llm_provider
         self._usage_history: list[dict] = []
+        self._last_compressed_at: Optional[str] = None
+        self._compressing: bool = False
     
     def count_tokens(self, text: str) -> int:
         """Estima número de tokens no texto."""
@@ -88,6 +100,8 @@ class ContextManager:
                 "status": "no_context",
                 "path": str(self.context_file) if self.context_file else None,
                 "needs_compression": False,
+                "last_compressed_at": self._last_compressed_at,
+                "compressing": False,
             }
         
         try:
@@ -122,6 +136,8 @@ class ContextManager:
             "status": status,
             "path": str(self.context_file),
             "needs_compression": needs_compression,
+            "last_compressed_at": self._last_compressed_at,
+            "compressing": self._compressing,
         }
         
         self._usage_history.append({
@@ -134,29 +150,34 @@ class ContextManager:
         
         return usage
     
-    def compress(self, content: str, target_percentage: float = 60.0) -> str:
-        """Comprime contexto removendo informações menos importantes."""
+    def compress(self, content: str, target_percentage: float = 60.0, llm_provider: Optional[Any] = None) -> str:
+        """Comprime contexto — estrutural ou via LLM se provider disponível."""
         if not content:
             return content
-        
+
+        provider = llm_provider or self.llm_provider
+        if provider:
+            return self._compress_with_llm(content, target_percentage, provider)
+
+        return self._compress_structural(content, target_percentage)
+
+    def _compress_structural(self, content: str, target_percentage: float = 60.0) -> str:
+        """Compressão estrutural: mantém topo/fim de cada seção, corta meio."""
         lines = content.split('\n')
         compressed_lines = []
         in_code_block = False
         section_lines = []
         current_section = None
-        
+
         for line in lines:
             stripped = line.strip()
-            
             if stripped.startswith('```'):
                 in_code_block = not in_code_block
                 compressed_lines.append(line)
                 continue
-            
             if in_code_block:
                 compressed_lines.append(line)
                 continue
-            
             if stripped.startswith('#'):
                 if current_section and len(section_lines) > 20:
                     compressed_lines.append(f"## {current_section} (resumido)")
@@ -165,13 +186,11 @@ class ContextManager:
                     compressed_lines.extend(section_lines[-5:])
                 else:
                     compressed_lines.extend(section_lines)
-                
                 current_section = stripped
                 section_lines = []
                 continue
-            
             section_lines.append(line)
-        
+
         if current_section and len(section_lines) > 20:
             compressed_lines.append(f"## {current_section} (resumido)")
             compressed_lines.extend(section_lines[:10])
@@ -179,7 +198,7 @@ class ContextManager:
             compressed_lines.extend(section_lines[-5:])
         else:
             compressed_lines.extend(section_lines)
-        
+
         result = []
         prev_empty = False
         for line in compressed_lines:
@@ -188,24 +207,74 @@ class ContextManager:
                 continue
             result.append(line)
             prev_empty = is_empty
-        
+
         compressed = '\n'.join(result)
-        
         current_tokens = self.count_tokens(compressed)
         target_tokens = int(self.token_limit * (target_percentage / 100))
-        
+
         if current_tokens > target_tokens:
             lines = compressed.split('\n')
             keep_start = len(lines) // 3
             keep_end = len(lines) // 6
-            
             compressed = '\n'.join(lines[:keep_start]) + \
                         f"\n\n<!-- Contexto comprimido: {current_tokens} tokens -> {target_tokens} tokens -->\n\n" + \
                         '\n'.join(lines[-keep_end:])
-        
+
         return compressed
-    
-    def auto_compress_if_needed(self) -> bool:
+
+    def _compress_with_llm(self, content: str, target_percentage: float, provider: Any) -> str:
+        """Compressão via LLM: cada seção é resumida preservando acordos."""
+        import json
+        lines = content.split('\n')
+        sections: list[dict] = []
+        current_heading = "geral"
+        current_lines: list[str] = []
+
+        for line in lines:
+            stripped = line.strip()
+            if stripped.startswith('#') and not stripped.startswith('## '):
+                if current_lines:
+                    sections.append({"heading": current_heading, "body": '\n'.join(current_lines).strip()})
+                current_heading = stripped.lstrip('#').strip()
+                current_lines = []
+            else:
+                current_lines.append(line)
+
+        if current_lines:
+            sections.append({"heading": current_heading, "body": '\n'.join(current_lines).strip()})
+
+        current_tokens = self.count_tokens(content)
+        target_tokens = int(self.token_limit * (target_percentage / 100))
+
+        # Seção por seção: só resume se estourarem o alvo
+        compressed_sections = []
+        estimated = 0
+        for sec in sections:
+            sec_tokens = self.count_tokens(sec["body"])
+            if estimated + sec_tokens <= target_tokens:
+                compressed_sections.append(f"# {sec['heading']}\n{sec['body']}")
+                estimated += sec_tokens
+            else:
+                prompt = f"{self.COMPRESSION_PROMPT}\n\n## {sec['heading']}\n\n{sec['body'][:8000]}"
+                try:
+                    resp = provider.chat(
+                        messages=[
+                            {"role": "system", "content": "Você é um compressor de contexto. Seja direto."},
+                            {"role": "user", "content": prompt},
+                        ],
+                        max_tokens=max(200, target_tokens // max(len(sections), 1)),
+                    )
+                    compressed_sections.append(f"# {sec['heading']} (comprimido)\n{resp.content.strip()}")
+                    estimated += self.count_tokens(resp.content)
+                except Exception:
+                    compressed_sections.append(f"# {sec['heading']}\n{sec['body'][:1000]}...")
+                    estimated += 1000
+
+        result = '\n\n'.join(compressed_sections)
+        result += f"\n\n<!-- Contexto comprimido via LLM: {current_tokens} tokens -> {self.count_tokens(result)} tokens -->"
+        return result
+
+    def auto_compress_if_needed(self, llm_provider: Optional[Any] = None) -> bool:
         """Comprime automaticamente se necessário."""
         if not self.auto_compress or not self.context_file:
             return False
@@ -216,17 +285,20 @@ class ContextManager:
             return False
         
         try:
+            self._compressing = True
             content = self.context_file.read_text(encoding="utf-8")
-            compressed = self.compress(content)
+            compressed = self.compress(content, llm_provider=llm_provider or self.llm_provider)
             
             backup_path = self.context_file.with_suffix('.bak.md')
             backup_path.write_text(content, encoding="utf-8")
             
             self.context_file.write_text(compressed, encoding="utf-8")
-            
+            self._last_compressed_at = datetime.utcnow().isoformat()
             return True
         except Exception:
             return False
+        finally:
+            self._compressing = False
     
     def get_growth_history(self) -> list[dict]:
         """Retorna histórico de crescimento do contexto."""
@@ -303,11 +375,13 @@ class AgentBase(ABC):
         context_file: Optional[str] = None,
         token_limit: int = 32000,
         auto_compress: bool = True,
+        llm_provider: Optional[Any] = None,
     ):
         self.agent_id = agent_id
         self.project_id = project_id
         self.notifier = notifier
         self.role = role
+        self.llm_provider = llm_provider
         self._start_time: Optional[datetime] = None
         self._current_task: Optional[dict] = None
         
@@ -317,6 +391,7 @@ class AgentBase(ABC):
             token_limit=token_limit,
             warn_at_percentage=80.0,
             auto_compress=auto_compress,
+            llm_provider=llm_provider,
         )
     
     @abstractmethod
@@ -350,7 +425,7 @@ class AgentBase(ABC):
             
             self._emit(AgentStatus.RUNNING, f"Executando: {label}", task)
             
-            self._context_manager.auto_compress_if_needed()
+            self._context_manager.auto_compress_if_needed(llm_provider=self.llm_provider)
             
             output = self.execute(task)
             
@@ -445,7 +520,7 @@ class AgentBase(ABC):
     
     def compress_context(self, target_percentage: float = 60.0) -> bool:
         """Comprime contexto manualmente."""
-        return self._context_manager.auto_compress_if_needed()
+        return self._context_manager.auto_compress_if_needed(llm_provider=self.llm_provider)
     
     def _build_result(
         self,

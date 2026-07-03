@@ -2,11 +2,26 @@
 Agent Factory — LLM Integration
 ================================
 Integração com provedores de LLM para tomada de decisão de agentes.
-Suporta Groq (API) e Ollama (local).
+Suporta Groq (API), Ollama (local), e MultiModelProvider (roteamento inteligente).
+
+Uso rápido (console):
+    from src.llm import get_provider, MultiModelProvider
+
+    # Ativa squad multi-modelo local
+    provider = get_provider("local_multi")
+    resp = provider.chat([{"role": "user", "content": "Gere um teste"}], task_type="coder")
+
+    # Ou deixa o "auto" decidir (groq → ollama → multi → mock)
+    provider = get_provider("auto")
+
+    # Cache integrado
+    from src.orchestrator.cache import CachedProvider, LLMCache
+    provider = CachedProvider(get_provider("local_multi"), LLMCache("sqlite"))
 """
 
 import json
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 from dataclasses import dataclass
@@ -221,11 +236,15 @@ def get_provider(
     Factory para obter provedor de LLM.
     
     Args:
-        provider_name: "groq", "ollama", "mock", ou "auto"
+        provider_name: "groq", "ollama", "mock", "local_multi", ou "auto"
         **kwargs: Argumentos passados ao provedor
     
     Returns:
         Instância do provedor
+    
+    Nota:
+        "auto" tenta groq → ollama → local_multi → mock
+        "local_multi" ativa o squad de 4 modelos locais com roteamento inteligente
     """
     if provider_name == "groq":
         return GroqProvider(**kwargs)
@@ -233,17 +252,185 @@ def get_provider(
         return OllamaProvider(**kwargs)
     elif provider_name == "mock":
         return MockProvider(**kwargs)
+    elif provider_name == "local_multi":
+        return MultiModelProvider(**kwargs)
     elif provider_name == "auto":
-        # Tenta Groq primeiro, depois Ollama
+        # Tenta cloud primeiro, depois local
         groq = GroqProvider()
         if groq.is_available():
             return groq
         
         ollama = OllamaProvider()
         if ollama.is_available():
-            return ollama
+            # Se Ollama está rodando, ativa squad multi-modelo
+            return MultiModelProvider()
         
         # Fallback para mock
         return MockProvider()
     else:
-        raise ValueError(f"Provedor desconhecido: {provider_name}")
+        raise ValueError(
+            f"Provedor desconhecido: {provider_name}. "
+            f"Opções: groq, ollama, mock, local_multi, auto"
+        )
+
+
+CAPABILITIES_REGISTRY = {
+    "classifier": {
+        "model": "gemma3:4b",
+        "label": "Classificador rápido",
+        "description": "Classifica tipo de tarefa, prioridade, roteamento",
+        "fits_gpu": True,
+        "params": {"temperature": 0.1, "max_tokens": 256},
+        "prompt_template": (
+            "Classifique a tarefa abaixo em UMA das categorias: "
+            "code, review, test, docs, architecture, analysis, planning, config.\n"
+            "Responda apenas com o nome da categoria.\n\nTarefa: {task}\n\nCategoria:"
+        ),
+    },
+    "reasoner": {
+        "model": "qwen3.6",
+        "label": "Raciocínio e coordenação",
+        "description": "Decomposição de tarefas, planejamento, decisões arquiteturais",
+        "fits_gpu": False,
+        "params": {"temperature": 0.3, "max_tokens": 4096},
+    },
+    "coder": {
+        "model": "qwen2.5-coder:7b",
+        "label": "Especialista em código",
+        "description": "Geração de código, testes, refatoração",
+        "fits_gpu": True,
+        "params": {"temperature": 0.2, "max_tokens": 4096},
+    },
+    "validator": {
+        "model": "gemma4",
+        "label": "Validador de saída",
+        "description": "Revisão de código, verificação de segurança, validação",
+        "fits_gpu": False,
+        "params": {"temperature": 0.1, "max_tokens": 2048},
+    },
+}
+
+
+class MultiModelProvider(LLMProvider):
+    """
+    Provedor que roteia requisições para o melhor modelo local
+    baseado no tipo da tarefa.
+
+    Modelos:
+      - classifier (gemma3:4b):   classificação rápida (~1s, cabe na GPU)
+      - reasoner   (qwen3.6):      raciocínio pesado (~23GB, offload parcial)
+      - coder      (qwen2.5-coder:7b): geração de código (~4.7GB, cabe na GPU)
+      - validator  (gemma4):       revisão e validação (~9.6GB, offload)
+
+    Uso:
+        provider = MultiModelProvider()
+        resp = provider.chat(messages, task_type="coder")
+        # ou deixa o classifier detectar automaticamente:
+        resp = provider.chat(messages)
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:11434",
+        capabilities: Optional[dict] = None,
+        classifier_model: str = "gemma3:4b",
+        default_model: str = "qwen3.6",
+    ):
+        self.base_url = base_url
+        self.capabilities = capabilities or CAPABILITIES_REGISTRY
+        self.classifier_model = classifier_model
+        self.default_model = default_model
+        self._providers: dict[str, OllamaProvider] = {}
+
+    def _get_provider(self, model_name: str) -> OllamaProvider:
+        """Retorna (ou cria) provider para um modelo."""
+        if model_name not in self._providers:
+            self._providers[model_name] = OllamaProvider(
+                base_url=self.base_url, model=model_name
+            )
+        return self._providers[model_name]
+
+    def _classify_task(self, messages: list[dict]) -> str:
+        """
+        Usa o classificador (gemma3:4b) pra detectar o tipo da tarefa
+        a partir da mensagem do usuário.
+        """
+        user_msg = ""
+        for m in reversed(messages):
+            if m.get("role") in ("user", "system") and m.get("content"):
+                user_msg = m["content"][:1000]
+                break
+
+        prompt = self.capabilities["classifier"]["prompt_template"].format(task=user_msg)
+        classifier = self._get_provider(self.classifier_model)
+        try:
+            resp = classifier.chat(
+                messages=[{"role": "user", "content": prompt}],
+                **self.capabilities["classifier"]["params"],
+            )
+            category = resp.content.strip().lower()
+            # Valida se é uma categoria conhecida
+            if category in self.capabilities:
+                return category
+            # Tenta extrair por regex
+            for known in self.capabilities:
+                if known in category:
+                    return known
+            return self.default_model
+        except Exception:
+            return self.default_model
+
+    def chat(
+        self,
+        messages: list[dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+        task_type: Optional[str] = None,
+        **kwargs,
+    ) -> LLMResponse:
+        """
+        Envia mensagem para o melhor modelo.
+
+        Args:
+            messages: Histórico da conversa
+            model: Nome específico do modelo (sobrepõe roteamento)
+            task_type: "coder" | "reasoner" | "validator" | "classifier"
+                       Se None, usa o classifier pra detectar.
+        """
+        # Se modelo explícito, usa diretamente
+        if model:
+            provider = self._get_provider(model)
+            return provider.chat(messages, model, temperature, max_tokens, **kwargs)
+
+        # Descobre o tipo de tarefa
+        if task_type is None:
+            task_type = self._classify_task(messages)
+
+        # Resolve o modelo a partir das capacidades
+        cap = self.capabilities.get(task_type)
+        if cap is None:
+            # Fallback: procura por substring no nome
+            for key, val in self.capabilities.items():
+                if task_type in key or key in task_type:
+                    cap = val
+                    break
+        if cap is None:
+            cap = self.capabilities.get(self.default_model, {})
+
+        model_name = cap.get("model", self.default_model)
+        params = {**cap.get("params", {})}
+        params.setdefault("temperature", temperature)
+        params.setdefault("max_tokens", max_tokens)
+        params.update(kwargs)
+
+        provider = self._get_provider(model_name)
+        return provider.chat(messages, model_name, **params)
+
+    def is_available(self) -> bool:
+        """Verifica se pelo menos um modelo local está disponível."""
+        for name in list(self.capabilities.keys()):
+            provider = self._get_provider(self.capabilities[name]["model"])
+            if provider.is_available():
+                return True
+        return False
