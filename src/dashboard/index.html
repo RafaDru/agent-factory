@@ -610,20 +610,54 @@
 
         .agent-card.running {
             border-color: var(--accent-light);
-            box-shadow: 0 0 20px rgba(96,165,250,0.3), inset 0 0 20px rgba(96,165,250,0.06);
+            border-width: 2px;
+            box-shadow: 0 0 30px rgba(96,165,250,0.4), inset 0 0 30px rgba(96,165,250,0.08);
             animation: pulse-card 1.5s ease-in-out infinite;
-            background: linear-gradient(135deg, var(--surface-raised), rgba(59,130,246,0.04));
+            background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(59,130,246,0.03));
         }
 
         .agent-card.running::before {
             content: '';
             position: absolute;
             top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-light), transparent);
+            box-shadow: 0 0 12px rgba(96,165,250,0.6);
+        }
+
+        .agent-card.running::after {
+            content: '';
+            position: absolute;
+            top: 0;
             left: -100%;
             width: 60%;
             height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(96,165,250,0.1), transparent);
-            animation: shimmer 2s ease-in-out infinite;
+            background: linear-gradient(90deg, transparent, rgba(96,165,250,0.06), transparent);
+            animation: shimmer 2.5s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .running-tag {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 2px 10px;
+            border-radius: 10px;
+            background: var(--accent);
+            color: #fff;
+            animation: pulse-tag 1.2s ease-in-out infinite;
+            margin-left: var(--sp-2);
+        }
+        .agent-card.running .running-tag { display: inline-flex; }
+        @keyframes pulse-tag {
+            0%, 100% { box-shadow: 0 0 6px rgba(96,165,250,0.5); }
+            50% { box-shadow: 0 0 16px rgba(96,165,250,0.9); }
         }
 
         .agent-card.failed {
@@ -1524,8 +1558,16 @@
 
         function getFilteredAgentIds() {
             const keys = Object.keys(agents);
-            if (!selectedProject) return keys;
-            return keys.filter(key => agents[key].source === selectedProject);
+            if (!selectedProject) return keys.sort((a, b) => {
+                const ta = agents[a].lastTime || agents[a].timestamp || 0;
+                const tb = agents[b].lastTime || agents[b].timestamp || 0;
+                return new Date(tb) - new Date(ta);
+            });
+            return keys.filter(key => agents[key].source === selectedProject).sort((a, b) => {
+                const ta = agents[a].lastTime || agents[a].timestamp || 0;
+                const tb = agents[b].lastTime || agents[b].timestamp || 0;
+                return new Date(tb) - new Date(ta);
+            });
         }
 
         function buildOrchestrationTree() {
@@ -1915,6 +1957,7 @@
                             <div class="card-icon">${emoji}</div>
                             <div class="card-title-row">
                                 <span class="card-title">${agent.id}</span>
+                                <span class="running-tag">▶ Running</span>
                                 <div class="card-meta">
                                     <span class="card-stat">⚡ <strong>${agent.activations}</strong></span>
                                     <span class="card-stat">📨 <strong>${agent.messages.length}</strong></span>
