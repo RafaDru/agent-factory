@@ -8,6 +8,24 @@
 
 ---
 
+## Dashboard Preview
+
+| Visão Geral | Detalhes | Orquestração |
+|---|---|---|
+| ![Overview](docs/screenshots/dashboard-overview.png) | ![Detail](docs/screenshots/dashboard-detail.png) | ![Orchestration](docs/screenshots/dashboard-orchestration.png) |
+
+### Key Dashboard Features
+
+- **Dual status**: each agent shows operational *Status* (Ready/Running) + *Last Execution* (✅ Completed / ❌ Failed / ⏹️ Stopped)
+- **Running agents**: pulse glow, blue top bar, **▶ Running** tag, shimmer sweep, blue-tinted background
+- **Orchestration view**: hierarchical tree of coordinator → worker delegations with real-time status per node
+- **Overview cards**: per-project summary with running/completed/failed/stopped counts and segmented progress bars
+- **Event log**: per-agent paginated log (10 per page) + global collapsible log
+- **Context bar**: real-time token/KB usage with color-coded status (ok/warning/exhausted)
+- **Responsive layout**: AppShell with collapsible sidebar, adapts to 900px and 600px breakpoints
+
+---
+
 ## Overview
 
 Agent Factory is a Python framework for creating, orchestrating, and monitoring autonomous AI agents. It provides:
@@ -26,13 +44,13 @@ Agent Factory is a Python framework for creating, orchestrating, and monitoring 
 > **Beta** — This is the first public release. Core APIs are stable, but breaking changes may occur as the framework evolves. Feedback and contributions are welcome.
 
 | What's working | What's in progress |
-|---|---|
+|---|---|---|
 | Agent lifecycle (coordinator/worker/reviewer) | Package distribution (PyPI) |
-| Real-time dashboard with context tracking | CLI tooling |
+| Real-time dashboard with dual status & orchestration view | CLI tooling |
 | ContextManager with auto-compression | Plugin system |
 | AgentLoader for on-demand loading | Windows installer |
 | LLM providers (Groq, Ollama, Mock) | Documentation site |
-| 36+ unit tests | CI/CD pipeline |
+| 56+ unit tests | CI/CD pipeline |
 
 ---
 
@@ -56,7 +74,7 @@ agent-factory/
 │   ├── registry.py          # Project + agent registry
 │   └── loader.py            # AgentLoader (on-demand loading)
 ├── tests/                   # 36+ pytest tests
-├── docs/                    # LLM instructions, changelogs
+├── docs/                    # LLM instructions, changelogs, screenshots
 ├── projects/                # External project configs
 ├── examples/                # Usage examples
 ├── pyproject.toml
@@ -140,12 +158,18 @@ server.start()
 
 ## Dashboard Features
 
-- **Agent cards** — horizontal layout with name, role, status badge, activation count
+- **Dual status indicators** — Operational Status (Ready/Running) + Last Execution (✅ Completed / ❌ Failed / ⏹️ Stopped)
+- **Running highlight** — blue top bar with glow, **▶ Running** pulse tag, shimmer sweep, blue border and background
+- **Orchestration view** — hierarchical tree of coordinator → worker chains, auto-detected from delegation events
+- **Overview cards** — per-project summary with running/completed/failed/stopped counts and segmented bars
+- **Agent cards** — horizontal layout with name, role, dual badges, activation mini-chart, context bar
 - **Context bar** — real-time token/KB usage with color-coded status (ok/warning/exhausted)
 - **Per-agent event log** — paginated (10 per page), expandable within each card
 - **Main event log** — collapsible global log with date/time/agent/task/status columns
-- **Pulse animations** — running agents glow blue, failed agents glow red
-- **SSE-ready** — designed for Server-Sent Events (currently uses polling)
+- **Pulse animations** — running agents glow blue with shimmer, failed agents glow red
+- **Sidebar** — collapsible with project filters (Todos/AFD/PTA) and settings toggles
+- **Responsive** — adapts to 900px and 600px breakpoints, columns hide on smaller screens
+- **SSE-ready** — designed for Server-Sent Events (currently uses 1s polling)
 
 ---
 
