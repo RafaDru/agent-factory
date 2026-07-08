@@ -8,21 +8,48 @@
 
 ---
 
-## Dashboard Preview
+## Dashboard
 
-| Visão Geral | Detalhes | Orquestração |
-|---|---|---|
-| ![Overview](docs/screenshots/dashboard-overview.png) | ![Detail](docs/screenshots/dashboard-detail.png) | ![Orchestration](docs/screenshots/dashboard-orchestration.png) |
+### Dual Status Indicators
 
-### Key Dashboard Features
+Each agent shows two independent statuses: operational *Status* (Ready/Running) and *Last Execution* (✅ Completed / ❌ Failed / ⏹️ Stopped). Agents stuck in "running" for more than 5 minutes are automatically detected as **stopped** (interrupted).
 
-- **Dual status**: each agent shows operational *Status* (Ready/Running) + *Last Execution* (✅ Completed / ❌ Failed / ⏹️ Stopped)
-- **Running agents**: pulse glow, blue top bar, **▶ Running** tag, shimmer sweep, blue-tinted background
-- **Orchestration view**: hierarchical tree of coordinator → worker delegations with real-time status per node
-- **Overview cards**: per-project summary with running/completed/failed/stopped counts and segmented progress bars
-- **Event log**: per-agent paginated log (10 per page) + global collapsible log
-- **Context bar**: real-time token/KB usage with color-coded status (ok/warning/exhausted)
-- **Responsive layout**: AppShell with collapsible sidebar, adapts to 900px and 600px breakpoints
+<p align="center">
+  <img src="docs/screenshots/dashboard-detail.png" alt="Agent detail view with dual status" width="100%">
+</p>
+
+- **Status**: Ready (idle) or Running (actively executing) — blue glow + **▶ Running** tag + shimmer
+- **Last Execution**: ✅ Completed, ❌ Failed, or ⏹️ Stopped — shown as a color-coded pill
+- **Ordering**: agents sort by last execution time descending — running agents jump to top
+
+---
+
+### Orchestration View
+
+Hierarchical tree of coordinator → worker delegation chains, auto-detected from events. Each node shows real-time status and task type.
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-orchestration.png" alt="Orchestration tree view" width="100%">
+</p>
+
+- Detects `"Delegando tarefa X para subordinado"` messages from coordinators
+- Maps task types to workers: `cv_task → visao-computacional`, `render_task → renderizacao`, `mobile_task → frontend-mobile`
+- Correlates by timestamp window (3s) for accurate chain reconstruction
+- Updates in real-time via polling cycle
+
+---
+
+### Overview Cards
+
+Per-project summary cards with agent counts and segmented progress bars.
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-overview.png" alt="Overview cards" width="100%">
+</p>
+
+- **🤖 Total**, **⚡ Running**, **✅ Completed**, **❌ Failed**, **⏹️ Stopped**, **📨 Events**
+- Segmented bar visualizes distribution across status categories
+- Click any card to filter agents by project
 
 ---
 
