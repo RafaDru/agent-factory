@@ -252,6 +252,22 @@ def run_demo_agents(notifier):
         }},
     ))
 
+    time.sleep(1)
+    notifier.emit(AgentEvent(
+        agent_id="agent-factory-dev", agent_role=AgentRole.WORKER,
+        status=AgentStatus.COMPLETED, task_id="startup",
+        project_id="agent-factory-dev",
+        message="Framework analisado — estrutura carregada com sucesso",
+    ))
+
+    time.sleep(1)
+    notifier.emit(AgentEvent(
+        agent_id="qa", agent_role=AgentRole.WORKER,
+        status=AgentStatus.COMPLETED, task_id="startup",
+        project_id="agent-factory-dev",
+        message="Dependências verificadas — ambiente OK",
+    ))
+
     print("[Demo] ✅ Agentes de demonstração executados")
 
 
