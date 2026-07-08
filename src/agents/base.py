@@ -14,6 +14,7 @@ Context Tracking Features:
 import os
 import re
 import time
+import inspect
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -22,6 +23,44 @@ from ..protocols.schema import (
     AgentEvent, AgentStatus, AgentRole, TaskResult
 )
 from ..protocols.events import EventNotifier
+
+
+class StructuredError(Exception):
+    """
+    Erro estruturado que expoe causa raiz e acoes disponiveis.
+    
+    Permite que a IA consumidora entenda:
+    1. O tipo do erro (validation | unknown_action | execution | timeout)
+    2. O que pediu de errado
+    3. O que pode pedir no lugar
+    4. Onde encontrar documentacao
+    """
+    
+    def __init__(
+        self,
+        message: str,
+        error_type: str = "execution",
+        action_requested: Optional[str] = None,
+        available_actions: Optional[list[str]] = None,
+        doc_path: Optional[str] = None,
+        hint: Optional[str] = None,
+    ):
+        self.error_type = error_type
+        self.action_requested = action_requested
+        self.available_actions = available_actions or []
+        self.doc_path = doc_path
+        self.hint = hint
+        super().__init__(message)
+    
+    def to_dict(self) -> dict:
+        return {
+            "error_type": self.error_type,
+            "action_requested": self.action_requested,
+            "available_actions": self.available_actions,
+            "message": str(self),
+            "documentation": self.doc_path,
+            "hint": self.hint,
+        }
 
 
 class ContextManager:
@@ -421,7 +460,13 @@ class AgentBase(ABC):
         
         try:
             if not self.validate_input(task):
-                raise ValueError(f"Input invalido para tarefa {task_id}")
+                input_schema = self.get_input_schema()
+                raise StructuredError(
+                    message=f"Input invalido para tarefa {task_id}. Formato esperado: {input_schema}",
+                    error_type="validation",
+                    doc_path=self.get_doc_path(),
+                    hint=f"Forneca os campos necessarios: {input_schema}",
+                )
             
             self._emit(AgentStatus.RUNNING, f"Executando: {label}", task)
             
@@ -432,6 +477,16 @@ class AgentBase(ABC):
             self._emit(AgentStatus.COMPLETED, f"Concluido: {label}", task, payload=output)
             
             return self._build_result(task, AgentStatus.COMPLETED, output)
+            
+        except StructuredError as e:
+            self._emit(
+                AgentStatus.FAILED,
+                f"Erro: {label} - {e}",
+                task,
+                payload=e.to_dict(),
+                error=str(e),
+            )
+            return self._build_result(task, AgentStatus.FAILED, error=str(e))
             
         except Exception as e:
             self._emit(AgentStatus.FAILED, f"Erro: {label} - {str(e)}", task, error=str(e))
@@ -522,6 +577,52 @@ class AgentBase(ABC):
         """Comprime contexto manualmente."""
         return self._context_manager.auto_compress_if_needed(llm_provider=self.llm_provider)
     
+    def get_available_actions(self) -> dict[str, dict]:
+        """
+        Retorna as acoes disponiveis neste agente.
+        Subclasses podem sobrescrever para expor actions especificas.
+        """
+        actions = {}
+        if hasattr(self, 'ACTIONS'):
+            return getattr(self, 'ACTIONS')
+        for name in dir(self):
+            if name.startswith('_') and not name.startswith('__'):
+                method = getattr(self, name)
+                if callable(method):
+                    doc = (method.__doc__ or "").strip()
+                    actions[name.lstrip('_')] = {"description": doc[:200] if doc else ""}
+        return actions
+
+    def get_input_schema(self) -> dict:
+        """
+        Retorna o schema de input esperado pelo agente.
+        Subclasses podem sobrescrever.
+        """
+        return {
+            "action": "str (obrigatorio) - acao a executar",
+            "task_id": "str (opcional) - identificador da tarefa",
+        }
+
+    def get_doc_path(self) -> Optional[str]:
+        """
+        Retorna caminho do arquivo de documentacao/contexto do agente.
+        """
+        if self._context_manager and self._context_manager.context_file:
+            return str(self._context_manager.context_file)
+        return None
+
+    def get_capabilities(self) -> dict:
+        """
+        Retorna capacidades completas do agente.
+        """
+        return {
+            "agent_id": self.agent_id,
+            "role": self.role.value,
+            "actions": self.get_available_actions(),
+            "input_schema": self.get_input_schema(),
+            "documentation": self.get_doc_path(),
+        }
+
     def _build_result(
         self,
         task: dict[str, Any],

@@ -150,35 +150,77 @@ def start_dashboard(port: int, demo: bool = False):
     from src.protocols.events import EventNotifier
     from src.dashboard.server import DashboardServer
     from src.persistence import ContextStore
+    from src.registry import get_registry
+    from src.loader import AgentReference
+    from src.protocols.schema import ProjectConfig
 
-    # Register all projects — output_dir matches EventNotifier convention
-    projects = {
-        "agent-factory-dev": ".agent-factory/events",
-        "pta": ".agent-factory/events",
-    }
+    registry = get_registry()
 
+    # Register agent-factory-dev project
+    if not registry.project_exists("agent-factory-dev"):
+        registry.register(ProjectConfig(
+            project_id="agent-factory-dev",
+            name="Agent Factory",
+            description="Plataforma de orquestracao de agentes autonomos",
+        ))
+
+    # Register PTA project
+    if not registry.project_exists("pta"):
+        registry.register(ProjectConfig(
+            project_id="pta",
+            name="Personal Trainer Agent",
+            description="App mobile com IA e visao computacional",
+        ))
+
+    # Register real agent references for agent-factory-dev project
+    agent_src = Path(__file__).parent / "src" / "agents"
+    refs = [
+        AgentReference(
+            agent_id="coordenador",
+            module_path=str(agent_src / "coordinator.py"),
+            class_name="AgentFactoryCoordinator",
+            context_limit_kb=15.0,
+        ),
+        AgentReference(
+            agent_id="agent-factory-dev",
+            module_path=str(agent_src / "factory_dev.py"),
+            class_name="AgentFactoryDevAgent",
+            context_limit_kb=15.0,
+        ),
+        AgentReference(
+            agent_id="qa",
+            module_path=str(agent_src / "qa.py"),
+            class_name="QAAgent",
+            context_limit_kb=10.0,
+        ),
+    ]
+    for ref in refs:
+        registry.add_agent_ref("agent-factory-dev", ref)
+
+    # Register PTA agent refs if not already there
+    pta_agent_path = Path.home() / "PersonalTrainerAgent" / "agentes" / "__init__.py"
+    if pta_agent_path.exists() and not registry.list_agent_refs("pta"):
+        pta_refs = [
+            AgentReference(agent_id="coordenador", module_path=str(pta_agent_path), class_name="CoordenadorAgent"),
+            AgentReference(agent_id="frontend-mobile", module_path=str(pta_agent_path), class_name="FrontendMobileAgent"),
+            AgentReference(agent_id="visao-computacional", module_path=str(pta_agent_path), class_name="VisaoComputacionalAgent"),
+            AgentReference(agent_id="ui-ux", module_path=str(pta_agent_path), class_name="UIUXAgent"),
+            AgentReference(agent_id="qa", module_path=str(pta_agent_path), class_name="QAAgent"),
+            AgentReference(agent_id="renderizacao", module_path=str(pta_agent_path), class_name="RenderizacaoAgent"),
+            AgentReference(agent_id="agent-factory-dev", module_path=str(pta_agent_path), class_name="AgentFactoryDevAgent"),
+            AgentReference(agent_id="research", module_path=str(pta_agent_path), class_name="ResearchAgent"),
+        ]
+        for ref in pta_refs:
+            registry.add_agent_ref("pta", ref)
+
+    # Build dashboard server with notifiers from registry
     server = None
     af_notifier = None
+    projects = registry.list_project_ids()
 
-    for proj, output_dir in projects.items():
-        notifier = EventNotifier(proj, output_dir=output_dir)
+    for proj in projects:
+        notifier = registry.get_notifier(proj)
         store = ContextStore(proj)
-
-        # Load existing events from disk
-        events_file = Path(output_dir) / proj / "events.jsonl"
-        if events_file.exists():
-            try:
-                with open(events_file, encoding="utf-8") as fh:
-                    for line in fh:
-                        line = line.strip()
-                        if line:
-                            from src.protocols.schema import AgentEvent
-                            import json
-                            data = json.loads(line)
-                            event = AgentEvent(**data)
-                            notifier._events.append(event)
-            except Exception:
-                pass
 
         if server is None:
             server = DashboardServer(notifier, port=port, context_store=store)
@@ -187,10 +229,10 @@ def start_dashboard(port: int, demo: bool = False):
             server.add_notifier(notifier)
             server.add_context_store(proj, store)
 
-        print(f"\n  [{proj}] {output_dir}/events/")
+        print(f"\n  [{proj}] eventos em: .agent-factory/events/{proj}/")
 
     print(f"\n[Dashboard] http://localhost:{port}")
-    print(f"[Dashboard] Projetos: {list(projects.keys())}")
+    print(f"[Dashboard] Projetos: {projects}")
 
     # Start server in a thread
     import threading
@@ -199,7 +241,7 @@ def start_dashboard(port: int, demo: bool = False):
     time.sleep(0.5)
 
     if demo and af_notifier:
-        run_demo_agents(af_notifier)
+        run_demo_agents(registry)
 
     print(f"\n{'─' * 50}")
     print("Agent Factory pronto! Pressione Ctrl+C para encerrar.")
@@ -213,62 +255,118 @@ def start_dashboard(port: int, demo: bool = False):
         print("\nEncerrando Agent Factory...")
 
 
-def run_demo_agents(notifier):
-    """Run demo agents to populate the dashboard."""
+def run_demo_agents(registry):
+    """Load and run real agents to populate the dashboard with live events."""
     from src.protocols.schema import AgentEvent, AgentStatus, AgentRole
 
-    print("\n[Demo] 🎬 Executando agentes de demonstração...")
+    print("\n[Demo] 🎬 Carregando agentes reais...")
 
-    events_data = [
-        ("coordenador", AgentRole.COORDINATOR, AgentStatus.RUNNING,
-         "Iniciando pipeline de desenvolvimento"),
-        ("agent-factory-dev", AgentRole.WORKER, AgentStatus.RUNNING,
-         "Analisando estrutura do framework"),
-        ("qa", AgentRole.WORKER, AgentStatus.RUNNING,
-         "Verificando dependências do projeto"),
-    ]
-    for agent_id, role, status, message in events_data:
+    project_id = "agent-factory-dev"
+
+    # Load agents from registry (this triggers real imports)
+    try:
+        coordenador = registry.load_agent(project_id, "coordenador")
+        dev_agent = registry.load_agent(project_id, "agent-factory-dev")
+        qa_agent = registry.load_agent(project_id, "qa")
+    except Exception as e:
+        print(f"[Demo] ⚠️  Erro ao carregar agentes: {e}")
+        print("[Demo] → Usando fallback com eventos diretos")
+        _demo_fallback(registry.get_notifier(project_id))
+        return
+
+    # Wire subordinates
+    coordenador.set_subordinates({
+        "agent-factory-dev": dev_agent,
+        "qa": qa_agent,
+    })
+
+    print("[Demo] ✅ Agentes carregados. Executando tarefas...")
+
+    # Task 1: agent-factory-dev lists its own capabilities
+    result1 = dev_agent.run({
+        "task_id": "startup-capabilities",
+        "title": "Capabilities",
+        "action": "get_capabilities",
+    })
+    print(f"  [agent-factory-dev] capabilities: {result1.status.value}")
+
+    # Task 2: QAAgent validates syntax of a core file
+    core_file = str(Path(__file__).parent / "src" / "agents" / "base.py")
+    result2 = qa_agent.run({
+        "task_id": "startup-validate",
+        "title": "Validacao Inicial",
+        "description": "Validar sintaxe do AgentBase",
+        "action": "validate_python_syntax",
+        "file_path": core_file,
+    })
+    print(f"  [qa] validacao: {result2.status.value}")
+
+    # Task 3: Coordenador delegates a plan
+    result3 = coordenador.run({
+        "task_id": "startup-plan",
+        "title": "Plano Inicial",
+        "action": "plan_and_execute",
+        "goal": "Validar ambiente de desenvolvimento Agent Factory",
+        "tasks": [
+            {
+                "name": "list-src",
+                "agent_id": "agent-factory-dev",
+                "task": {
+                    "task_id": "step-list",
+                    "action": "list_directory",
+                    "path": str(Path(__file__).parent / "src"),
+                    "pattern": "**/*.py",
+                },
+            },
+            {
+                "name": "run-tests",
+                "agent_id": "qa",
+                "task": {
+                    "task_id": "step-tests",
+                    "action": "run_tests",
+                    "path": "tests/",
+                    "args": ["--tb=short", "-q"],
+                },
+                "depends_on": ["list-src"],
+            },
+        ],
+    })
+    print(f"  [coordenador] plano: {result3.output.get('status', '?')}")
+
+    print("[Demo] ✅ Agentes reais executados com sucesso")
+
+
+def _demo_fallback(notifier):
+    """Fallback: emite eventos diretos se o loading de agentes falhar."""
+    from src.protocols.schema import AgentEvent, AgentStatus, AgentRole
+
+    print("[Demo] → Fallback: emitindo eventos simulados")
+
+    for agent_id, role, msg in [
+        ("coordenador", AgentRole.COORDINATOR, "Iniciando pipeline"),
+        ("agent-factory-dev", AgentRole.WORKER, "Analisando estrutura"),
+        ("qa", AgentRole.WORKER, "Verificando dependencias"),
+    ]:
         notifier.emit(AgentEvent(
-            agent_id=agent_id, agent_role=role, status=status,
-            task_id="startup", project_id="agent-factory-dev",
-            message=message,
-            metrics={"duration_seconds": 0, "context": {
-                "used_kb": 2.4, "limit_kb": 15.0, "tokens": 214,
-                "token_limit": 32000, "percentage": 6.9,
-                "status": "ok", "compressing": False,
-            }},
+            agent_id=agent_id, agent_role=role,
+            status=AgentStatus.RUNNING, task_id="startup",
+            project_id="agent-factory-dev", message=msg,
         ))
         time.sleep(1)
 
-    notifier.emit(AgentEvent(
-        agent_id="coordenador", agent_role=AgentRole.COORDINATOR,
-        status=AgentStatus.COMPLETED, task_id="startup",
-        project_id="agent-factory-dev",
-        message="Ambiente local configurado — squad multi-modelo disponível",
-        metrics={"duration_seconds": 3.2, "context": {
-            "used_kb": 3.1, "limit_kb": 15.0, "tokens": 312,
-            "token_limit": 32000, "percentage": 10.0,
-            "status": "ok", "compressing": False,
-        }},
-    ))
+    for agent_id, msg in [
+        ("coordenador", "Ambiente configurado"),
+        ("agent-factory-dev", "Estrutura analisada"),
+        ("qa", "Dependencias OK"),
+    ]:
+        notifier.emit(AgentEvent(
+            agent_id=agent_id, agent_role=AgentRole.WORKER,
+            status=AgentStatus.COMPLETED, task_id="startup",
+            project_id="agent-factory-dev", message=msg,
+        ))
+        time.sleep(1)
 
-    time.sleep(1)
-    notifier.emit(AgentEvent(
-        agent_id="agent-factory-dev", agent_role=AgentRole.WORKER,
-        status=AgentStatus.COMPLETED, task_id="startup",
-        project_id="agent-factory-dev",
-        message="Framework analisado — estrutura carregada com sucesso",
-    ))
-
-    time.sleep(1)
-    notifier.emit(AgentEvent(
-        agent_id="qa", agent_role=AgentRole.WORKER,
-        status=AgentStatus.COMPLETED, task_id="startup",
-        project_id="agent-factory-dev",
-        message="Dependências verificadas — ambiente OK",
-    ))
-
-    print("[Demo] ✅ Agentes de demonstração executados")
+    print("[Demo] ✅ Fallback concluido")
 
 
 def main():
