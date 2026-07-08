@@ -1204,8 +1204,8 @@
                         📊 Todos <span class="pill-count" id="pill-all-count"></span>
                     </button>
                     <div class="view-toggle">
-                        <button class="view-btn active" id="view-overview-btn" onclick="setView('overview')">📋 Visão Geral</button>
-                        <button class="view-btn" id="view-detail-btn" onclick="setView('detail')">📑 Detalhes</button>
+                        <button class="view-btn" id="view-overview-btn" onclick="setView('overview')">📋 Visão Geral</button>
+                        <button class="view-btn active" id="view-detail-btn" onclick="setView('detail')">📑 Detalhes</button>
                         <button class="view-btn" id="view-orch-btn" onclick="setView('orchestration')">🔀 Orquestração</button>
                     </div>
                 </div>
@@ -1251,7 +1251,7 @@
         let currentProject = new URLSearchParams(window.location.search).get('project') || null;
         let pollInterval = null;
         let agentLogPages = {};
-        let viewMode = 'overview';
+        let viewMode = 'detail';
         let selectedProject = currentProject || '';
         let settings = {
             showGlobalLog: true,
