@@ -174,24 +174,28 @@ def start_dashboard(port: int, demo: bool = False):
 
     # Register real agent references for agent-factory-dev project
     agent_src = Path(__file__).parent / "src" / "agents"
+    ctx_base = Path(__file__).parent / "contexts" / "agent-factory-dev"
     refs = [
         AgentReference(
             agent_id="coordenador",
             module_path=str(agent_src / "coordinator.py"),
             class_name="AgentFactoryCoordinator",
             context_limit_kb=15.0,
+            context_file=str(ctx_base / "coordenador" / "CONTEXTO.md"),
         ),
         AgentReference(
             agent_id="agent-factory-dev",
             module_path=str(agent_src / "factory_dev.py"),
             class_name="AgentFactoryDevAgent",
             context_limit_kb=15.0,
+            context_file=str(ctx_base / "agent-factory-dev" / "CONTEXTO.md"),
         ),
         AgentReference(
             agent_id="qa",
             module_path=str(agent_src / "qa.py"),
             class_name="QAAgent",
             context_limit_kb=10.0,
+            context_file=str(ctx_base / "qa" / "CONTEXTO.md"),
         ),
     ]
     for ref in refs:
