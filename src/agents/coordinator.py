@@ -1,7 +1,7 @@
 """
-Agent Factory — Coordenador do Projeto agent-factory-dev (REAL)
-===============================================================
-Orquestra agentes-factory-dev e qa para evoluir a plataforma.
+Agent Factory — Coordenador do Projeto AFP (REAL)
+==================================================
+Orquestra dev e qa para evoluir a plataforma.
 Usa LLM (Groq/Ollama) para gerar planos autonomamente a partir de objetivos.
 """
 
@@ -20,16 +20,16 @@ from src.llm import get_provider, LLMProvider
 
 class AgentFactoryCoordinator(StandardBaseAgent):
     """
-    Coordenador do projeto agent-factory-dev.
+    Coordenador do projeto AFP.
     Recebe objetivos de alto nivel, gera planos via LLM e delega
-    para agent-factory-dev e qa.
+    para dev e qa.
     """
 
     ACTIONS = {
         "delegate": {
-            "description": "Delega tarefa para agente-factory-dev ou qa e retorna resultado",
+            "description": "Delega tarefa para dev ou qa e retorna resultado",
             "params": {
-                "agent_id": "str (obrigatorio) - desenvolvedor | qa | designer",
+                "agent_id": "str (obrigatorio) - dev | qa | designer",
                 "task": "dict (obrigatorio) - {action, ...}",
             },
         },
@@ -47,20 +47,20 @@ class AgentFactoryCoordinator(StandardBaseAgent):
         },
     }
 
-    PLAN_SYSTEM_PROMPT = """Voce e o coordenador do projeto Agent Factory (agent-factory-dev).
+    PLAN_SYSTEM_PROMPT = """Voce e o coordenador do projeto Agent Factory (AFP).
 Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 
 ## Regra de Ouro da Orquestração
 Você é o Coordenador. Sua responsabilidade é garantir a qualidade.
 1. Receba objetivo.
 2. Delegue sempre ao `designer` para propor o design/protótipo antes de qualquer código.
-3. Delegue ao `desenvolvedor` a implementação baseada nos artefatos do designer.
+3. Delegue ao `dev` a implementação baseada nos artefatos do designer.
 4. Delegue ao `qa` a validação final.
 5. Somente marque como COMPLETED após o QA validar. Se qualquer etapa falhar, aborte e reporte.
 
 ## Subordinados disponiveis (use estes nomes exatos)
 - designer: Planejamento gráfico, protótipos HTML/CSS, UX.
-- desenvolvedor: Implementação de código, scripts, edição de arquivos.
+- dev: Implementação de código, scripts, edição de arquivos.
 - qa: Testes, validação e qualidade.
 
 ## Formato de resposta
@@ -70,14 +70,14 @@ Responda exclusivamente com um JSON contendo uma chave "plan" (lista de tarefas 
 C:/Users/rafae/agent-factory
 
 ## Regras de Execucao (OBRIGATORIO)
-- Toda tarefa delegada ao agente 'desenvolvedor' DEVE ser seguida por uma tarefa de verificacao do agente 'qa'.
-- A tarefa de QA deve ter 'depends_on' apontando para o nome da tarefa do desenvolvedor.
+- Toda tarefa delegada ao agente 'dev' DEVE ser seguida por uma tarefa de verificacao do agente 'qa'.
+- A tarefa de QA deve ter 'depends_on' apontando para o nome da tarefa do dev.
 - O coordenador deve garantir essa cadeia de validacao antes de marcar a implementacao como concluida.
-- Os agentes disponiveis sao: desenvolvedor (codigo), qa (testes/validacao), designer (design/prototipo).
+- Os agentes disponiveis sao: dev (codigo), qa (testes/validacao), designer (design/prototipo).
 
 ## Acoes disponiveis por agente
 
-### desenvolvedor (codigo, arquivos, scripts)
+### dev (codigo, arquivos, scripts)
 - `read_file` params: file_path
 - `write_file` params: file_path, content
 - `edit_file` params: file_path, old_string, new_string
@@ -108,7 +108,7 @@ Responda exclusivamente com um JSON valido contendo uma chave "plan" com uma lis
   "plan": [
     {
       "name": "criar-arquivo-teste",
-      "agent_id": "desenvolvedor",
+      "agent_id": "dev",
       "task": {
         "task_id": "step-001",
         "title": "Criar arquivo de teste",
@@ -135,7 +135,7 @@ Responda exclusivamente com um JSON valido contendo uma chave "plan" com uma lis
 
 Regras:
 - "name" deve ser unico (usado como identificador de dependencia)
-- "agent_id" deve ser "desenvolvedor" (codigo), "qa" (testes), ou "designer" (design)
+- "agent_id" deve ser "dev" (codigo), "qa" (testes), ou "designer" (design)
 - "depends_on" lista "name"s de tarefas que devem ser concluidas antes
 - Nao inclua tarefas dependentes de si mesmas
 - Ordene as tarefas respeitando as dependencias

@@ -2,8 +2,9 @@
 
 import importlib
 import json
+import traceback
 from pathlib import Path
-from typing import Any, Optional, get_type_hints
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,6 +12,7 @@ from src.sdk.base import StandardBaseAgent
 from src.protocols.schema import AgentRole, TaskOutput, OutputStatus
 from src.protocols.events import EventNotifier
 from src.sdk.hooks import HookRegistry, HookPoint, HookContext
+from src.llm import get_provider, LLMProvider
 
 
 class ActionDef(BaseModel):
@@ -73,6 +75,14 @@ class AgentFactory:
         Constroi agente a partir da configuracao declarativa.
         Registra automaticamente as acoes como metodos do agente.
         """
+        # Resolver provider LLM se configurado
+        llm_provider: Optional[LLMProvider] = None
+        if config.llm_provider:
+            try:
+                llm_provider = get_provider(config.llm_provider)
+            except Exception as e:
+                print(f"  [Factory] ⚠️ LLM provider '{config.llm_provider}' falhou: {e}")
+
         # Validar handlers antes de criar a classe
         resolved_handlers: dict[str, Any] = {}
         for action_name, action_def in config.actions.items():
@@ -92,6 +102,7 @@ class AgentFactory:
                 super().__init__(*args, **outer_kwargs)
                 self._agent_def = config
                 self._prompt = config.prompt
+                self._llm_provider = llm_provider
 
             def execute(self, task: dict[str, Any]) -> TaskOutput:
                 action = task.get("action", "")
@@ -128,16 +139,69 @@ class AgentFactory:
         """Quando o action nao tem handler Python, usa LLM para decidir."""
         action = task.get("action", "")
         action_def = config.actions.get(action)
+
         if not action_def:
             return TaskOutput.needs_direction(
                 rationale=f"Acao '{action}' nao definida no agente '{config.id}'",
                 available_actions=list(config.actions.keys()),
             )
-        return TaskOutput.failure(
-            rationale=f"LLM nao configurado para action '{action}'. "
-                       "Defina handler Python ou configure llm_provider.",
-            available_actions=list(config.actions.keys()),
-        )
+
+        # Tentar usar LLM provider do agente
+        provider: Optional[LLMProvider] = getattr(agent, '_llm_provider', None)
+        if provider is None or not provider.is_available():
+            return TaskOutput.failure(
+                rationale=f"Acao '{action}' sem handler Python e LLM provider "
+                           f"'{config.llm_provider}' indisponivel. "
+                           "Defina handler Python ou configure llm_provider valido.",
+                available_actions=list(config.actions.keys()),
+            )
+
+        # Construir prompt para o LLM
+        task_params = {k: v for k, v in task.items() if k not in ('action', 'task_id', 'title')}
+        params_desc = "\n".join(
+            f"  {k}: {v}" for k, v in action_def.params.items()
+        ) if action_def.params else "  (parametros livres)"
+        extra_input = "\n".join(
+            f"  {k}: {v}" for k, v in task_params.items()
+        ) if task_params else "  (nenhum)"
+
+        prompt = f"""Voce e o agente '{config.id}' — {config.description or 'sem descricao'}.
+
+## Instrucao do sistema
+{config.prompt or 'Nenhuma instrucao especifica.'}
+
+## Acao solicitada
+{action_def.description or action}
+
+## Parametros esperados
+{params_desc}
+
+## Dados recebidos
+{extra_input}
+
+## Tarefa
+Com base nos dados acima, execute a acao '{action}'.
+Responda de forma direta e objetiva. Se houver erros, indique claramente.
+"""
+
+        try:
+            resp = provider.chat(
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3,
+                max_tokens=2048,
+            )
+            return TaskOutput.success(
+                summary=f"LLM ({config.llm_provider}): {resp.content[:120].strip()}...",
+                rationale=resp.content,
+                raw_response=resp.content,
+                model=resp.model,
+                usage=resp.usage,
+            )
+        except Exception as e:
+            return TaskOutput.failure(
+                rationale=f"LLM fallback falhou: {e}",
+                available_actions=list(config.actions.keys()),
+            )
 
     @staticmethod
     def _inject_skill(agent: StandardBaseAgent, skill_name: str, config: AgentDef):

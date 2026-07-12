@@ -355,6 +355,7 @@
             height: 8px;
             border-radius: 50%;
             flex-shrink: 0;
+            background: var(--text-muted);
         }
         .project-dot.afd { background: var(--accent); }
         .project-dot.pta { background: var(--success); }
@@ -1141,16 +1142,7 @@
                             <span class="item-label">Todos</span>
                             <span class="item-badge" id="sidebar-badge-all"></span>
                         </div>
-                        <div class="sidebar-item" data-sidebar-project="agent-factory-dev" onclick="sidebarSelectProject('agent-factory-dev')">
-                            <span class="project-dot afd"></span>
-                            <span class="item-label">AFD</span>
-                            <span class="item-badge" id="sidebar-badge-afd"></span>
-                        </div>
-                        <div class="sidebar-item" data-sidebar-project="pta" onclick="sidebarSelectProject('pta')">
-                            <span class="project-dot pta"></span>
-                            <span class="item-label">PTA</span>
-                            <span class="item-badge" id="sidebar-badge-pta"></span>
-                        </div>
+                        <div id="sidebar-projects"></div>
                     </div>
 
                     <div class="sidebar-divider"></div>
@@ -1192,6 +1184,29 @@
                                 <input type="checkbox" id="toggle-duration" checked onchange="toggleSetting('showDuration', this.checked)">
                                 <span class="toggle-slider"></span>
                             </label>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-divider"></div>
+
+                    <!-- Legenda de Ícones -->
+                    <div class="sidebar-section">
+                        <div class="sidebar-section-title" style="cursor:pointer" onclick="toggleIconLegend()">
+                            <span class="sec-icon">❓</span>
+                            <span class="sec-label">Ícones</span>
+                            <span class="sec-toggle" id="icon-legend-toggle">▶</span>
+                        </div>
+                        <div id="icon-legend-body" style="display:none;padding:4px 12px 8px;font-size:11px;line-height:1.8">
+                            <div>🎯 coordenador</div>
+                            <div>⚙️ agent-factory-dev</div>
+                            <div>🧪 qa</div>
+                            <div>📱 frontend-mobile</div>
+                            <div>👁️ visao-computacional</div>
+                            <div>🎬 renderizacao</div>
+                            <div>🎨 ui-ux</div>
+                            <div>🔬 research</div>
+                            <div>🤖 code-executor</div>
+                            <div style="margin-top:4px;color:var(--text-muted)">Passe o mouse no ícone para ver o role</div>
                         </div>
                     </div>
                 </div>
@@ -1248,11 +1263,14 @@
         let events = [];
         let agents = {};
         let contextStats = {};
+        let agentModels = {};
+        let openAgentLogs = new Set();
         let currentProject = new URLSearchParams(window.location.search).get('project') || null;
         let pollInterval = null;
         let agentLogPages = {};
         let viewMode = 'detail';
         let selectedProject = currentProject || '';
+        let timerInterval = null;
         let settings = {
             showGlobalLog: true,
             showOverview: true,
@@ -1286,6 +1304,9 @@
                 await fetchStatus();
                 await fetchContext();
             }, 1000);
+            timerInterval = setInterval(() => {
+                renderLiveTimers();
+            }, 1000);
             updateConnectionStatus(true);
         }
 
@@ -1299,6 +1320,12 @@
                 const url = currentProject ? `/api/status?project=${currentProject}` : '/api/status';
                 const response = await fetch(url);
                 const status = await response.json();
+                if (!currentProject) {
+                    const projectsResp = await fetch('/api/projects');
+                    const projects = await projectsResp.json();
+                    if (Array.isArray(projects)) projects.sort();
+                    updateSidebarProjects(projects);
+                }
                 updateUI(status);
             } catch (error) {
                 console.error('Erro ao buscar status:', error);
@@ -1309,35 +1336,40 @@
             try {
                 let allNewEvents = [];
                 let allProviders = {};
+                let allAgentModels = {};
 
                 if (currentProject) {
                     const response = await fetch(`/api/events?project=${currentProject}`);
                     const data = await response.json();
                     allNewEvents = data.events || [];
                     allProviders = data.providers || {};
+                    allAgentModels = data.agent_models || {};
+                    allAgentModels = data.agent_models || {};
                 } else {
-                    // Try per-project fetches first
-                    const projects = ['agent-factory-dev', 'pta'];
+                    const projectsResp = await fetch('/api/projects');
+                    const projects = await projectsResp.json();
+                    if (Array.isArray(projects)) projects.sort();
+                    updateSidebarProjects(projects);
                     for (const proj of projects) {
                         try {
                             const response = await fetch(`/api/events?project=${proj}`);
                             const data = await response.json();
                             const projEvents = data.events || [];
-                            console.log(`[Dashboard] Fetched ${projEvents.length} events from ${proj}`);
                             allNewEvents = allNewEvents.concat(projEvents);
                             Object.assign(allProviders, data.providers || {});
+                            Object.assign(allAgentModels, data.agent_models || {});
                         } catch (e) {
                             console.warn(`Erro ao buscar eventos de ${proj}:`, e);
                         }
                     }
-                    // Fallback: if per-project fetches failed, try merged endpoint
                     if (allNewEvents.length === 0) {
                         try {
                             const response = await fetch('/api/events');
                             const data = await response.json();
                             allNewEvents = data.events || data;
                             allProviders = data.providers || {};
-                            console.log(`[Dashboard] Fallback merged: ${allNewEvents.length} events`);
+                            allAgentModels = data.agent_models || {};
+                            allAgentModels = data.agent_models || {};
                         } catch (e) {
                             console.error('Fallback fetch failed:', e);
                         }
@@ -1350,12 +1382,16 @@
                     });
                 });
 
+                agentModels = allAgentModels;
+
                 const seen = new Set(events.map(e => e.event_id));
                 const newEvents = allNewEvents.filter(e => !seen.has(e.event_id));
 
-                if (newEvents.length > 0) {
+                if (allNewEvents.length > 0) {
                     events = allNewEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                    console.log(`[Dashboard] Processing ${newEvents.length} new events, total: ${events.length}`);
+                }
+                if (newEvents.length > 0) {
+                    console.log(`[Dashboard] ${newEvents.length} novos eventos, total: ${events.length}`);
                     newEvents.forEach(event => handleEvent(event));
                 }
 
@@ -1518,13 +1554,46 @@
             renderAll();
         }
 
+        const sidebarLabels = {
+            'agent-factory-dev': { icon: '⚙️', label: 'AFD', dotClass: 'afd' },
+            'pta': { icon: '🌱', label: 'PTA', dotClass: 'pta' },
+            'solarman-solar-monitor': { icon: '☀️', label: 'Solar', dotClass: '' },
+        };
+
+        function getSidebarLabel(projectId) {
+            return sidebarLabels[projectId] || { icon: '📦', label: projectId.substring(0, 6), dotClass: '' };
+        }
+
+        function updateSidebarProjects(projects) {
+            const container = document.getElementById('sidebar-projects');
+            const currentIds = new Set(Array.from(container.children).map(c => c.dataset.sidebarProject));
+            const newIds = new Set(projects);
+            // Remove old
+            container.querySelectorAll('.sidebar-item').forEach(el => {
+                if (!newIds.has(el.dataset.sidebarProject)) el.remove();
+            });
+            // Add new
+            projects.forEach(proj => {
+                if (!currentIds.has(proj)) {
+                    const meta = getSidebarLabel(proj);
+                    const div = document.createElement('div');
+                    div.className = 'sidebar-item' + (selectedProject === proj ? ' active' : '');
+                    div.dataset.sidebarProject = proj;
+                    div.onclick = () => sidebarSelectProject(proj);
+                    const dotClass = meta.dotClass ? `project-dot ${meta.dotClass}` : 'project-dot';
+                    div.innerHTML = `<span class="${dotClass}"></span><span class="item-label">${meta.label}</span><span class="item-badge"></span>`;
+                    container.appendChild(div);
+                }
+            });
+        }
+
         function updateSidebarBadges() {
             const groups = getProjectGroups();
             let total = 0;
             Object.keys(groups).forEach(src => {
                 total += groups[src].agents.length;
-                const key = src === 'agent-factory-dev' ? 'afd' : src;
-                const badge = document.getElementById(`sidebar-badge-${key}`);
+                const selector = `#sidebar-projects .sidebar-item[data-sidebar-project="${CSS.escape(src)}"] .item-badge`;
+                const badge = document.querySelector(selector);
                 if (badge) badge.textContent = groups[src].agents.length || '';
             });
             const allBadge = document.getElementById('sidebar-badge-all');
@@ -1660,6 +1729,7 @@
             const sourceLabels = {
                 'agent-factory-dev': '⚙️ Agent Factory',
                 'pta': '🌱 PTA',
+                'solarman-solar-monitor': '☀️ Solar',
                 'outros': '📦 Outros',
             };
             const statusIcons = {
@@ -1690,7 +1760,7 @@
 
                     html += `<div class="orch-chain">
                         <div class="orch-root">
-                            <span class="orch-node ${chain.status}">
+                            <span class="orch-node ${chain.status}" title="${chain.rootAgent} (coordenador)">
                                 ${rootEmoji} ${chain.rootAgent}
                                 <span class="orch-badge ${chain.status}">${rootStatusIcon} ${chain.status}</span>
                             </span>
@@ -1706,7 +1776,7 @@
                         html += `<div class="orch-child">
                             <div class="orch-connector"></div>
                             <div class="orch-node-wrap">
-                                <span class="orch-node ${d.status}">
+                                <span class="orch-node ${d.status}" title="${d.workerId} (worker)">
                                     ${workerEmoji} ${d.workerId}
                                     <span class="orch-badge ${d.status}">${icon} ${d.status}</span>
                                 </span>
@@ -1729,6 +1799,7 @@
             const sourceLabels = {
                 'agent-factory-dev': { icon: '⚙️', label: 'Agent Factory' },
                 'pta': { icon: '🌱', label: 'PTA' },
+                'solarman-solar-monitor': { icon: '☀️', label: 'Solar' },
                 'outros': { icon: '📦', label: 'Outros Projetos' },
             };
 
@@ -1907,6 +1978,7 @@
             const sourceLabels = {
                 'agent-factory-dev': { icon: '⚙️', label: 'Agent Factory' },
                 'pta': { icon: '🌱', label: 'PTA' },
+                'solarman-solar-monitor': { icon: '☀️', label: 'Solar' },
                 'outros': { icon: '📦', label: 'Outros Projetos' },
             };
 
@@ -1922,7 +1994,8 @@
                     const lastError = agent.messages.slice().reverse().find(m => m.error)?.error;
                     const agentEmojis = {
                         'coordenador': '🎯', 'frontend-mobile': '📱', 'visao-computacional': '👁️',
-                        'ui-ux': '🎨', 'qa': '🧪', 'renderizacao': '🎬', 'agent-factory-dev': '⚙️'
+                        'ui-ux': '🎨', 'qa': '🧪', 'renderizacao': '🎬', 'agent-factory-dev': '⚙️',
+                        'code-executor': '🤖', 'research': '🔬',
                     };
                     const emoji = agentEmojis[agent.id] || '🤖';
                     const recentHistory = agent.history.slice(-10);
@@ -1951,10 +2024,11 @@
                     const limitKb = ctx.limit_kb || 0;
                     const agentEventCount = events.filter(e => e.project_id === agent.source && e.agent_id === agent.id).length;
                     const provider = agent.provider || 'auto';
+                    const isLogOpen = openAgentLogs.has(agent.agentKey);
 
                     html += `<div class="agent-card ${agent.status === 'running' ? 'running' : ''} ${(agent.lastExecution || '') === 'failed' ? 'failed' : ''}" id="agent-${agent.agentKey}">
                         <div class="card-top">
-                            <div class="card-icon">${emoji}</div>
+                            <div class="card-icon" title="${agent.id} (${agent.role})">${emoji}</div>
                             <div class="card-title-row">
                                 <span class="card-title">${agent.id}</span>
                                 <span class="running-tag">▶ Running</span>
@@ -1964,6 +2038,7 @@
                                     <span class="card-stat">${agent.role === 'coordinator' ? '🎯' : agent.role === 'worker' ? '⚙️' : '🔍'}</span>
                                     <span class="badge ${agent.status === 'running' ? 'running' : 'ready'}">${agent.status === 'running' ? 'Running' : 'Ready'}</span>
                                     <span class="last-exec ${agent.lastExecution || 'none'}">${({'completed':'✅ Completed','failed':'❌ Failed','stopped':'⏹️ Stopped','none':'—'})[agent.lastExecution] || agent.lastExecution}</span>
+                                    <span style="font-weight:700; color:var(--accent); font-size: 11px;">${agentModels[agent.id] || ''}</span>
                                 </div>
                             </div>
                         </div>
@@ -1982,12 +2057,12 @@
                                     ${provider === 'local_multi' ? '🖥️ Local' : provider === 'cloud' ? '☁️ Cloud' : '🔄 Auto'}
                                 </button>
                                 <span class="log-toggle-btn" onclick="toggleAgentLog('${agent.agentKey}')">
-                                    <span class="arrow" id="agent-log-arrow-${agent.agentKey}">▶</span>
+                                    <span class="arrow ${isLogOpen ? 'open' : ''}" id="agent-log-arrow-${agent.agentKey}">▶</span>
                                     📋 <span style="font-size:9px;background:var(--surface-overlay);padding:1px 5px;border-radius:8px;">${agentEventCount}</span>
                                 </span>
                             </div>
                         </div>
-                        <div class="agent-log" id="agent-log-content-${agent.agentKey}">
+                        <div class="agent-log ${isLogOpen ? 'open' : ''}" id="agent-log-content-${agent.agentKey}">
                             <table>
                                 <tbody id="agent-log-tbody-${agent.agentKey}"></tbody>
                             </table>
@@ -2035,6 +2110,9 @@
             const arrow = document.getElementById(`agent-log-arrow-${agentKey}`);
             const isOpen = content.classList.toggle('open');
             arrow.classList.toggle('open', isOpen);
+            
+            if (isOpen) openAgentLogs.add(agentKey);
+            else openAgentLogs.delete(agentKey);
         }
 
         function addLogEntry(event) {
@@ -2172,6 +2250,14 @@
             const isOpen = logContainer.classList.toggle('collapsed');
             logArrow.textContent = isOpen ? '▶' : '▼';
         });
+
+        function toggleIconLegend() {
+            const body = document.getElementById('icon-legend-body');
+            const toggle = document.getElementById('icon-legend-toggle');
+            const isHidden = body.style.display === 'none' || !body.style.display;
+            body.style.display = isHidden ? 'block' : 'none';
+            toggle.textContent = isHidden ? '▼' : '▶';
+        }
 
         init();
     </script>

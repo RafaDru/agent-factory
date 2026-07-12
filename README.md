@@ -74,10 +74,12 @@ Agent Factory is a Python framework for creating, orchestrating, and monitoring 
 |---|---|---|
 | Agent lifecycle (coordinator/worker/reviewer) | Package distribution (PyPI) |
 | Real-time dashboard with dual status & orchestration view | CLI tooling |
-| ContextManager with auto-compression | Plugin system |
-| AgentLoader for on-demand loading | Windows installer |
-| LLM providers (Groq, Ollama, Mock) | Documentation site |
-| 56+ unit tests | CI/CD pipeline |
+| ContextManager with auto-compression | Windows System Tray Icon |
+| AgentLoader for on-demand loading | Plugin system |
+| LLM providers (Groq, Ollama, Mock) | Windows installer |
+| MCP Server (6 tools + 4 resources) | Documentation site |
+| Solar project (solarman-solar-monitor) | CI/CD pipeline |
+| 60+ tests (incl. MCP + coordinator LLM) | Dashboard toast notifications |
 
 ---
 
@@ -200,22 +202,59 @@ server.start()
 
 ---
 
-## LLM Providers
+## MCP Server (AI Agent Integration)
+
+Expose os agentes do Agent Factory como **tools e resources MCP** para qualquer LLM (OpenCode, Claude Code, Cursor, etc.) consumir.
+
+### Iniciar
+
+```bash
+python start_agent_factory.py --mcp
+# Servidor MCP em http://127.0.0.1:8081/sse
+```
+
+### Tools disponiveis
+
+| Tool | Descrição |
+|------|-----------|
+| `list_projects` | Lista projetos registrados e seus agentes |
+| `list_agents` | Lista agentes de um projeto com capacidades |
+| `run_agent` | Executa tarefa em um agente específico |
+| `run_objective` | Envia objetivo de alto nível ao coordenador |
+| `read_events` | Lê eventos recentes de um projeto |
+| `get_project_status` | Status consolidado de um projeto |
+
+### Resources disponiveis
+
+| URI | Conteúdo |
+|-----|----------|
+| `afp://{project}/events` | Eventos recentes |
+| `afp://{project}/agents` | Referências dos agentes |
+| `afp://{project}/{agent}/context` | Arquivo de contexto do agente |
+| `afp://{project}/{agent}/capabilities` | Capacidades do agente |
+
+Como usar — veja [AGENTS.md](AGENTS.md) para o fluxo completo de delegação recursiva.
+
+---
 
 | Provider | Type | Setup |
-|---|---|---|
+|---|---|---|---|
 | [Groq](https://groq.com) | Cloud | `GROQ_API_KEY` env var |
+| [DeepSeek](https://platform.deepseek.com) | Cloud (gratuito) | `DEEPSEEK_API_KEY` env var |
+| [OpenRouter](https://openrouter.ai) | Cloud (gratuito) | `OPENROUTER_API_KEY` env var |
 | [Ollama](https://ollama.ai) | Local | Run `ollama serve` on port 11434 |
 | Mock | Test | No setup required |
 
 ```python
 from src.llm import get_provider
 
-# Auto-detect
+# Auto-detect (groq → deepseek → openrouter → ollama → mock)
 provider = get_provider("auto")
 
 # Or specify
 provider = get_provider("groq", api_key="your-key")
+provider = get_provider("deepseek", model="deepseek-chat")
+provider = get_provider("openrouter", model="cognitivecomputations/dolphin-mixtral-8x7b:free")
 provider = get_provider("ollama", model="llama3.2")
 provider = get_provider("mock")
 ```

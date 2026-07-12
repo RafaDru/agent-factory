@@ -1,4 +1,4 @@
-# Agent-Factory-Dev — Agent Factory
+# Dev — Agent Factory Platform (AFP)
 
 ## Proposito
 Agente de desenvolvimento da plataforma Agent Factory. Opera arquivos reais no sistema de arquivos: leitura, escrita, edicao, execucao de scripts, git e descoberta de diretorios.

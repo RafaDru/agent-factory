@@ -157,9 +157,23 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         
         all_events.sort(key=lambda e: e.timestamp, reverse=True)
         
+        # Extrair modelo do ultimo evento "llm-model" de cada agente
+        agent_models: dict[str, str] = {}
+        for e in reversed(all_events):
+            aid = e.agent_id
+            if aid not in agent_models:
+                m = e.metrics.get("model") if e.metrics else None
+                if m:
+                    agent_models[aid] = m
+                elif e.payload and isinstance(e.payload, dict):
+                    m = e.payload.get("model") or e.payload.get("provider_model")
+                    if m:
+                        agent_models[aid] = m
+        
         result = {
             "events": [e.model_dump(mode="json") for e in all_events],
             "providers": dict(self.agent_providers),
+            "agent_models": agent_models,
         }
         
         self.send_response(200)

@@ -165,11 +165,11 @@ def start_dashboard(port: int, demo: bool = False):
 
     registry = get_registry()
 
-    # Register agent-factory-dev project
-    if not registry.project_exists("agent-factory-dev"):
+    # Register afp project (Agent Factory Platform)
+    if not registry.project_exists("afp"):
         registry.register(ProjectConfig(
-            project_id="agent-factory-dev",
-            name="Agent Factory",
+            project_id="afp",
+            name="Agent Factory Platform",
             description="Plataforma de orquestracao de agentes autonomos",
         ))
 
@@ -189,9 +189,9 @@ def start_dashboard(port: int, demo: bool = False):
             description="Otimizacao e monitoramento da Creality CR-10 SE com Klipper",
         ))
 
-    # Register real agent references for agent-factory-dev project
+    # Register real agent references for afp project
     agent_src = Path(__file__).parent / "src" / "agents"
-    ctx_base = Path(__file__).parent / "contexts" / "agent-factory-dev"
+    ctx_base = Path(__file__).parent / "contexts" / "afp"
     refs = [
         AgentReference(
             agent_id="coordenador",
@@ -201,11 +201,11 @@ def start_dashboard(port: int, demo: bool = False):
             context_file=str(ctx_base / "coordenador" / "CONTEXTO.md"),
         ),
         AgentReference(
-            agent_id="desenvolvedor",
+            agent_id="dev",
             module_path=str(agent_src / "factory_dev.py"),
             class_name="AgentFactoryDevAgent",
             context_limit_kb=15.0,
-            context_file=str(ctx_base / "desenvolvedor" / "CONTEXTO.md"),
+            context_file=str(ctx_base / "dev" / "CONTEXTO.md"),
         ),
         AgentReference(
             agent_id="qa",
@@ -223,7 +223,7 @@ def start_dashboard(port: int, demo: bool = False):
         ),
     ]
     for ref in refs:
-        registry.add_agent_ref("agent-factory-dev", ref)
+        registry.add_agent_ref("afp", ref)
 
     # Register PTA agent refs if not already there
     pta_agent_path = Path.home() / "PersonalTrainerAgent" / "agentes" / "__init__.py"
@@ -340,12 +340,12 @@ def run_demo_agents(registry):
 
     print("\n[Demo] 🎬 Carregando agentes reais...")
 
-    project_id = "agent-factory-dev"
+    project_id = "afp"
 
     # Load agents from registry (this triggers real imports)
     try:
         coordenador = registry.load_agent(project_id, "coordenador")
-        dev_agent = registry.load_agent(project_id, "desenvolvedor")
+        dev_agent = registry.load_agent(project_id, "dev")
         qa_agent = registry.load_agent(project_id, "qa")
         design_agent = registry.load_agent(project_id, "designer")
     except Exception as e:
@@ -356,20 +356,20 @@ def run_demo_agents(registry):
 
     # Wire subordinates (nomes EXATOS do registro e do prompt do coordenador)
     coordenador.set_subordinates({
-        "desenvolvedor": dev_agent,
+        "dev": dev_agent,
         "qa": qa_agent,
         "designer": design_agent,
     })
 
     print("[Demo] ✅ Agentes carregados. Executando tarefas...")
 
-    # Task 1: agent-factory-dev lists its own capabilities
+    # Task 1: dev lists its own capabilities
     result1 = dev_agent.run({
         "task_id": "startup-capabilities",
         "title": "Capabilities",
         "action": "get_capabilities",
     })
-    print(f"  [agent-factory-dev] capabilities: {result1.status.value}")
+    print(f"  [dev] capabilities: {result1.status.value}")
 
     # Task 2: QAAgent validates syntax of a core file
     core_file = str(Path(__file__).parent / "src" / "agents" / "base.py")
@@ -391,7 +391,7 @@ def run_demo_agents(registry):
         "tasks": [
             {
                 "name": "list-src",
-                "agent_id": "desenvolvedor",
+                "agent_id": "dev",
                 "task": {
                     "task_id": "step-list",
                     "action": "list_directory",
@@ -425,25 +425,25 @@ def _demo_fallback(notifier):
 
     for agent_id, role, msg in [
         ("coordenador", AgentRole.COORDINATOR, "Iniciando pipeline"),
-        ("agent-factory-dev", AgentRole.WORKER, "Analisando estrutura"),
+        ("dev", AgentRole.WORKER, "Analisando estrutura"),
         ("qa", AgentRole.WORKER, "Verificando dependencias"),
     ]:
         notifier.emit(AgentEvent(
             agent_id=agent_id, agent_role=role,
             status=AgentStatus.RUNNING, task_id="startup",
-            project_id="agent-factory-dev", message=msg,
+            project_id="afp", message=msg,
         ))
         time.sleep(1)
 
     for agent_id, msg in [
         ("coordenador", "Ambiente configurado"),
-        ("agent-factory-dev", "Estrutura analisada"),
+        ("dev", "Estrutura analisada"),
         ("qa", "Dependencias OK"),
     ]:
         notifier.emit(AgentEvent(
             agent_id=agent_id, agent_role=AgentRole.WORKER,
             status=AgentStatus.COMPLETED, task_id="startup",
-            project_id="agent-factory-dev", message=msg,
+            project_id="afp", message=msg,
         ))
         time.sleep(1)
 

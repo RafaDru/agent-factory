@@ -34,7 +34,7 @@ class AgentFactoryDevAgent(StandardBaseAgent):
 
     def __init__(self, project_id: str, notifier: EventNotifier, **kwargs):
         super().__init__(
-            agent_id="desenvolvedor",
+            agent_id="dev",
             project_id=project_id,
             notifier=notifier,
             role=AgentRole.WORKER,

@@ -8,7 +8,7 @@
 ## Índice
 
 | # | Seção | Para que serve |
-|---|-------|----------------|
+| |-------|----------------|
 | 1 | [O que é o Agent Factory](#1-o-que-é-o-agent-factory) | Contexto geral do framework |
 | 2 | [Arquitetura do diretório](#2-arquitetura-do-diretório) | Onde cada coisa vive |
 | 3 | [Criar um agente](#3-criar-um-agente) | Criar novo agente do zero |
@@ -21,6 +21,8 @@
 | 10 | [ContextManager](#10-contextmanager) | Rastreamento de tokens/KB |
 | 11 | [AgentLoader](#11-agentloader) | Carregar agentes sob demanda |
 | 12 | [Convenções](#12-convenções) | Nomes, estilos, regras |
+| 13 | [MCP Server](#13-mcp-server-model-context-protocol) | Integração com LLMs |
+| 14 | [Provedores Cloud Gratuitos](#14-provedores-cloud-gratuitos) | DeepSeek, OpenRouter |
 
 ---
 
@@ -486,7 +488,7 @@ from src.agents.real import SubprocessAgent, LLMAgent, ReviewerAgent
 from src.protocols.events import EventNotifier
 from src.protocols.schema import AgentEvent, AgentStatus, TaskResult, ProjectConfig
 from src.persistence import ContextStore
-from src.llm import get_provider, LLMProvider
+from src.llm import get_provider, LLMProvider, DeepSeekProvider, OpenRouterProvider
 from src.registry import get_registry
 from src.loader import AgentLoader
 from src.orchestrator.pipeline import Pipeline, PipelineStep, PipelineResult
@@ -494,3 +496,130 @@ from src.orchestrator.context_injector import ContextInjector, InjectorConfig
 from src.orchestrator.cache import LLMCache, CachedProvider
 from src.orchestrator.graph import OrchestratorGraph
 ```
+
+## 13. MCP Server (Model Context Protocol)
+
+O Agent Factory expõe seus agentes como ferramentas MCP para integração com LLMs (OpenCode, Claude Code, Cursor, etc.).
+
+### Inicialização
+
+```bash
+python start_agent_factory.py --mcp
+# Servidor: http://127.0.0.1:8081/sse
+```
+
+### Ferramentas MCP
+
+| Tool | Descrição |
+|------|-----------|
+| `list_projects` | Lista projetos e seus agentes |
+| `list_agents(project_id)` | Lista agentes com capacidades |
+| `run_agent(project_id, agent_id, task)` | Executa tarefa em agente específico |
+| `run_objective(project_id, objective, context)` | Envia objetivo ao coordenador (gera plano via LLM) |
+| `read_events(project_id, limit)` | Lê eventos recentes de um projeto |
+| `get_project_status(project_id)` | Status consolidado do projeto |
+
+### Resources MCP
+
+| URI | Conteúdo |
+|-----|----------|
+| `afp://{project}/events` | Eventos recentes |
+| `afp://{project}/agents` | Referências dos agentes |
+| `afp://{project}/{agent}/context` | Arquivo de contexto do agente |
+| `afp://{project}/{agent}/capabilities` | Capacidades do agente |
+
+### Fluxo de Delegação Recursiva
+
+1. LLM chama `run_objective(project, objective)` via MCP
+2. Coordenador carrega seu contexto e usa LLM (Groq/Ollama) para gerar plano
+3. Coordenador delega tarefas para workers (`dev`, `qa`, etc.)
+4. Workers executam e retornam resultados ou `StructuredError`
+5. Resultados sobem a cadeia até o LLM que iniciou
+
+### StructuredError
+
+Quando um agente falha, retorna erro estruturado para correção:
+
+```json
+{
+  "error_type": "file_not_found",
+  "action_requested": "edit_file",
+  "available_actions": ["read_file", "list_directory", "write_file"],
+  "doc_path": "src/agents/base.py",
+  "hint": "Arquivo nao encontrado. Use list_directory para descobrir arquivos."
+}
+```
+
+Veja [AGENTS.md](../AGENTS.md) para a arquitetura completa.
+
+---
+
+## 14. Provedores Cloud Gratuitos
+
+Todos os provedores abaixo sao gratuitos (sem cartao de credito). Basta gerar o token nos links indicados e configurar a env var.
+
+| Provedor | Env Var | Modelo Padrao | Free Tier | Cadastro |
+|----------|---------|---------------|-----------|----------|
+| **Groq** | `GROQ_API_KEY` | `llama-3.3-70b-versatile` | 30 RPM, 14.400 req/dia | [console.groq.com](https://console.groq.com) |
+| **Gemini** | `GEMINI_API_KEY` | `gemini-2.0-flash` | 1.500 req/dia, 1M tokens ctx | [aistudio.google.com](https://aistudio.google.com/apikey) |
+| **DeepSeek** | `DEEPSEEK_API_KEY` | `deepseek-chat` | 50M tokens (prompt) + 10M (completion) | [platform.deepseek.com](https://platform.deepseek.com/api_keys) |
+| **OpenRouter** | `OPENROUTER_API_KEY` | `cognitivecomputations/dolphin-mixtral-8x7b:free` | 50 req/dia, 20+ modelos free | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **Cerebras** | `CEREBRAS_API_KEY` | `llama-3.1-8b` | 1M tokens/dia, 30 RPM | [inference.cerebras.ai](https://inference.cerebras.ai/) |
+| **Mistral** | `MISTRAL_API_KEY` | `mistral-small-latest` | 1B tokens/mes (Experiment) | [console.mistral.ai](https://console.mistral.ai/api-keys/) |
+| **NVIDIA NIM** | `NVIDIA_API_KEY` | `meta/llama-3.1-8b-instruct` | 40 RPM (phone verify) | [build.nvidia.com](https://build.nvidia.com/) |
+| **HuggingFace** | `HUGGINGFACE_API_KEY` | `Qwen/Qwen2.5-72B-Instruct` | 300 req/hora, serverless | [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens) |
+| **MIMO (Xiaomi)** | `MIMO_API_KEY` | `mimo-v2-5-pro` | MiMo-V2.5-Pro, 1T params, rivaliza Claude | [platform.xiaomimimo.com](https://platform.xiaomimimo.com/) |
+| **Cloudflare** | `CLOUDFLARE_API_KEY` + `CLOUDFLARE_ACCOUNT_ID` | `@cf/meta/llama-3.1-8b-instruct` | ~300K neurons/mes | [dash.cloudflare.com](https://dash.cloudflare.com/profile/api-tools) |
+
+### Uso individual
+
+```python
+from src.llm import get_provider
+
+# Groq — mais rapido (LPU)
+p = get_provider("groq")
+p = get_provider("groq", model="llama4-maverick-17b-128e")  # Llama 4
+
+# Gemini — maior contexto (1M tokens)
+p = get_provider("gemini")
+p = get_provider("gemini", model="gemini-2.0-flash-lite")  # versao lite
+
+# DeepSeek — mais forte (V3)
+p = get_provider("deepseek")
+p = get_provider("deepseek", model="deepseek-reasoner")  # R1 raciocinio
+
+# OpenRouter — gateway multi-modelo
+p = get_provider("openrouter")
+p = get_provider("openrouter", model="google/gemma-7b:free")
+
+# Cerebras — inferencia mais rapida
+p = get_provider("cerebras")
+p = get_provider("cerebras", model="llama-3.1-70b")
+
+# Mistral — 1B tokens/mes gratis
+p = get_provider("mistral")
+p = get_provider("mistral", model="open-mistral-nemo")
+
+# NVIDIA NIM — GPU NVIDIA cloud
+p = get_provider("nvidia")
+
+# HuggingFace — serverless, centenas de modelos
+p = get_provider("huggingface")
+
+# MIMO (Xiaomi) — MiMo-V2.5-Pro, rivaliza Claude
+p = get_provider("mimo")
+p = get_provider("mimo", model="mimo-v2-5")  # versao multimodal
+
+# Cloudflare — edge computing
+p = get_provider("cloudflare")
+```
+
+### Auto-detect
+
+```python
+provider = get_provider("auto")
+# Ordem: Groq → Gemini → DeepSeek → OpenRouter → Cerebras →
+#        Mistral → MIMO → NVIDIA → HuggingFace → Cloudflare → Ollama (MultiModel) → Mock
+```
+
+Veja [AGENTS.md](../AGENTS.md) para a arquitetura completa.
