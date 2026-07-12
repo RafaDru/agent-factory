@@ -1,3 +1,7 @@
+import os
+import json
+import urllib.request
+import urllib.error
 from pathlib import Path
 from typing import Any
 from mcp.server.fastmcp import FastMCP
@@ -252,6 +256,42 @@ def get_project_status(project_id: str) -> dict[str, Any]:
     """
     registry = _get_registry()
     return registry.get_project_status(project_id)
+
+
+@mcp.tool()
+def figma_get_file(file_key: str) -> dict[str, Any]:
+    """Obtem metadados de um arquivo Figma via REST API.
+
+    Usa FIGMA_API_KEY do ambiente. Retorna nome, versao, ultima modificacao
+    e lista de paginas/documentos do arquivo.
+
+    Args:
+        file_key: A chave do arquivo Figma (da URL: figma.com/file/KEY/...)
+
+    Returns:
+        Dados do arquivo Figma com documento e paginas.
+    """
+    api_key = os.getenv("FIGMA_API_KEY")
+    if not api_key:
+        return {"error": "FIGMA_API_KEY nao configurada no ambiente"}
+    url = f"https://api.figma.com/v1/files/{file_key}"
+    req = urllib.request.Request(url, headers={"X-Figma-Token": api_key})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read())
+            return {
+                "name": data.get("name", ""),
+                "version": data.get("version", ""),
+                "last_modified": data.get("lastModified", ""),
+                "pages": [
+                    {"id": d.get("id"), "name": d.get("name")}
+                    for d in (data.get("document", {}).get("children", []))
+                ],
+            }
+    except urllib.error.HTTPError as e:
+        return {"error": f"Figma API HTTP {e.code}: {e.reason}"}
+    except Exception as e:
+        return {"error": str(e)}
 
 
 # ── Resources ────────────────────────────────────────────────────────────────

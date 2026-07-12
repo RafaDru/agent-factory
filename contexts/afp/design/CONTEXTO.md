@@ -10,11 +10,13 @@ Evoluir a interface do dashboard do Agent Factory para ser intuitiva, funcional 
 - **Feedback visual**: Utilizar badges e estados visuais claros.
 
 ## Acoes Disponiveis
-- design_ui: Cria esboço de componentes.
+- design_ui: Cria esboco de componentes.
 - prototype: Gera HTML/CSS (Tailwind/Lucide) para componentes.
-- analyze_ux: Analisa tendências e propõe melhorias.
+- analyze_ux: Analisa tendencias e propoe melhorias.
+- research_design_systems: Pesquisa design systems do mercado focados em dashboards operacionais.
 
 ## Stack Sugerida
 - Tailwind CSS
-- Alpine.js (para interatividade rápida sem build complexo)
+- Alpine.js (para interatividade rapida sem build complexo)
 - Lucide Icons
+- Ant Design / PatternFly como referencia de design systems
