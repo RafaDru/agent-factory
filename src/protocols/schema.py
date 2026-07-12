@@ -22,6 +22,21 @@ class AgentStatus(str, Enum):
     WAITING = "waiting"  # Aguardando input humano
 
 
+class OutputStatus(str, Enum):
+    """
+    Status de saida de um agente apos execucao.
+    Define o resultado semantico — nao o ciclo de vida.
+    """
+    SUCCESS = "success"                          # Executou completamente
+    PARTIAL_SUCCESS = "partial_success"          # Executou com ressalvas
+    FAILURE = "failure"                          # Nao conseguiu executar
+    NEEDS_DIRECTION = "needs_direction"          # Objetivo ambiguo, precisa de esclarecimento
+    NEEDS_AUTHORIZATION = "needs_authorization"  # Requer autorizacao para prosseguir
+    REJECTED = "rejected"                        # Recusou por politica/seguranca
+    DELEGATED = "delegated"                      # Repassou para outro agente
+    REQUESTED_ACTION = "requested_action"        # Requer acao do agente pai
+
+
 class AgentRole(str, Enum):
     """Papel do agente na orquestração."""
     COORDINATOR = "coordinator"
@@ -163,3 +178,104 @@ class OrchestratorState(BaseModel):
     
     # Resultado final
     final_result: Optional[TaskResult] = None
+
+
+class TaskOutput(BaseModel):
+    """
+    Saída padronizada de uma tarefa executada por um agente.
+    
+    Agrupa resultado + metadados + raciocínio em um único struct.
+    """
+    status: OutputStatus
+    rationale: str = ""
+    summary: str = ""
+    details: Optional[dict[str, Any]] = None
+    available_actions: Optional[list[str]] = None
+    
+    delegated_to: Optional[str] = None
+    delegated_result: Optional["TaskOutput"] = None
+    
+    requested_action: Optional[str] = None
+    requested_params: Optional[dict[str, Any]] = None
+    
+    duration_ms: float = 0
+    metrics: dict[str, Any] = Field(default_factory=dict)
+
+    @classmethod
+    def from_execute_output(cls, output: dict) -> "TaskOutput":
+        """
+        Converte dict retornado por execute() para TaskOutput.
+        Mantem compatibilidade com workers que ainda retornam dicts simples.
+        """
+        raw_status = output.get("status", "success")
+        if raw_status == "ok":
+            status = OutputStatus.SUCCESS
+        elif raw_status == "error":
+            status = OutputStatus.FAILURE
+        elif raw_status == "partial":
+            status = OutputStatus.PARTIAL_SUCCESS
+        elif raw_status == "warning":
+            status = OutputStatus.SUCCESS
+        elif isinstance(raw_status, OutputStatus):
+            status = raw_status
+        else:
+            status = OutputStatus(raw_status)
+
+        error = output.get("error") or output.get("message", "")
+        rationale = output.get("rationale") or error or ""
+        summary = output.get("summary") or output.get("message") or output.get("status", "")
+        available = output.get("available_actions")
+
+        details = {k: v for k, v in output.items()
+                   if k not in ("status", "rationale", "summary",
+                                "available_actions", "error")}
+        if not details:
+            details = None
+
+        return cls(
+            status=status,
+            rationale=rationale,
+            summary=summary,
+            details=details or output,
+            available_actions=available,
+        )
+
+    @classmethod
+    def success(cls, summary: str = "", rationale: str = "", **details) -> "TaskOutput":
+        return cls(status=OutputStatus.SUCCESS, summary=summary, rationale=rationale, details=details or None)
+
+    @classmethod
+    def failure(cls, rationale: str, summary: str = "", available_actions: Optional[list[str]] = None, **details) -> "TaskOutput":
+        return cls(status=OutputStatus.FAILURE, rationale=rationale, summary=summary or rationale,
+                   available_actions=available_actions, details=details or None)
+
+    @classmethod
+    def partial(cls, summary: str, rationale: str = "", **details) -> "TaskOutput":
+        return cls(status=OutputStatus.PARTIAL_SUCCESS, summary=summary, rationale=rationale, details=details or None)
+
+    @classmethod
+    def needs_direction(cls, rationale: str, available_actions: Optional[list[str]] = None) -> "TaskOutput":
+        return cls(status=OutputStatus.NEEDS_DIRECTION, rationale=rationale, summary=rationale,
+                   available_actions=available_actions)
+
+    @classmethod
+    def delegated(cls, to: str, result: "TaskOutput", summary: str = "") -> "TaskOutput":
+        return cls(status=OutputStatus.DELEGATED, delegated_to=to, delegated_result=result,
+                   summary=summary or f"Delegado para {to}")
+
+
+# Resolver forward reference
+TaskOutput.model_rebuild()
+
+
+class Decision(str, Enum):
+    """
+    Decisao do motor de orquestracao apos avaliar um resultado de agente.
+    """
+    ACCEPT = "accept"                          # Resultado aceitavel, prosseguir
+    RETRY = "retry"                            # Tentar novamente com correcao
+    RETRY_ALTERNATIVE = "retry_alternative"    # Tentar acao diferente
+    REPLAN = "replan"                          # Gerar novo plano
+    ESCALATE = "escalate"                      # Escalar para humano/pai
+    SKIP = "skip"                              # Ignorar e continuar
+    ABORT = "abort"                            # Abortar toda execucao

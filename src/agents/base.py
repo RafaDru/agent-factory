@@ -630,11 +630,16 @@ class AgentBase(ABC):
         output: Optional[dict] = None,
         error: Optional[str] = None,
     ) -> TaskResult:
-        """Constrói o resultado final da tarefa."""
+        """Constrói o resultado final da tarefa com um resumo auto-explicativo."""
         end_time = datetime.utcnow()
         duration = 0
         if self._start_time:
             duration = (end_time - self._start_time).total_seconds() * 1000
+        
+        # Gera um resumo mais inteligente se a descrição for vazia
+        action = task.get("action", "execucao")
+        task_desc = task.get("description") or task.get("title") or f"Acao: {action}"
+        summary = f"Tarefa {status.value.upper()}: {task_desc} (ID: {task.get('task_id', 'n/a')})"
         
         return TaskResult(
             task_id=task.get("task_id", "unknown"),
@@ -644,7 +649,7 @@ class AgentBase(ABC):
             started_at=self._start_time or end_time,
             completed_at=end_time,
             output=output or {},
-            summary=f"Tarefa {status.value}: {task.get('description', 'sem descricao')}",
+            summary=summary,
             total_duration_ms=duration,
         )
 

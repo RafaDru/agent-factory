@@ -21,6 +21,15 @@ import urllib.request
 import urllib.error
 from pathlib import Path
 
+# Carregar .env na raiz antes de qualquer import
+_env_path = Path(__file__).parent / ".env"
+if _env_path.exists():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_path)
+    except ImportError:
+        pass
+
 # Ensure project root is in path
 ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(ROOT))
@@ -172,6 +181,14 @@ def start_dashboard(port: int, demo: bool = False):
             description="App mobile com IA e visao computacional",
         ))
 
+    # Register CR-10 SE project
+    if not registry.project_exists("cr10se"):
+        registry.register(ProjectConfig(
+            project_id="cr10se",
+            name="CR-10 SE 3D Printer",
+            description="Otimizacao e monitoramento da Creality CR-10 SE com Klipper",
+        ))
+
     # Register real agent references for agent-factory-dev project
     agent_src = Path(__file__).parent / "src" / "agents"
     ctx_base = Path(__file__).parent / "contexts" / "agent-factory-dev"
@@ -184,11 +201,11 @@ def start_dashboard(port: int, demo: bool = False):
             context_file=str(ctx_base / "coordenador" / "CONTEXTO.md"),
         ),
         AgentReference(
-            agent_id="agent-factory-dev",
+            agent_id="desenvolvedor",
             module_path=str(agent_src / "factory_dev.py"),
             class_name="AgentFactoryDevAgent",
             context_limit_kb=15.0,
-            context_file=str(ctx_base / "agent-factory-dev" / "CONTEXTO.md"),
+            context_file=str(ctx_base / "desenvolvedor" / "CONTEXTO.md"),
         ),
         AgentReference(
             agent_id="qa",
@@ -196,6 +213,13 @@ def start_dashboard(port: int, demo: bool = False):
             class_name="QAAgent",
             context_limit_kb=10.0,
             context_file=str(ctx_base / "qa" / "CONTEXTO.md"),
+        ),
+        AgentReference(
+            agent_id="designer",
+            module_path=str(agent_src / "design_factory.py"),
+            class_name="DesignAgent",
+            context_limit_kb=10.0,
+            context_file=str(ctx_base / "design" / "CONTEXTO.md"),
         ),
     ]
     for ref in refs:
@@ -216,6 +240,57 @@ def start_dashboard(port: int, demo: bool = False):
         ]
         for ref in pta_refs:
             registry.add_agent_ref("pta", ref)
+
+    # Register CR-10 SE agent references
+    cr10se_agent_src = Path(__file__).parent / "src" / "agents"
+    cr10se_ctx_base = Path(__file__).parent / "contexts" / "cr10se"
+    printer_scripts = Path(r"C:\Users\rafae\Documents\Impressao 3D")
+    cr10se_refs = [
+        AgentReference(
+            agent_id="coordenador",
+            module_path=str(cr10se_agent_src / "cr10se_coordinator.py"),
+            class_name="CR10SECoordinator",
+            context_limit_kb=15.0,
+            context_file=str(cr10se_ctx_base / "coordenador" / "CONTEXTO.md"),
+        ),
+        AgentReference(
+            agent_id="klipper",
+            module_path=str(cr10se_agent_src / "cr10se_klipper.py"),
+            class_name="KlipperAgent",
+            context_limit_kb=15.0,
+            context_file=str(cr10se_ctx_base / "klipper" / "CONTEXTO.md"),
+        ),
+        AgentReference(
+            agent_id="pipeline",
+            module_path=str(cr10se_agent_src / "cr10se_pipeline.py"),
+            class_name="PipelineAgent",
+            context_limit_kb=15.0,
+            context_file=str(cr10se_ctx_base / "pipeline" / "CONTEXTO.md"),
+        ),
+        AgentReference(
+            agent_id="visao",
+            module_path=str(cr10se_agent_src / "cr10se_vision.py"),
+            class_name="VisionAgent",
+            context_limit_kb=15.0,
+            context_file=str(cr10se_ctx_base / "visao" / "CONTEXTO.md"),
+        ),
+        AgentReference(
+            agent_id="resume",
+            module_path=str(cr10se_agent_src / "cr10se_resume.py"),
+            class_name="ResumeAgent",
+            context_limit_kb=15.0,
+            context_file=str(cr10se_ctx_base / "resume" / "CONTEXTO.md"),
+        ),
+        AgentReference(
+            agent_id="qa",
+            module_path=str(cr10se_agent_src / "cr10se_qa.py"),
+            class_name="PrintQAAgent",
+            context_limit_kb=10.0,
+            context_file=str(cr10se_ctx_base / "qa" / "CONTEXTO.md"),
+        ),
+    ]
+    for ref in cr10se_refs:
+        registry.add_agent_ref("cr10se", ref)
 
     # Build dashboard server with notifiers from registry
     server = None
@@ -270,18 +345,20 @@ def run_demo_agents(registry):
     # Load agents from registry (this triggers real imports)
     try:
         coordenador = registry.load_agent(project_id, "coordenador")
-        dev_agent = registry.load_agent(project_id, "agent-factory-dev")
+        dev_agent = registry.load_agent(project_id, "desenvolvedor")
         qa_agent = registry.load_agent(project_id, "qa")
+        design_agent = registry.load_agent(project_id, "designer")
     except Exception as e:
         print(f"[Demo] ⚠️  Erro ao carregar agentes: {e}")
         print("[Demo] → Usando fallback com eventos diretos")
         _demo_fallback(registry.get_notifier(project_id))
         return
 
-    # Wire subordinates
+    # Wire subordinates (nomes EXATOS do registro e do prompt do coordenador)
     coordenador.set_subordinates({
-        "agent-factory-dev": dev_agent,
+        "desenvolvedor": dev_agent,
         "qa": qa_agent,
+        "designer": design_agent,
     })
 
     print("[Demo] ✅ Agentes carregados. Executando tarefas...")
@@ -314,7 +391,7 @@ def run_demo_agents(registry):
         "tasks": [
             {
                 "name": "list-src",
-                "agent_id": "agent-factory-dev",
+                "agent_id": "desenvolvedor",
                 "task": {
                     "task_id": "step-list",
                     "action": "list_directory",
@@ -373,6 +450,20 @@ def _demo_fallback(notifier):
     print("[Demo] ✅ Fallback concluido")
 
 
+def _start_mcp_server(port: int = 8081):
+    """Start MCP server via SSE in a background thread."""
+    import threading
+    from src.mcp.server import run_sse
+
+    print(f"\n[MCP] 🚀 Iniciando servidor MCP na porta {port}")
+
+    t = threading.Thread(target=run_sse, args=("127.0.0.1", port), daemon=True)
+    t.start()
+    time.sleep(2)
+    print(f"[MCP] ✅ Server ready: http://127.0.0.1:{port}/sse")
+    print(f"[MCP] 📖 Configure no OpenCode como MCP server com URL acima")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Agent Factory Startup")
     parser.add_argument("--port", type=int, default=DASHBOARD_PORT,
@@ -381,7 +472,17 @@ def main():
                         help="Run demo agents on startup")
     parser.add_argument("--no-ollama", action="store_true",
                         help="Skip Ollama management")
+    parser.add_argument("--mcp", action="store_true",
+                        help="Start MCP server (SSE) for AI agent integration")
+    parser.add_argument("--mcp-port", type=int, default=8081,
+                        help="MCP server port (default: 8081)")
+    parser.add_argument("--detach", action="store_true",
+                        help="Descola o servidor em processo background e printa o PID")
     args = parser.parse_args()
+
+    if args.detach:
+        _detach_and_exit(args)
+        return  # never reached
 
     print_banner()
 
@@ -392,8 +493,58 @@ def main():
     else:
         print("[Ollama] ⏭️  Gerenciamento desabilitado (--no-ollama)")
 
-    # Step 2: Dashboard (blocking)
+    # Step 2: MCP server (if requested)
+    if args.mcp:
+        _start_mcp_server(args.mcp_port)
+
+    # Step 3: Dashboard (blocking)
     start_dashboard(port=args.port, demo=args.demo)
+
+
+def _detach_and_exit(args: argparse.Namespace):
+    """Re-executa o script em processo detached/background."""
+    import subprocess
+    import sys
+
+    script = Path(__file__).resolve()
+    cmd = [sys.executable, "-X", "utf8", "-u", str(script)]
+
+    # Propaga todas as flags, exceto --detach
+    if args.port != DASHBOARD_PORT:
+        cmd += ["--port", str(args.port)]
+    if args.demo:
+        cmd.append("--demo")
+    if args.no_ollama:
+        cmd.append("--no-ollama")
+    if args.mcp:
+        cmd.append("--mcp")
+    if args.mcp_port != 8081:
+        cmd += ["--mcp-port", str(args.mcp_port)]
+
+    out_log = ROOT / "afp_output.log"
+    err_log = ROOT / "afp_error.log"
+
+    creationflags = 0
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+
+    proc = subprocess.Popen(
+        cmd,
+        creationflags=creationflags,
+        stdout=open(out_log, "w", encoding="utf-8"),
+        stderr=open(err_log, "w", encoding="utf-8"),
+        cwd=str(ROOT),
+        close_fds=True,
+    )
+
+    print(f"[AFP] Servidor iniciado em background")
+    print(f"[AFP] PID: {proc.pid}")
+    print(f"[AFP] Logs: {out_log}")
+    print(f"[AFP] Dashboard: http://localhost:{args.port}")
+    if args.mcp:
+        print(f"[AFP] MCP SSE: http://127.0.0.1:{args.mcp_port}/sse")
+    print(f"[AFP] Para encerrar: Stop-Process -Id {proc.pid}" if sys.platform == "win32"
+          else f"[AFP] Para encerrar: kill {proc.pid}")
 
 
 if __name__ == "__main__":

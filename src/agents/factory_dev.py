@@ -7,282 +7,246 @@ Opera arquivos reais: ler, escrever, editar, rodar scripts/testes/git.
 import os
 import sys
 import subprocess
+import traceback
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent
+from src.protocols.schema import AgentRole, TaskOutput, OutputStatus
 from src.protocols.events import EventNotifier
 
-
-class AgentFactoryDevAgent(AgentBase):
+class AgentFactoryDevAgent(StandardBaseAgent):
     """
     Agente de Desenvolvimento do Agent Factory.
-    Acoes reais: leitura/escrita de arquivos, execucao de scripts/testes/git.
     """
 
     ACTIONS = {
-        "read_file": {
-            "description": "Le conteudo de um arquivo",
-            "params": {"file_path": "str (obrigatorio) - caminho absoluto"},
-        },
-        "write_file": {
-            "description": "Escreve conteudo em um arquivo (cria diretorios se necessario)",
-            "params": {"file_path": "str (obrigatorio)", "content": "str (obrigatorio)"},
-        },
-        "edit_file": {
-            "description": "Substitui texto em um arquivo existente",
-            "params": {"file_path": "str (obrigatorio)", "old_string": "str (obrigatorio)", "new_string": "str (obrigatorio)"},
-        },
-        "run_script": {
-            "description": "Executa um script Python via subprocess",
-            "params": {"script_path": "str (obrigatorio)", "args": "list[str] (opcional)", "timeout": "int (opcional, padrao 300)"},
-        },
-        "run_tests": {
-            "description": "Executa pytest em um diretorio/arquivo",
-            "params": {"path": "str (opcional, padrao tests/)", "args": "list[str] (opcional)"},
-        },
-        "run_git": {
-            "description": "Executa comando git",
-            "params": {"args": "list[str] (obrigatorio, ex: ['add', '.'])", "workdir": "str (opcional)"},
-        },
-        "list_directory": {
-            "description": "Lista conteudo de um diretorio",
-            "params": {"path": "str (obrigatorio)", "pattern": "str (opcional, ex: *.py)"},
-        },
-        "get_capabilities": {
-            "description": "Retorna as acoes disponiveis neste agente",
-            "params": {},
-        },
+        "read_file": {"description": "Le conteudo de um arquivo", "params": {"file_path": "str"}},
+        "write_file": {"description": "Escreve conteudo em um arquivo", "params": {"file_path": "str", "content": "str"}},
+        "edit_file": {"description": "Edita um arquivo (substitui trecho)", "params": {"file_path": "str", "old_string": "str", "new_string": "str"}},
+        "list_directory": {"description": "Lista arquivos em um diretorio com glob", "params": {"path": "str", "pattern": "str"}},
+        "run_script": {"description": "Executa script Python", "params": {"script_path": "str", "args": "list[str] (opcional)"}},
+        "run_tests": {"description": "Executa pytest", "params": {"path": "str", "args": "list[str] (opcional)"}},
+        "run_git": {"description": "Executa comando git", "params": {"args": "list[str]"}},
+        "rename_file": {"description": "Renomeia ou move um arquivo", "params": {"src": "str", "dst": "str"}},
+        "delete_file": {"description": "Remove um arquivo", "params": {"file_path": "str"}},
     }
 
-    def __init__(
-        self,
-        project_id: str,
-        notifier: EventNotifier,
-        working_dir: Optional[str] = None,
-        **kwargs,
-    ):
+    def __init__(self, project_id: str, notifier: EventNotifier, **kwargs):
         super().__init__(
-            agent_id="agent-factory-dev",
+            agent_id="desenvolvedor",
             project_id=project_id,
             notifier=notifier,
             role=AgentRole.WORKER,
-            context_limit_kb=kwargs.get("context_limit_kb", 15.0),
-            context_file=kwargs.get("context_file"),
+            **kwargs,
         )
-        self.working_dir = Path(working_dir or os.getcwd())
+        self.working_dir = Path(kwargs.get("working_dir", os.getcwd()))
 
-    def validate_input(self, task: dict[str, Any]) -> bool:
-        return "action" in task
+    def _resolve(self, path: str) -> Path:
+        p = Path(path)
+        if p.is_absolute():
+            return p
+        return (self.working_dir / p).resolve()
 
-    def execute(self, task: dict[str, Any]) -> dict[str, Any]:
-        action = task["action"]
+    def execute(self, task: dict[str, Any]) -> TaskOutput:
+        action = task.get("action")
+        aliases = {
+            "create_file": "write_file", "create": "write_file", "make_file": "write_file",
+            "write": "write_file", "read": "read_file",
+            "list_files": "list_directory", "list": "list_directory",
+            "edit": "edit_file", "rename": "rename_file",
+            "delete": "delete_file", "remove_file": "delete_file", "move_file": "rename_file",
+            "run": "run_script", "execute_script": "run_script",
+            "test": "run_tests", "pytest": "run_tests", "git": "run_git",
+        }
+        action = aliases.get(action, action)
 
-        if action == "read_file":
-            return self._read_file(task)
-        elif action == "write_file":
-            return self._write_file(task)
-        elif action == "edit_file":
-            return self._edit_file(task)
-        elif action == "run_script":
-            return self._run_script(task)
-        elif action == "run_tests":
-            return self._run_tests(task)
-        elif action == "run_git":
-            return self._run_git(task)
-        elif action == "list_directory":
-            return self._list_directory(task)
-        elif action == "get_capabilities":
-            return self._get_capabilities()
-        else:
-            available = sorted(self.ACTIONS.keys())
-            raise StructuredError(
-                message=f"Acao desconhecida: '{action}'. Acoes disponiveis: {', '.join(available)}",
-                error_type="unknown_action",
-                action_requested=action,
-                available_actions=available,
-                doc_path=self.get_doc_path(),
-                hint=f"Use uma das acoes disponiveis ou chame action=get_capabilities para detalhes.",
+        handlers = {
+            "read_file": self._read_file,
+            "write_file": self._write_file,
+            "edit_file": self._edit_file,
+            "list_directory": self._list_directory,
+            "run_script": self._run_script,
+            "run_tests": self._run_tests,
+            "run_git": self._run_git,
+            "rename_file": self._rename_file,
+            "delete_file": self._delete_file,
+            "get_capabilities": lambda t: TaskOutput.success(summary="Capabilities", capabilities=self.get_capabilities()),
+        }
+
+        handler = handlers.get(action)
+        if handler:
+            return handler(task)
+
+        available = sorted(self.ACTIONS.keys())
+        return TaskOutput.needs_direction(
+            rationale=f"Acao desconhecida: '{action}'. Disponiveis: {available}",
+            available_actions=available,
+        )
+
+    def _read_file(self, task: dict) -> TaskOutput:
+        file_path = task.get("file_path") or task.get("path")
+        if not file_path:
+            return TaskOutput.needs_direction(
+                rationale="Caminho do arquivo nao especificado. Informe file_path.",
+                available_actions=["list_directory", "get_capabilities"],
             )
-
-    def _read_file(self, task: dict) -> dict:
-        file_path = Path(task["file_path"])
-        if not file_path.exists():
-            return {"status": "error", "error": f"Arquivo não encontrado: {file_path}"}
+        path = self._resolve(file_path)
+        if not path.exists():
+            return TaskOutput.failure(rationale=f"Arquivo nao encontrado: {path}", file_path=str(path))
         try:
-            content = file_path.read_text(encoding="utf-8")
-            return {
-                "status": "ok",
-                "file_path": str(file_path),
-                "content": content,
-                "size_bytes": len(content.encode("utf-8")),
-                "line_count": content.count("\n") + 1,
-            }
+            content = path.read_text(encoding="utf-8")
+            return TaskOutput.success(
+                summary=f"Lido: {path}",
+                rationale=f"Conteudo lido ({len(content)} chars)",
+                path=str(path), size=len(content),
+            )
         except Exception as e:
-            return {"status": "error", "error": str(e)}
+            return TaskOutput.failure(rationale=f"Erro ao ler {path}: {e}")
 
-    def _write_file(self, task: dict) -> dict:
-        file_path = Path(task["file_path"])
+    def _write_file(self, task: dict) -> TaskOutput:
+        file_path = task.get("file_path") or task.get("path")
+        if not file_path:
+            return TaskOutput.needs_direction(
+                rationale="Caminho do arquivo nao especificado. Informe file_path.",
+                available_actions=["list_directory"],
+            )
+        path = self._resolve(file_path)
         content = task.get("content", "")
         try:
-            file_path.parent.mkdir(parents=True, exist_ok=True)
-            file_path.write_text(content, encoding="utf-8")
-            return {
-                "status": "ok",
-                "file_path": str(file_path),
-                "size_bytes": len(content.encode("utf-8")),
-                "line_count": content.count("\n") + 1,
-            }
-        except Exception as e:
-            return {"status": "error", "error": str(e)}
-
-    def _edit_file(self, task: dict) -> dict:
-        file_path = Path(task["file_path"])
-        old_string = task.get("old_string", "")
-        new_string = task.get("new_string", "")
-        if not file_path.exists():
-            return {"status": "error", "error": f"Arquivo não encontrado: {file_path}"}
-        try:
-            content = file_path.read_text(encoding="utf-8")
-            if old_string not in content:
-                return {
-                    "status": "error",
-                    "error": "old_string não encontrado no arquivo",
-                }
-            occurrences = content.count(old_string)
-            if occurrences > 1:
-                new_content = content.replace(old_string, new_string)
-            else:
-                new_content = content.replace(old_string, new_string)
-            file_path.write_text(new_content, encoding="utf-8")
-            return {
-                "status": "ok",
-                "file_path": str(file_path),
-                "replacements": occurrences,
-            }
-        except Exception as e:
-            return {"status": "error", "error": str(e)}
-
-    def _run_script(self, task: dict) -> dict:
-        script_path = task.get("script_path", "")
-        args = task.get("args", [])
-        timeout = task.get("timeout", 300)
-
-        script = Path(script_path)
-        if not script.exists():
-            return {"status": "error", "error": f"Script não encontrado: {script_path}"}
-
-        cmd = [sys.executable, str(script)] + list(args)
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                cwd=self.working_dir,
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+            size = path.stat().st_size
+            return TaskOutput.success(
+                summary=f"Arquivo salvo: {path} ({size} bytes)",
+                rationale=f"Escritos {size} bytes em {path.name}",
+                path=str(path), bytes=size,
             )
-            return {
-                "status": "ok",
-                "stdout": result.stdout[-2000:],
-                "stderr": result.stderr[-2000:],
-                "returncode": result.returncode,
-                "success": result.returncode == 0,
-            }
-        except subprocess.TimeoutExpired:
-            return {"status": "error", "error": f"Timeout após {timeout}s"}
         except Exception as e:
-            return {"status": "error", "error": str(e)}
+            return TaskOutput.failure(rationale=f"Erro ao escrever {path}: {e}")
 
-    def _run_tests(self, task: dict) -> dict:
-        test_path = task.get("path", "tests/")
-        args = task.get("args", [])
-
-        cmd = [sys.executable, "-m", "pytest", str(test_path), "-v"] + list(args)
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=120,
-                cwd=self.working_dir,
+    def _edit_file(self, task: dict) -> TaskOutput:
+        file_path = task.get("file_path") or task.get("path")
+        if not file_path:
+            return TaskOutput.needs_direction(
+                rationale="Caminho do arquivo nao especificado.",
+                available_actions=["list_directory", "read_file"],
             )
-            return {
-                "status": "ok",
-                "stdout": result.stdout[-3000:],
-                "stderr": result.stderr[-1000:],
-                "returncode": result.returncode,
-                "passed": result.returncode == 0,
-                "summary": self._parse_test_summary(result.stdout),
-            }
-        except subprocess.TimeoutExpired:
-            return {"status": "error", "error": "Timeout após 120s"}
-        except Exception as e:
-            return {"status": "error", "error": str(e)}
-
-    def _parse_test_summary(self, output: str) -> dict:
-        passed = failed = errors = 0
-        for line in output.split("\n"):
-            if "passed" in line and "failed" in line:
-                parts = line.split()
-                for i, p in enumerate(parts):
-                    if p == "passed":
-                        passed = int(parts[i - 1]) if i > 0 else 0
-                    elif p == "failed":
-                        failed = int(parts[i - 1]) if i > 0 else 0
-                    elif p == "error":
-                        errors = int(parts[i - 1]) if i > 0 else 0
-        return {"passed": passed, "failed": failed, "errors": errors}
-
-    def _run_git(self, task: dict) -> dict:
-        git_args = task.get("args", [])
-        workdir = Path(task.get("workdir", str(self.working_dir)))
-
-        cmd = ["git"] + list(git_args)
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=30,
-                cwd=workdir,
-            )
-            return {
-                "status": "ok",
-                "stdout": result.stdout[-2000:],
-                "stderr": result.stderr[-1000:],
-                "returncode": result.returncode,
-                "success": result.returncode == 0,
-            }
-        except Exception as e:
-            return {"status": "error", "error": str(e)}
-
-    def _list_directory(self, task: dict) -> dict:
-        path = Path(task.get("path", str(self.working_dir)))
-        pattern = task.get("pattern", "*")
-
+        path = self._resolve(file_path)
         if not path.exists():
-            return {"status": "error", "error": f"Diretório não encontrado: {path}"}
+            return TaskOutput.failure(rationale=f"Arquivo nao encontrado: {path}")
+        old = task.get("old_string", "")
+        new = task.get("new_string", "")
+        if not old:
+            return TaskOutput.needs_direction(rationale="'old_string' obrigatorio para editar.")
+        try:
+            content = path.read_text(encoding="utf-8")
+            if old not in content:
+                return TaskOutput.failure(rationale=f"'old_string' nao encontrado em {path}")
+            count = content.count(old)
+            new_content = content.replace(old, new, 1)
+            path.write_text(new_content, encoding="utf-8")
+            return TaskOutput.success(
+                summary=f"Arquivo editado: {path} (1 substituicao de {count} ocorrencia(s))",
+                rationale=f"Substituida 1 ocorrencia de {count} no total",
+                path=str(path), replacements=count,
+            )
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao editar {path}: {e}")
 
-        items = []
-        for p in path.glob(pattern):
-            items.append({
-                "name": p.name,
-                "path": str(p),
-                "type": "dir" if p.is_dir() else "file",
-                "size": p.stat().st_size if p.is_file() else 0,
-            })
+    def _list_directory(self, task: dict) -> TaskOutput:
+        base_path = self._resolve(task.get("path", "."))
+        pattern = task.get("pattern", "*")
+        if not base_path.exists():
+            return TaskOutput.failure(rationale=f"Diretorio nao encontrado: {base_path}")
+        try:
+            files = [str(p.relative_to(self.working_dir)) for p in sorted(base_path.glob(pattern))]
+            return TaskOutput.success(
+                summary=f"Listados {len(files)} arquivos em {base_path}",
+                rationale=f"Padrao: {pattern}, encontrados: {len(files)}",
+                path=str(base_path), files=files, count=len(files),
+            )
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao listar {base_path}: {e}")
 
-        return {
-            "status": "ok",
-            "path": str(path),
-            "items": sorted(items, key=lambda x: (x["type"] != "dir", x["name"])),
-            "total": len(items),
-        }
+    def _run_script(self, task: dict) -> TaskOutput:
+        script_path = self._resolve(task.get("script_path", ""))
+        args = task.get("args", [])
+        if not script_path.exists():
+            return TaskOutput.failure(rationale=f"Script nao encontrado: {script_path}")
+        cmd = [sys.executable, str(script_path)] + list(args)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, cwd=self.working_dir)
+            ok = result.returncode == 0
+            (cls, msg) = (TaskOutput.success, "executado") if ok else (TaskOutput.failure, "falhou")
+            return cls(
+                summary=f"Script {script_path.name} {msg} (codigo {result.returncode})",
+                rationale=result.stderr[:500] if not ok else f"stdout: {result.stdout[:200]}",
+                returncode=result.returncode, stderr=result.stderr[-500:],
+            )
+        except subprocess.TimeoutExpired:
+            return TaskOutput.failure(rationale=f"Script excedeu timeout de 120s: {script_path.name}")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao executar script: {e}")
 
-    def _get_capabilities(self) -> dict:
-        return {
-            "agent_id": self.agent_id,
-            "role": self.role.value,
-            "working_dir": str(self.working_dir),
-            "actions": self.ACTIONS,
-        }
+    def _run_tests(self, task: dict) -> TaskOutput:
+        test_path = task.get("path", "tests/")
+        args = task.get("args", ["--tb=short", "-q"])
+        cmd = [sys.executable, "-m", "pytest", test_path] + list(args)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, cwd=self.working_dir)
+            passed = result.returncode == 0
+            cls = TaskOutput.success if passed else TaskOutput.failure
+            return cls(
+                summary=f"Testes {'passaram' if passed else 'falharam'} (codigo {result.returncode})",
+                rationale=result.stdout[-500:],
+                returncode=result.returncode, passed=passed,
+            )
+        except subprocess.TimeoutExpired:
+            return TaskOutput.failure(rationale="Testes excederam timeout de 300s")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao executar testes: {e}")
+
+    def _run_git(self, task: dict) -> TaskOutput:
+        args = task.get("args", [])
+        cmd = ["git"] + list(args)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=self.working_dir)
+            ok = result.returncode == 0
+            cls = TaskOutput.success if ok else TaskOutput.failure
+            return cls(
+                summary=f"git {'ok' if ok else 'falhou'} (codigo {result.returncode})",
+                rationale=result.stderr[:500] if not ok else result.stdout[:500],
+                returncode=result.returncode, stdout=result.stdout[:2000], stderr=result.stderr[:1000],
+            )
+        except subprocess.TimeoutExpired:
+            return TaskOutput.failure(rationale="Git excedeu timeout de 60s")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao executar git: {e}")
+
+    def _rename_file(self, task: dict) -> TaskOutput:
+        src = self._resolve(task.get("src", ""))
+        dst = self._resolve(task.get("dst", ""))
+        if not src or not dst:
+            return TaskOutput.needs_direction(rationale="Parametros 'src' e 'dst' obrigatorios.")
+        if not src.exists():
+            return TaskOutput.failure(rationale=f"Origem nao encontrada: {src}")
+        try:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            src.rename(dst)
+            return TaskOutput.success(summary=f"Renomeado: {src.name} -> {dst.name}", from_path=str(src), to_path=str(dst))
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao renomear: {e}")
+
+    def _delete_file(self, task: dict) -> TaskOutput:
+        fp = task.get("file_path") or task.get("path")
+        if not fp:
+            return TaskOutput.needs_direction(rationale="Parametro 'file_path' obrigatorio.")
+        path = self._resolve(fp)
+        if not path.exists():
+            return TaskOutput.failure(rationale=f"Arquivo nao encontrado: {path}")
+        try:
+            path.unlink()
+            return TaskOutput.success(summary=f"Arquivo removido: {path}")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao remover {path}: {e}")

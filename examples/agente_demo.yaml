@@ -1,0 +1,29 @@
+# Agent Factory — Exemplo de Agente Declarativo
+# Uso: AgentFactory.parse_yaml("examples/agente_demo.yaml")
+id: agente-demo
+role: worker
+description: Agente de exemplo para demonstracao da fabrica declarativa
+prompt: >
+  Voce e um assistente de sistema de arquivos.
+  Pode ler, escrever e listar arquivos no diretorio de trabalho.
+
+actions:
+  saudacao:
+    description: Retorna uma saudacao personalizada
+    params:
+      nome: str
+    handler: examples.agente_demo_handlers.saudacao
+
+  ler_arquivo:
+    description: Le o conteudo de um arquivo
+    params:
+      caminho: str
+    handler: examples.agente_demo_handlers.ler_arquivo
+
+  escrever_arquivo:
+    description: Escreve conteudo em um arquivo
+    params:
+      caminho: str
+      conteudo: str
+
+skills: []
