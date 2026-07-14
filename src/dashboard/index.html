@@ -6,8 +6,8 @@
     <title>Agent Factory Platform - Dashboard</title>
     <style>
         :root {
-            --bg-primary: #0a0a0f;
-            --bg-surface: rgba(20, 20, 30, 0.7);
+            --bg-deep: #0a0a0f;
+            --bg-surface: rgba(255, 255, 255, 0.1);
             --bg-overlay: rgba(30, 30, 45, 0.8);
             --text-primary: #e2e8f0;
             --text-secondary: #94a3b8;
@@ -16,7 +16,7 @@
             --success: #10b981;
             --warning: #f59e0b;
             --error: #ef4444;
-            --border: rgba(255, 255, 255, 0.1);
+            --border: rgba(255, 255, 255, 0.2);
             --sp-1: 4px;
             --sp-2: 8px;
             --sp-3: 12px;
@@ -41,17 +41,23 @@
 
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg-primary);
+            background: var(--bg-deep);
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.5;
         }
 
-        /* Glass Morphism Base Styles */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: var(--sp-4);
+        }
+
+        /* Glass Morphism - Refined */
         .glass-card {
             background: var(--bg-surface);
-            backdrop-filter: blur(16px) saturate(180%);
-            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            backdrop-filter: blur(10px) saturate(180%);
+            -webkit-backdrop-filter: blur(10px) saturate(180%);
             border: 1px solid var(--border);
             border-radius: var(--radius-lg);
             padding: var(--sp-4);
@@ -69,18 +75,29 @@
             height: 1px;
             background: linear-gradient(90deg,
                 transparent,
-                rgba(34, 211, 238, 0.3),
+                var(--accent-cyan),
                 transparent
             );
         }
 
-        /* Neon Accents */
+        .glass-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 0 20px var(--accent-cyan), 0 8px 32px rgba(34, 211, 238, 0.3);
+        }
+
+        /* Neon Accents - Enhanced */
         .neon-glow {
             box-shadow:
-                0 0 10px rgba(34, 211, 238, 0.3),
-                0 0 20px rgba(168, 85, 247, 0.2),
-                0 0 30px rgba(34, 211, 238, 0.1);
-            border: 1px solid rgba(34, 211, 238, 0.2);
+                0 0 10px #22d3ee,
+                0 0 20px #a855f7;
+            border: 1px solid var(--accent-cyan);
+        }
+
+        .neon-glow-purple {
+            box-shadow:
+                0 0 10px #a855f7,
+                0 0 20px #22d3ee;
+            border: 1px solid var(--accent-purple);
         }
 
         .neon-border {
@@ -96,472 +113,1019 @@
             bottom: -1px;
             background: linear-gradient(
                 135deg,
-                rgba(34, 211, 238, 0.3),
-                rgba(168, 85, 247, 0.3),
-                rgba(34, 211, 238, 0.3)
+                var(--accent-cyan),
+                var(--accent-purple),
+                var(--accent-cyan)
             );
             border-radius: var(--radius-lg);
             z-index: -1;
-            animation: neonPulse 2s infinite alternate;
+            opacity: 0.3;
         }
 
-        @keyframes neonPulse {
-            0% { opacity: 0.7; }
-            100% { opacity: 1; }
-        }
-
-        /* Status Animations */
-        .pulse-running {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        .pulse-fade {
-            animation: pulseFade 1.5s ease-in-out infinite;
-        }
-
+        /* Status Animations - Enhanced */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        @keyframes pulseFade {
-            0%, 100% { opacity: 0.8; }
-            50% { opacity: 1; }
-        }
-
-        .fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Status Badges */
-        .status-badge {
-            display: inline-block;
-            padding: var(--sp-1) var(--sp-3);
-            border-radius: var(--radius-full);
-            font-size: 0.75rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .status-badge::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            50% { opacity: 0.5; box-shadow: 0 0 15px var(--accent-cyan); }
         }
 
         .status-running {
+            animation: pulse 2s infinite;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+        .status-ready { color: var(--success); }
+        .status-stopped { color: var(--warning); }
+        .status-failed { color: var(--error); }
+
+        /* Neon Text */
+        .neon-text {
+            text-shadow:
+                0 0 5px var(--accent-cyan),
+                0 0 10px var(--accent-purple);
+        }
+
+        /* Glass Buttons */
+        .glass-button {
+            background: var(--bg-surface);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: var(--sp-2) var(--sp-4);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            font-size: 14px;
+        }
+
+        .glass-button:hover {
+            background: rgba(34, 211, 238, 0.1);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .glass-button.active {
+            background: rgba(34, 211, 238, 0.2);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 15px var(--accent-cyan);
+        }
+
+        /* Layout Components */
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .grid-layout {
+            display: grid;
+            gap: var(--sp-4);
+        }
+
+        .grid-3-col {
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        }
+
+        .grid-2-col {
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        }
+
+        /* Agent Card Specific - Enhanced */
+        .agent-card {
+            position: relative;
+            min-height: 220px;
+            transition: all var(--transition-normal);
+        }
+
+        .agent-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 0 20px var(--accent-cyan);
+        }
+
+        .agent-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius-full);
             background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            color: #000;
-            box-shadow: 0 0 8px rgba(34, 211, 238, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            position: absolute;
+            top: var(--sp-2);
+            left: var(--sp-2);
+            box-shadow: 0 0 10px var(--accent-cyan);
+            border: 2px solid var(--bg-deep);
         }
 
-        .status-ready {
-            background: var(--success);
-            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        .agent-status {
+            position: absolute;
+            top: var(--sp-2);
+            right: var(--sp-2);
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-        .status-stopped {
-            background: var(--text-secondary);
-            box-shadow: 0 0 8px rgba(148, 163, 184, 0.5);
+        .agent-main-status {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: var(--sp-1);
+            text-shadow: 0 0 5px currentColor;
         }
 
-        .status-failed {
-            background: var(--error);
-            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        .agent-sub-status {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: var(--sp-2);
         }
 
-        /* Context Bar */
-        .context-bar {
+        .agent-task {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 100%;
+            padding: 0 var(--sp-2);
+        }
+
+        .agent-task h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: var(--sp-1);
+            color: var(--text-primary);
+            text-shadow: 0 0 3px var(--accent-cyan);
+        }
+
+        .agent-task p {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .agent-mode {
+            position: absolute;
+            bottom: var(--sp-2);
+            left: var(--sp-2);
+            font-size: 10px;
+            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.3);
+            padding: var(--sp-1) var(--sp-2);
+            border-radius: var(--radius-sm);
+        }
+
+        .agent-context {
+            position: absolute;
+            bottom: var(--sp-2);
+            right: var(--sp-2);
+            width: 80px;
+        }
+
+        .progress-bar {
             height: 4px;
+            background: rgba(255, 255, 255, 0.1);
             border-radius: 2px;
-            margin-top: var(--sp-2);
-            background: linear-gradient(90deg, transparent, currentColor, transparent);
+            overflow: hidden;
+            border: 1px solid var(--border);
         }
 
-        .context-low {
-            background: var(--success);
+        .progress-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
         }
 
-        .context-medium {
-            background: var(--warning);
+        .progress-low { background: var(--success); }
+        .progress-medium { background: var(--warning); }
+        .progress-high { background: var(--error); }
+
+        .agent-last-run {
+            position: absolute;
+            bottom: var(--sp-2);
+            left: var(--sp-2);
+            right: var(--sp-2);
+            font-size: 10px;
+            color: var(--text-secondary);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: var(--sp-1);
+            border-radius: var(--radius-sm);
         }
 
-        .context-high {
-            background: var(--error);
-        }
-
-        /* Timeline Styles */
-        .timeline {
+        /* Timeline Components - Enhanced */
+        .timeline-container {
             position: relative;
             padding: var(--sp-4) 0;
+            display: flex;
+            flex-direction: column;
+            gap: var(--sp-3);
+            height: 100%;
+            overflow-y: auto;
         }
 
-        .timeline::before {
-            content: '';
+        .timeline-connector {
             position: absolute;
             left: 50%;
             top: 0;
             bottom: 0;
             width: 2px;
-            background: linear-gradient(to bottom,
-                transparent,
-                var(--accent-cyan),
-                transparent
-            );
+            background: linear-gradient(to bottom, transparent, var(--accent-cyan), transparent);
             transform: translateX(-50%);
         }
 
         .timeline-item {
             position: relative;
-            padding: var(--sp-3) 0;
+            padding: var(--sp-3) var(--sp-4);
+            margin-bottom: var(--sp-3);
             cursor: pointer;
-            margin-bottom: var(--sp-4);
+            transition: all var(--transition-fast);
+        }
+
+        .timeline-item:hover {
+            transform: translateY(-2px);
         }
 
         .timeline-item::after {
             content: '';
             position: absolute;
             left: 50%;
-            transform: translateX(-50%);
+            top: var(--sp-3);
             width: 12px;
             height: 12px;
-            border-radius: 50%;
-            border: 2px solid var(--accent-cyan);
-            background: var(--bg-primary);
-            z-index: 1;
-        }
-
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom,
-                transparent,
-                var(--accent-cyan),
-                transparent
-            );
+            border-radius: var(--radius-full);
+            background: var(--accent-cyan);
             transform: translateX(-50%);
-        }
-
-        .timeline-content {
-            position: relative;
-            z-index: 2;
-            max-width: 45%;
-        }
-
-        .timeline-content.left {
-            margin-left: 5%;
-        }
-
-        .timeline-content.right {
-            margin-left: 55%;
+            border: 2px solid var(--bg-deep);
+            box-shadow: 0 0 10px var(--accent-cyan);
         }
 
         .timeline-message {
+            position: relative;
+            z-index: 2;
+            padding: var(--sp-2);
+            border-radius: var(--radius-md);
+            max-width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .timeline-coordinator {
+            background: rgba(168, 85, 247, 0.1);
+            margin-left: 0;
+            border-left: 3px solid var(--accent-purple);
+            box-shadow: -5px 0 15px rgba(168, 85, 247, 0.1);
+            align-self: flex-start;
+            margin-right: auto;
+        }
+
+        .timeline-agent {
+            background: rgba(34, 211, 238, 0.1);
+            margin-right: 0;
+            margin-left: auto;
+            border-right: 3px solid var(--accent-cyan);
+            box-shadow: 5px 0 15px rgba(34, 211, 238, 0.1);
+            align-self: flex-end;
+        }
+
+        .timeline-arrow {
+            position: absolute;
+            top: var(--sp-3);
+            width: 20px;
+            height: 20px;
             background: var(--bg-surface);
+            border: 1px solid var(--border);
+            transform: rotate(45deg);
+            z-index: 1;
+        }
+
+        .timeline-coordinator .timeline-arrow {
+            left: -12px;
+        }
+
+        .timeline-agent .timeline-arrow {
+            right: -12px;
+        }
+
+        .floating-card {
+            position: fixed;
+            background: var(--bg-surface);
+            backdrop-filter: blur(16px);
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             padding: var(--sp-3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .floating-card.hidden {
+            display: none;
+        }
+
+        .floating-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: var(--sp-2);
-            position: relative;
+            padding-bottom: var(--sp-2);
+            border-bottom: 1px solid var(--border);
         }
 
-        .timeline-message::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 20px;
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-top: 8px solid var(--bg-surface);
-        }
-
-        .timeline-message.coordinator::after {
-            left: auto;
-            right: 20px;
-            border-top: none;
-            border-bottom: 8px solid var(--bg-surface);
-        }
-
-        /* Agent Card Specific Styles */
-        .agent-card {
-            transition: all var(--transition-normal);
-            position: relative;
-        }
-
-        .agent-card:hover {
-            transform: translateY(-8px);
-            box-shadow:
-                0 10px 20px rgba(34, 211, 238, 0.2),
-                0 15px 30px rgba(168, 85, 247, 0.1);
-        }
-
-        .agent-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
-        }
-
-        .agent-status-container {
-            position: relative;
-            display: inline-block;
-        }
-
-        .agent-status-container::after {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            border-radius: var(--radius-full);
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            z-index: -1;
-            opacity: 0;
-            transition: opacity var(--transition-normal);
-        }
-
-        .agent-card:hover .agent-status-container::after {
-            opacity: 0.3;
-        }
-
-        /* Project and Team Cards */
-        .project-card, .team-card {
-            transition: all var(--transition-normal);
-        }
-
-        .project-card:hover, .team-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(34, 211, 238, 0.2);
-        }
-
-        /* Project Card Specific Styles */
-        .project-card {
-            cursor: pointer;
-            min-height: 200px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .project-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--sp-4);
-        }
-
-        .project-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: var(--sp-3);
-            margin-top: var(--sp-3);
-        }
-
-        .stat-item {
-            text-align: center;
-            padding: var(--sp-2);
-            background: rgba(34, 211, 238, 0.1);
-            border-radius: var(--radius-md);
-            border: 1px solid rgba(34, 211, 238, 0.2);
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--accent-cyan);
-            margin-bottom: var(--sp-1);
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
+        .close-floating {
+            background: none;
+            border: none;
             color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all var(--transition-fast);
         }
 
-        /* Team Card Specific Styles */
-        .team-card {
-            cursor: pointer;
-            min-height: 150px;
+        .close-floating:hover {
+            color: var(--accent-cyan);
+            transform: rotate(90deg);
+        }
+
+        .floating-card-content {
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            gap: var(--sp-2);
         }
 
-        .team-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--sp-4);
+        .interaction-details {
+            background: rgba(0, 0, 0, 0.2);
+            padding: var(--sp-2);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent-cyan);
         }
 
-        .team-meta {
+        .interaction-input, .interaction-output {
+            margin-bottom: var(--sp-2);
+        }
+
+        .interaction-input h4, .interaction-output h4 {
+            color: var(--accent-purple);
+            margin-bottom: var(--sp-1);
+            font-size: 14px;
+        }
+
+        .interaction-output h4 {
+            color: var(--accent-cyan);
+        }
+
+        .interaction-content {
+            background: var(--bg-overlay);
+            padding: var(--sp-2);
+            border-radius: var(--radius-sm);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        /* Navigation - Enhanced */
+        .nav-menu {
             display: flex;
             gap: var(--sp-2);
-            flex-wrap: wrap;
-        }
-
-        .team-meta-item {
-            display: flex;
-            align-items: center;
-            gap: var(--sp-1);
-            padding: var(--sp-1) var(--sp-2);
-            background: rgba(168, 85, 247, 0.1);
-            border-radius: var(--radius-sm);
-            border: 1px solid rgba(168, 85, 247, 0.2);
-            font-size: 0.75rem;
-        }
-
-        .team-agents {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: var(--sp-3);
-            margin-top: var(--sp-3);
-        }
-
-        .team-agent-count {
-            display: flex;
-            align-items: center;
-            gap: var(--sp-1);
-            padding: var(--sp-2);
-            background: rgba(34, 211, 238, 0.1);
+            margin-bottom: var(--sp-4);
+            padding: var(--sp-2) var(--sp-4);
+            background: var(--bg-overlay);
             border-radius: var(--radius-md);
-            border: 1px solid rgba(34, 211, 238, 0.2);
+            overflow-x: auto;
+            border: 1px solid var(--border);
         }
 
-        /* Utility Classes */
-        .hidden {
-            display: none !important;
-        }
-
-        .flex-center {
+        .nav-item {
+            padding: var(--sp-2) var(--sp-3);
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-fast);
+            white-space: nowrap;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: var(--sp-1);
         }
 
-        .glass-overlay {
-            background: rgba(10, 10, 15, 0.8);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border-radius: var(--radius-lg);
-            padding: var(--sp-4);
+        .nav-item.active {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--text-primary);
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .nav-item:hover {
+            background: rgba(34, 211, 238, 0.1);
+        }
+
+        /* Logs Panel - Enhanced */
+        .logs-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-overlay);
+            padding: var(--sp-2) var(--sp-4);
+            display: flex;
+            gap: var(--sp-2);
+            overflow-x: auto;
+            z-index: 50;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .log-filter {
+            padding: var(--sp-1) var(--sp-2);
+            background: transparent;
             border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all var(--transition-fast);
         }
 
-        /* Agent Grid Styles */
-        .agent-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: var(--sp-4);
-            margin-top: var(--sp-4);
+        .log-filter.active {
+            background: rgba(34, 211, 238, 0.2);
+            border-color: var(--accent-cyan);
+            color: var(--text-primary);
+            box-shadow: 0 0 10px var(--accent-cyan);
         }
 
-        .agent-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: var(--sp-4);
-            position: relative;
-            transition: all var(--transition-normal);
+        .log-filter:hover {
+            background: rgba(34, 211, 238, 0.1);
         }
 
-        .agent-card-header {
+        /* Timeline Sidebar */
+        .timeline-sidebar {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 400px;
+            height: 100vh;
+            background: var(--bg-overlay);
+            backdrop-filter: blur(16px);
+            border-left: 1px solid var(--border);
+            transform: translateX(100%);
+            transition: transform var(--transition-normal);
+            z-index: 60;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .timeline-sidebar.active {
+            transform: translateX(0);
+        }
+
+        .timeline-sidebar-header {
+            padding: var(--sp-3) var(--sp-4);
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
+        }
+
+        .timeline-sidebar-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .close-sidebar {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 20px;
+        }
+
+        .timeline-sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--sp-3);
+        }
+
+        .timeline-empty-state {
+            text-align: center;
+            padding: var(--sp-8);
+            color: var(--text-secondary);
+        }
+
+        /* Logs Panel Content */
+        .logs-content {
+            margin-top: 40px;
+            background: var(--bg-overlay);
+            border-radius: var(--radius-md);
+            padding: var(--sp-3);
+            border: 1px solid var(--border);
+        }
+
+        .log-entry {
+            padding: var(--sp-2);
+            border-bottom: 1px solid var(--border);
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .log-entry.info {
+            color: var(--text-secondary);
+        }
+
+        .log-entry.warning {
+            color: var(--warning);
+        }
+
+        .log-entry.error {
+            color: var(--error);
+        }
+
+        .log-entry.debug {
+            color: var(--accent-cyan);
+        }
+
+        /* Debug Panel Content */
+        .debug-content {
+            margin-top: 40px;
+            background: var(--bg-overlay);
+            border-radius: var(--radius-md);
+            padding: var(--sp-3);
+            border: 1px solid var(--border);
+        }
+
+        .debug-section {
             margin-bottom: var(--sp-3);
         }
 
-        .agent-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
-            box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+        .debug-section h3 {
+            color: var(--accent-purple);
+            margin-bottom: var(--sp-2);
+            font-size: 14px;
         }
 
-        .agent-status-main {
-            font-weight: bold;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .agent-status-sub {
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            margin-top: var(--sp-1);
-        }
-
-        .agent-timer {
+        .debug-data {
+            background: var(--bg-surface);
+            padding: var(--sp-2);
+            border-radius: var(--radius-sm);
             font-family: 'Courier New', monospace;
-            font-size: 0.8rem;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Events Panel Content */
+        .events-content {
+            margin-top: 40px;
+            background: var(--bg-overlay);
+            border-radius: var(--radius-md);
+            padding: var(--sp-3);
+            border: 1px solid var(--border);
+        }
+
+        .event-item {
+            padding: var(--sp-2);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .event-item.coordinator {
+            background: rgba(168, 85, 247, 0.1);
+            border-left: 3px solid var(--accent-purple);
+        }
+
+        .event-item.agent {
+            background: rgba(34, 211, 238, 0.1);
+            border-left: 3px solid var(--accent-cyan);
+        }
+
+        .event-timestamp {
             color: var(--text-secondary);
-            margin-top: var(--sp-1);
-        }
-
-        .agent-task-info {
-            text-align: center;
-            margin: var(--sp-3) 0;
-        }
-
-        .agent-task-name {
-            font-weight: bold;
-            font-size: 1.1rem;
+            font-size: 10px;
             margin-bottom: var(--sp-1);
         }
 
-        .agent-mission-name {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
+        .event-message {
+            color: var(--text-primary);
         }
 
-        .agent-llm-info {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--sp-2);
-            margin: var(--sp-2) 0;
-            font-size: 0.8rem;
+        /* Responsive - Enhanced */
+        @media (max-width: 1024px) {
+            .grid-3-col, .grid-2-col {
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+
+            .timeline-sidebar {
+                width: 350px;
+            }
         }
 
-        .llm-mode {
-            padding: var(--sp-1) var(--sp-2);
-            border-radius: var(--radius-sm);
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--sp-2);
+            }
+
+            .grid-3-col, .grid-2-col {
+                grid-template-columns: 1fr;
+            }
+
+            .timeline-sidebar {
+                width: 100%;
+            }
+
+            .timeline-coordinator {
+                margin-left: 10%;
+            }
+
+            .timeline-agent {
+                margin-right: 10%;
+            }
+
+            .nav-menu {
+                padding: var(--sp-1) var(--sp-2);
+            }
+
+            .nav-item {
+                padding: var(--sp-1) var(--sp-2);
+                font-size: 14px;
+            }
+
+            .logs-panel {
+                flex-direction: column;
+                padding: var(--sp-2);
+            }
+
+            .log-filter {
+                width: 100%;
+                text-align: center;
+            }
         }
 
-        .llm-mode.auto {
-            background: rgba(34, 211, 238, 0.2);
-            color: var(--accent
+        @media (max-width: 480px) {
+            .glass-card {
+                padding: var(--sp-2);
+            }
+
+            .agent-avatar {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+
+            .agent-main-status {
+                font-size: 16px;
+            }
+
+            .timeline-sidebar {
+                width: 100%;
+            }
+
+            .timeline-sidebar-header {
+                flex-direction: column;
+                gap: var(--sp-2);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation State -->
+    <div id="app-state" class="hidden">projects</div>
+    <div id="current-project" class="hidden"></div>
+    <div id="current-team" class="hidden"></div>
+
+    <!-- Logs Panel -->
+    <div id="logs-panel" class="logs-panel hidden">
+        <button class="log-filter active" data-filter="all">Todos</button>
+        <button class="log-filter" data-filter="error">Erros</button>
+        <button class="log-filter" data-filter="warning">Avisos</button>
+        <button class="log-filter" data-filter="info">Informações</button>
+        <button class="log-filter" data-filter="debug">Debug</button>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Projects View -->
+        <div id="projects-view" class="view active">
+            <h1 class="text-3xl font-bold text-center mb-8 neon-text">Agent Factory Platform</h1>
+
+            <div id="projects-grid" class="grid-layout grid-3-col">
+                <!-- Projects will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Teams View -->
+        <div id="teams-view" class="view">
+            <div class="nav-menu">
+                <button class="nav-item glass-button" data-view="projects">
+                    <span>🏠</span> Projetos
+                </button>
+                <button class="nav-item glass-button active" data-view="teams">
+                    <span>👥</span> Times
+                </button>
+            </div>
+
+            <h2 id="teams-title" class="text-2xl font-bold mb-6 neon-text"></h2>
+
+            <div id="teams-grid" class="grid-layout grid-2-col">
+                <!-- Teams will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Agents View -->
+        <div id="agents-view" class="view">
+            <div class="nav-menu">
+                <button class="nav-item glass-button" data-view="projects">
+                    <span>🏠</span> Projetos
+                </button>
+                <button class="nav-item glass-button" data-view="teams">
+                    <span>👥</span> Times
+                </button>
+                <button class="nav-item glass-button active" data-view="agents">
+                    <span>🤖</span> Agentes
+                </button>
+                <button id="timeline-toggle" class="nav-item glass-button">
+                    <span>📊</span> Timeline
+                </button>
+            </div>
+
+            <h2 id="agents-title" class="text-2xl font-bold mb-6 neon-text"></h2>
+
+            <div id="agents-grid" class="grid-layout grid-3-col">
+                <!-- Agents will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Logs View -->
+        <div id="logs-view" class="view">
+            <div class="nav-menu">
+                <button class="nav-item glass-button active" data-view="logs">
+                    <span>📝</span> Logs
+                </button>
+                <button class="nav-item glass-button" data-view="debug">
+                    <span>🐛</span> Debug
+                </button>
+                <button class="nav-item glass-button" data-view="events">
+                    <span>📡</span> Events
+                </button>
+            </div>
+
+            <h2 class="text-2xl font-bold mb-6 neon-text">Logs e Debug</h2>
+
+            <!-- Logs Content -->
+            <div id="logs-content" class="logs-content">
+                <div class="logs-table">
+                    <!-- Log entries will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Debug Content -->
+            <div id="debug-content" class="debug-content hidden">
+                <div class="debug-section">
+                    <h3>Dados dos Agentes</h3>
+                    <div id="agents-debug-data" class="debug-data"></div>
+                </div>
+                <div class="debug-section">
+                    <h3>Dados do Sistema</h3>
+                    <div id="system-debug-data" class="debug-data"></div>
+                </div>
+            </div>
+
+            <!-- Events Content -->
+            <div id="events-content" class="events-content hidden">
+                <div id="events-list">
+                    <!-- Events will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Sidebar -->
+    <div id="timeline-sidebar" class="timeline-sidebar">
+        <div class="timeline-sidebar-header">
+            <h3 class="timeline-sidebar-title">Fluxo de Interações</h3>
+            <button class="close-sidebar">✕</button>
+        </div>
+        <div id="timeline-sidebar-content" class="timeline-sidebar-content">
+            <div class="timeline-empty-state">
+                Selecione um agente para ver o fluxo de interações
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Card for Details -->
+    <div id="floating-card" class="floating-card hidden">
+        <div class="floating-card-header">
+            <h3 id="floating-card-title" class="font-semibold"></h3>
+            <button class="close-floating">✕</button>
+        </div>
+        <div id="floating-card-content" class="floating-card-content"></div>
+    </div>
+
+    <script>
+        // State Management - Refactored with clear separation of concerns
+        const state = {
+            projects: [],
+            teams: [],
+            agents: [],
+            missions: [],
+            events: [],
+            logs: [],
+            currentView: 'projects',
+            currentProject: null,
+            currentTeam: null,
+            currentAgent: null,
+            eventSource: null,
+            navigationHistory: []
+        };
+
+        // DOM Elements - Organized by component
+        const elements = {
+            // Views
+            projectsView: document.getElementById('projects-view'),
+            teamsView: document.getElementById('teams-view'),
+            agentsView: document.getElementById('agents-view'),
+            logsView: document.getElementById('logs-view'),
+
+            // Grids
+            projectsGrid: document.getElementById('projects-grid'),
+            teamsGrid: document.getElementById('teams-grid'),
+            agentsGrid: document.getElementById('agents-grid'),
+
+            // Content panels
+            logsContent: document.getElementById('logs-content'),
+            debugContent: document.getElementById('debug-content'),
+            eventsContent: document.getElementById('events-content'),
+
+            // Titles
+            teamsTitle: document.getElementById('teams-title'),
+            agentsTitle: document.getElementById('agents-title'),
+
+            // State indicators
+            appState: document.getElementById('app-state'),
+            currentProjectState: document.getElementById('current-project'),
+            currentTeamState: document.getElementById('current-team'),
+
+            // Panels
+            logsPanel: document.getElementById('logs-panel'),
+            floatingCard: document.getElementById('floating-card'),
+            floatingCardTitle: document.getElementById('floating-card-title'),
+            floatingCardContent: document.getElementById('floating-card-content'),
+
+            // Timeline sidebar
+            timelineSidebar: document.getElementById('timeline-sidebar'),
+            timelineSidebarContent: document.getElementById('timeline-sidebar-content'),
+            timelineToggle: document.getElementById('timeline-toggle'),
+            closeSidebar: document.querySelector('.close-sidebar'),
+
+            // Logs panel
+            logFilters: document.querySelectorAll('.log-filter'),
+
+            // Controls
+            closeFloating: document.querySelector('.close-floating'),
+            navItems: document.querySelectorAll('.nav-item')
+        };
+
+        // Initialize the dashboard - Refactored with clear flow
+        async function init() {
+            try {
+                // Load initial data
+                await loadProjects();
+                await loadMissions();
+                await loadSystemData();
+
+                // Setup event listeners
+                setupNavigation();
+                setupEventSource();
+                setupLogsPanel();
+                setupFloatingCard();
+                setupTimelineSidebar();
+
+                // Show appropriate view based on state
+                updateView();
+
+                // Log initialization
+                console.log('Dashboard initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize dashboard:', error);
+                logError('Falha ao inicializar o dashboard');
+            }
+        }
+
+        // Data Loading Functions - Refactored with error handling
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/projects');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                state.projects = await response.json();
+                renderProjects();
+            } catch (error) {
+                console.error('Error loading projects:', error);
+                logError(`Falha ao carregar projetos: ${error.message}`);
+                showErrorMessage('Não foi possível carregar os projetos');
+            }
+        }
+
+        async function loadMissions() {
+            try {
+                const response = await fetch('/api/missions');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                state.missions = await response.json();
+            } catch (error) {
+                console.error('Error loading missions:', error);
+                logError(`Falha ao carregar missões: ${error.message}`);
+            }
+        }
+
+        async function loadSystemData() {
+            try {
+                // Load system status
+                const statusResponse = await fetch('/api/status');
+                if (statusResponse.ok) {
+                    const systemStatus = await statusResponse.json();
+                    state.systemStatus = systemStatus;
+                }
+
+                // Load context data
+                const contextResponse = await fetch('/api/context');
+                if (contextResponse.ok) {
+                    const contextData = await contextResponse.json();
+                    state.contextData = contextData;
+                }
+            } catch (error) {
+                console.error('Error loading system data:', error);
+                logError(`Falha ao carregar dados do sistema: ${error.message}`);
+            }
+        }
+
+        // Log Management Functions
+        function logInfo(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] [INFO] ${message}`;
+            state.logs.push({ type: 'info', message: logEntry });
+            renderLogs();
+        }
+
+        function logWarning(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] [WARNING] ${message}`;
+            state.logs.push({ type: 'warning', message: logEntry });
+            renderLogs();
+        }
+
+        function logError(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] [ERROR] ${message}`;
+            state.logs.push({ type: 'error', message: logEntry });
+            renderLogs();
+        }
+
+        function logDebug(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] [DEBUG] ${message}`;
+            state.logs.push({ type: 'debug', message: logEntry });
+            renderLogs();
+        }
+
+        function renderLogs() {
+            if (!state.logs.length) return;
+
+            const logsTable = elements.logsContent.querySelector('.logs-table');
+            logsTable.innerHTML = '';
+
+            state.logs.forEach(log => {
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${log.type}`;
+                logEntry.textContent = log.message;
+                logsTable.appendChild(logEntry);
+            });
+        }
+
+        function filterLogs(filter) {
+            const logsTable = elements.logsContent.querySelector('.logs-table');
+            logsTable.innerHTML = '';
+
+            state.logs.filter(log => {
+                if (filter === 'all') return true;
+                return log.type === filter;
+            }).forEach(log => {
+                const logEntry = document.createElement('div');
+                logEntry.className = `log-entry ${log.type}`;
+                logEntry.textContent = log.message;
+                logsTable.appendChild(logEntry);
+            });
+        }
+
+        function renderDebug() {
+            if (state.agents && state.agents.length > 0) {
+                const agentsDebugData = document.getElementById('agents-debug-data');
+                agentsDebugData.textContent = JSON.stringify(state.agents

@@ -309,7 +309,7 @@ Retorne APENAS o codigo gerado, sem explicacoes, dentro de um bloco ``` com a li
 Se houver multiplos arquivos, retorne cada um em seu proprio bloco ``` com o caminho como comentario no inicio."""
 
         system_prompt = "Voce e um engenheiro de software sênior. Gere codigo limpo, seguro e bem estruturado."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=4096)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=8192)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
@@ -362,7 +362,7 @@ Forneca:
 
 Retorne o plano seguido pelos blocos de codigo com ```."""
         system_prompt = "Voce e um arquiteto de software sênior. Planeje implementacoes claras e modulares."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=4096)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=8192)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
@@ -413,7 +413,7 @@ Instrucoes: {instructions}
 
 Retorne APENAS o codigo refatorado completo dentro de um bloco ```."""
         system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=4096)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=8192)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
