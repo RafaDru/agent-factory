@@ -1,0 +1,19 @@
+INFO:     Started server process [65544]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8081 (Press CTRL+C to quit)
+[07/14/26 13:27:25] INFO     HTTP Request: POST                 _client.py:1025
+                             https://api.groq.com/openai/v1/cha                
+                             t/completions "HTTP/1.1 429 Too                   
+                             Many Requests"                                    
+[07/14/26 13:27:27] INFO     HTTP Request: POST                 _client.py:1025
+                             https://api.xiaomimimo.com/v1/chat                
+                             /completions "HTTP/1.1 400 Bad                    
+                             Request"                                          
+[07/14/26 13:27:28] INFO     HTTP Request: POST                 _client.py:1025
+                             https://api.deepseek.com/chat/comp                
+                             letions "HTTP/1.1 402 Payment                     
+                             Required"                                         
+[07/14/26 13:27:32] INFO     HTTP Request: POST                 _client.py:1025
+                             https://api.mistral.ai/v1/chat/com                
+                             pletions "HTTP/1.1 200 OK"                        

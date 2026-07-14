@@ -20,6 +20,8 @@ class AgentFactoryDevAgent(StandardBaseAgent):
     Agente de Desenvolvimento do Agent Factory.
     """
 
+    _DEFAULT_LLM = "auto"
+
     ACTIONS = {
         "read_file": {"description": "Le conteudo de um arquivo", "params": {"file_path": "str"}},
         "write_file": {"description": "Escreve conteudo em um arquivo", "params": {"file_path": "str", "content": "str"}},
@@ -30,6 +32,9 @@ class AgentFactoryDevAgent(StandardBaseAgent):
         "run_git": {"description": "Executa comando git", "params": {"args": "list[str]"}},
         "rename_file": {"description": "Renomeia ou move um arquivo", "params": {"src": "str", "dst": "str"}},
         "delete_file": {"description": "Remove um arquivo", "params": {"file_path": "str"}},
+        "generate_code": {"description": "Gera codigo via LLM (React, Python, etc)", "params": {"spec": "str - especificacao do que gerar", "language": "str (opcional)", "output_path": "str (opcional)"}},
+        "implement_feature": {"description": "Usa LLM para planejar e implementar uma feature", "params": {"spec": "str - descricao da feature", "output_path": "str (opcional)"}},
+        "refactor_code": {"description": "Usa LLM para analisar e refatorar codigo existente", "params": {"file_path": "str", "instructions": "str (opcional)"}},
     }
 
     def __init__(self, project_id: str, notifier: EventNotifier, **kwargs):
@@ -71,6 +76,9 @@ class AgentFactoryDevAgent(StandardBaseAgent):
             "run_git": self._run_git,
             "rename_file": self._rename_file,
             "delete_file": self._delete_file,
+            "generate_code": self._generate_code_with_llm,
+            "implement_feature": self._implement_feature_with_llm,
+            "refactor_code": self._refactor_code_with_llm,
             "get_capabilities": lambda t: TaskOutput.success(summary="Capabilities", capabilities=self.get_capabilities()),
         }
 
@@ -250,3 +258,180 @@ class AgentFactoryDevAgent(StandardBaseAgent):
             return TaskOutput.success(summary=f"Arquivo removido: {path}")
         except Exception as e:
             return TaskOutput.failure(rationale=f"Erro ao remover {path}: {e}")
+
+    def _build_context_prompt(self, task: dict) -> str:
+        """Carrega os 3 niveis de contexto se disponiveis e retorna como prefixo do prompt."""
+        parts = []
+        ctx_global = self.load_global_context()
+        if ctx_global:
+            parts.append(f"## Contexto Global do Projeto\n\n{ctx_global}")
+        mission_id = task.get("_mission_id", "")
+        if mission_id:
+            ctx_mission = self.load_mission_context(mission_id)
+            if ctx_mission:
+                parts.append(f"## Contexto da Missão\n\n{ctx_mission}")
+            task_id = task.get("_task_id", "")
+            if task_id and self.agent_id:
+                ctx_task = self.load_task_context(mission_id, task_id, self.agent_id)
+                if ctx_task:
+                    parts.append(f"## Contexto desta Tarefa\n\n{ctx_task}")
+        dep_ctx = task.get("_dependency_context", "")
+        if dep_ctx:
+            parts.append(dep_ctx)
+        return "\n\n".join(parts)
+
+    def _save_artifact(self, task: dict, name: str, content: str):
+        """Salva artefato se a task tiver contexto de missao."""
+        mid = task.get("_mission_id", "")
+        tid = task.get("_task_id", "")
+        if mid and tid:
+            self.save_task_artifact(mid, tid, self.agent_id, name, content)
+
+    def _generate_code_with_llm(self, task: dict) -> TaskOutput:
+        spec = task.get("spec") or task.get("prompt", "")
+        if not spec:
+            return TaskOutput.needs_direction(
+                rationale="Especifique o que gerar no campo 'spec'.",
+                available_actions=["read_file", "list_directory", "get_capabilities"],
+            )
+        language = task.get("language", "")
+        output_path = task.get("output_path", "")
+
+        context_prefix = self._build_context_prompt(task)
+        lang_hint = f" na linguagem/stack {language}" if language else ""
+        prompt = f"""{context_prefix}
+
+Gere codigo para a seguinte especificacao{lang_hint}:
+
+{spec}
+
+Retorne APENAS o codigo gerado, sem explicacoes, dentro de um bloco ``` com a linguagem. 
+Se houver multiplos arquivos, retorne cada um em seu proprio bloco ``` com o caminho como comentario no inicio."""
+
+        system_prompt = "Voce e um engenheiro de software sênior. Gere codigo limpo, seguro e bem estruturado."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=4096)
+
+        if llm_response:
+            self._save_artifact(task, "llm_raw_response.md", llm_response)
+            # Strip markdown code fences if present
+            cleaned = llm_response.strip()
+            if cleaned.startswith("```"):
+                first_nl = cleaned.find("\n")
+                if first_nl != -1:
+                    cleaned = cleaned[first_nl + 1:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3].strip()
+            result = {
+                "status": "generated",
+                "summary": f"Codigo gerado via LLM ({self._llm.__class__.__name__ if self._llm else 'N/A'})",
+                "code": cleaned,
+                "spec": spec,
+            }
+            if output_path:
+                path = self._resolve(output_path)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(cleaned, encoding="utf-8")
+                result["file_path"] = str(path)
+                result["summary"] += f" -> {path}"
+            return TaskOutput.success(**result)
+        return TaskOutput.failure(
+            rationale="LLM nao disponivel para geracao de codigo. Use write_file manualmente.",
+            available_actions=["write_file", "read_file", "list_directory"],
+        )
+
+    def _implement_feature_with_llm(self, task: dict) -> TaskOutput:
+        spec = task.get("spec") or task.get("prompt", "")
+        if not spec:
+            return TaskOutput.needs_direction(
+                rationale="Especifique a feature no campo 'spec'.",
+                available_actions=["read_file", "list_directory", "get_capabilities"],
+            )
+        output_path = task.get("output_path", "")
+
+        context_prefix = self._build_context_prompt(task)
+        prompt = f"""{context_prefix}
+
+Analise a seguinte feature e planeje sua implementacao:
+
+{spec}
+
+Forneca:
+1. Um plano de implementacao passo a passo
+2. Os arquivos que precisam ser criados ou modificados
+3. O codigo para cada arquivo
+
+Retorne o plano seguido pelos blocos de codigo com ```."""
+        system_prompt = "Voce e um arquiteto de software sênior. Planeje implementacoes claras e modulares."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=4096)
+
+        if llm_response:
+            self._save_artifact(task, "llm_raw_response.md", llm_response)
+            result = {
+                "status": "planned",
+                "summary": f"Feature planejada via LLM ({self._llm.__class__.__name__ if self._llm else 'N/A'})",
+                "plan": llm_response,
+                "spec": spec,
+            }
+            if output_path:
+                path = self._resolve(output_path)
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(llm_response, encoding="utf-8")
+                result["file_path"] = str(path)
+            return TaskOutput.success(**result)
+        return TaskOutput.failure(
+            rationale="LLM nao disponivel para planejamento. Implemente manualmente.",
+            available_actions=["write_file", "edit_file", "read_file"],
+        )
+
+    def _refactor_code_with_llm(self, task: dict) -> TaskOutput:
+        file_path = task.get("file_path") or task.get("path")
+        if not file_path:
+            return TaskOutput.needs_direction(
+                rationale="Informe file_path para refatorar.",
+                available_actions=["read_file", "list_directory"],
+            )
+        path = self._resolve(file_path)
+        if not path.exists():
+            return TaskOutput.failure(rationale=f"Arquivo nao encontrado: {path}")
+
+        instructions = task.get("instructions", "Melhore a qualidade, legibilidade e desempenho do codigo.")
+        try:
+            content = path.read_text(encoding="utf-8")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao ler {path}: {e}")
+
+        context_prefix = self._build_context_prompt(task)
+        prompt = f"""{context_prefix}
+
+Analise e refatore o seguinte codigo:
+
+Instrucoes: {instructions}
+
+```{path.suffix[1:] if path.suffix else ''}
+{content}
+```
+
+Retorne APENAS o codigo refatorado completo dentro de um bloco ```."""
+        system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=4096)
+
+        if llm_response:
+            self._save_artifact(task, "llm_raw_response.md", llm_response)
+            self._save_artifact(task, "original_code.md", content)
+            cleaned = llm_response.strip()
+            if cleaned.startswith("```"):
+                first_nl = cleaned.find("\n")
+                if first_nl != -1:
+                    cleaned = cleaned[first_nl + 1:]
+                if cleaned.endswith("```"):
+                    cleaned = cleaned[:-3].strip()
+            path.write_text(cleaned, encoding="utf-8")
+            return TaskOutput.success(
+                summary=f"Codigo refatorado via LLM e salvo em {path}",
+                rationale=f"LLM: {self._llm.__class__.__name__ if self._llm else 'N/A'}",
+                file_path=str(path), before_size=len(content), after_size=len(llm_response),
+            )
+        return TaskOutput.failure(
+            rationale="LLM nao disponivel para refatoracao.",
+            available_actions=["edit_file", "read_file"],
+        )

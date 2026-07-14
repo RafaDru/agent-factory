@@ -12,17 +12,20 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent, AgentRole
+from src.agents.base import StructuredError
 from src.protocols.events import EventNotifier
 
 PRINTER_DIR = Path(r"C:\Users\rafae\Documents\Impressao 3D")
 
 
-class VisionAgent(AgentBase):
+class VisionAgent(StandardBaseAgent):
     """
     Agente de visao computacional para monitoramento de impressao.
     Detecta anomalias, patinacao da extrusora, e crescimento da peca.
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "start_monitoring": {

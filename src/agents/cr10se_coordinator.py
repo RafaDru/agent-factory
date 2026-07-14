@@ -17,7 +17,8 @@ import json
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent, AgentRole
+from src.agents.base import StructuredError, AgentBase
 from src.protocols.events import EventNotifier
 from src.protocols.schema import AgentEvent, AgentStatus
 from src.llm import get_provider, LLMProvider
@@ -25,11 +26,13 @@ from src.llm import get_provider, LLMProvider
 PRINTER_DIR = r"C:\Users\rafae\Documents\Impressao 3D"
 
 
-class CR10SECoordinator(AgentBase):
+class CR10SECoordinator(StandardBaseAgent):
     """
     Coordenador do projeto cr10se.
     Planeja e executa melhorias na CR-10 SE delegando para workers especializados.
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "delegate": {

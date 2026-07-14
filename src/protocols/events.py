@@ -24,6 +24,9 @@ class EventNotifier:
     - Callback (para integração)
     """
     
+    _sse_clients: set = set()
+    _last_event_id: int = 0
+    
     def __init__(self, project_id: str, output_dir: str = ".agent-events"):
         self.project_id = project_id
         self.output_dir = Path(output_dir) / project_id
@@ -36,6 +39,31 @@ class EventNotifier:
         
         # Inicializar status
         self._update_status("initializing", 0)
+    
+    @classmethod
+    def register_sse_client(cls, client):
+        """Registra um cliente SSE para receber eventos."""
+        cls._sse_clients.add(client)
+    
+    @classmethod
+    def unregister_sse_client(cls, client):
+        """Remove um cliente SSE."""
+        cls._sse_clients.discard(client)
+
+    def _notify_sse_clients(self, event: AgentEvent):
+        """Envia evento para todos os clientes SSE registrados."""
+        EventNotifier._last_event_id += 1
+        event_id = EventNotifier._last_event_id
+        event_json = event.model_dump_json()
+
+        message = f"event: agent_event\nid: {event_id}\ndata: {event_json}\n\n"
+        
+        for client in list(EventNotifier._sse_clients):
+            try:
+                client.wfile.write(message.encode("utf-8"))
+                client.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError):
+                EventNotifier.unregister_sse_client(client)
     
     def on_event(self, callback: Callable[[AgentEvent], None]):
         """Registra callback para eventos."""
@@ -56,6 +84,9 @@ class EventNotifier:
                 callback(event)
             except Exception as e:
                 print(f"Callback error: {e}")
+        
+        # 4. Notificar clientes SSE
+        self._notify_sse_clients(event)
     
     def emit_task_result(self, result: TaskResult):
         """Emite resultado final de tarefa."""

@@ -12,17 +12,20 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent, AgentRole
+from src.agents.base import StructuredError
 from src.protocols.events import EventNotifier
 
 PRINTER_DIR = Path(r"C:\Users\rafae\Documents\Impressao 3D")
 
 
-class ResumeAgent(AgentBase):
+class ResumeAgent(StandardBaseAgent):
     """
     Agente de retomada de impressao.
     Analisa GCode, probe de posicao, constroi GCode de retomada e valida.
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "analyze_gcode": {

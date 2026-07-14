@@ -1,0 +1,57 @@
+{
+  "project_id": "pta",
+  "project_name": "Personal Trainer Agentico",
+  "team_id": "PTA-Team",
+  "team_name": "PTA Team",
+  "description": "App mobile com IA e visao computacional para treinos personalizados. Agentes definidos no proprio projeto PTA.",
+  "icon": "🌱",
+  "working_dir": "~/PersonalTrainerAgent",
+  "agents_source": "agentes/",
+  "agents": [
+    {
+      "agent_id": "coordenador",
+      "module_path": "~/PersonalTrainerAgent/agentes/__init__.py",
+      "class_name": "CoordenadorAgent",
+      "context_limit_kb": 15.0,
+      "llm_provider": "auto",
+      "emoji": "🎯",
+      "description": "Coordenador do time PTA"
+    },
+    {
+      "agent_id": "desenvolvedor",
+      "module_path": "~/PersonalTrainerAgent/agentes/__init__.py",
+      "class_name": "DesenvolvedorAgent",
+      "context_limit_kb": 12.0,
+      "llm_provider": "auto",
+      "emoji": "⚙️",
+      "description": "Desenvolvimento mobile e backend"
+    },
+    {
+      "agent_id": "qa",
+      "module_path": "~/PersonalTrainerAgent/agentes/__init__.py",
+      "class_name": "QAAgent",
+      "context_limit_kb": 10.0,
+      "llm_provider": "auto",
+      "emoji": "🧪",
+      "description": "Testes e qualidade"
+    },
+    {
+      "agent_id": "designer",
+      "module_path": "~/PersonalTrainerAgent/agentes/__init__.py",
+      "class_name": "DesignerAgent",
+      "context_limit_kb": 10.0,
+      "llm_provider": "auto",
+      "emoji": "🎨",
+      "description": "UX/UI e design de interfaces"
+    },
+    {
+      "agent_id": "negocios",
+      "module_path": "~/PersonalTrainerAgent/agentes/__init__.py",
+      "class_name": "NegociosAgent",
+      "context_limit_kb": 10.0,
+      "llm_provider": "auto",
+      "emoji": "💼",
+      "description": "Analise de negocios e metricas"
+    }
+  ]
+}

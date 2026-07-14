@@ -82,7 +82,7 @@ OpenCode: reads AGENTS.md → discovers MCP tools → calls run_objective()
 
 ```
 Tool:  run_objective
-Args:  project_id = "afp"
+Args:  project_id = "AFP-Team"
        objective = "Adicionar logging estruturado com módulo logging em todos os agentes em src/agents/"
        context = "Usar logging.basicConfig, log para arquivo em .agent-factory/logs/"
 ```
@@ -248,9 +248,9 @@ The delegating agent (or parent LLM) should:
 
 ## Project Types
 
-### afp (Agent Factory Platform)
-**Purpose:** Evolve the Agent Factory Platform itself.
-**Agents:** coordenador (orchestrator), dev (development), qa (quality)
+### AFP-Team (Agent Factory Platform Team)
+**Purpose:** A equipe de agentes que evolui a própria Agent Factory Platform de forma recursiva. Este é o projeto meta, onde a plataforma constrói a si mesma.
+**Agents:** `coordenador` (orquestrador), `dev` (desenvolvimento), `qa` (qualidade), `designer` (UX/UI). Cada agente possui seu próprio LLM provider para raciocínio autônomo.
 
 ### pta
 **Purpose:** Build and evolve the Personal Trainer App with AI and computer vision.
@@ -275,31 +275,8 @@ The delegating agent (or parent LLM) should:
 | 1 | Document architecture (this file) | ✅ Done |
 | 2 | MCP server exposing agents as tools | ✅ Done |
 | 3 | Coordinator with LLM brain (plan generation) | ✅ Done |
-| 4 | Spawn sub-session mechanism (worker as mini-LLM) | ⏳ Planned |
-| 5 | Update all context files with new flow | ✅ Done |
+| 4 | All agents with native LLM provider | ✅ Done |
+| 5 | Spawn sub-session mechanism (worker as mini-LLM) | ⏳ Planned |
+| 6 | Update all context files with new flow | ✅ Done |
+| 7 | Recursive self-improvement via AFP-Team | 🎯 Goal |
 
-## Feature Roadmap (Solicitado pelo Usuario)
-
-### System Tray Icon para Windows
-
-**Objetivo:** Um icone na bandeja do sistema (ao lado do relogio) para gerenciar o Agent Factory sem precisar abrir terminal.
-
-**Funcionalidades desejadas:**
-- ✅ Atalho para abrir o Dashboard (`http://localhost:8080`) com duplo clique
-- ✅ Indicador visual de status: "rodando" (verde) / "parado" (cinza)
-- ✅ Opcao de "Liga/Desliga" do servidor Agent Factory
-- ✅ Inicializacao automatica com o Windows
-- ✅ Notificacoes toast no system tray quando:
-  - Um agente for acionado ("Agente negocios acionado para analise...")
-  - Uma tarefa for finalizada ("Tarefa concluida: analise-oportunidades")
-  - Coordenador solicitar atencao ("Coordenador precisa da sua revisao")
-  - Alertas de erro ou timeout de agentes
-- ✅ Menu de contexto com atalhos rapidos (abrir dashboard, abrir MCP, reiniciar servidor)
-
-**Stack de implementacao:**
-- `pystray` ou `infi.systray` para o icone no system tray
-- `plyer` para notificacoes toast nativas do Windows
-- `winreg` para registro de startup com Windows
-- WebSocket ou polling para receber eventos do EventNotifier em tempo real
-
-**Status:** 🔜 Pendente (proxima prioridade apos estabilizacao do MCP)

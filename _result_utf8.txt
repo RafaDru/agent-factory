@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "C:\Users\rafae\agent-factory\test_missao_afp.py", line 11, in <module>
+    from src.protocols.events import EventNotifier
+  File "C:\Users/rafae/agent-factory\src\__init__.py", line 17, in <module>
+    from .dashboard.server import DashboardServer
+ImportError: cannot import name 'DashboardServer' from 'src.dashboard.server' (C:\Users/rafae/agent-factory\src\dashboard\server.py)

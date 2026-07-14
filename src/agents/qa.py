@@ -19,12 +19,17 @@ class QAAgent(StandardBaseAgent):
     Agente de Qualidade — validacao real de artefatos.
     """
 
+    _DEFAULT_LLM = "auto"
+
     ACTIONS = {
         "run_tests": {"description": "Executa pytest e retorna resultados", "params": {"path": "str", "args": "list[str] (opcional)"}},
         "validate_python_syntax": {"description": "Valida sintaxe Python de um arquivo", "params": {"file_path": "str"}},
         "analyze_artifact": {"description": "Le um artefato do disco e avalia seu conteudo", "params": {"file_path": "str", "checks": "list[str] (opcional)"}},
         "lint": {"description": "Executa flake8 ou pycodestyle em um arquivo/diretorio", "params": {"path": "str"}},
         "file_exists": {"description": "Verifica se arquivo existe e nao esta vazio", "params": {"file_path": "str"}},
+        "review_code": {"description": "Usa LLM para revisar codigo (boas praticas, seguranca, qualidade)", "params": {"file_path": "str"}},
+        "suggest_fixes": {"description": "Usa LLM para analisar falhas e sugerir correcoes", "params": {"error": "str - descricao do erro/falha", "file_path": "str (opcional)"}},
+        "analyze_project": {"description": "Usa LLM para analisar saude geral do projeto", "params": {"path": "str (opcional)"}},
     }
 
     def __init__(self, project_id: str, notifier: EventNotifier, **kwargs):
@@ -59,6 +64,9 @@ class QAAgent(StandardBaseAgent):
             "analyze_artifact": self._analyze_artifact,
             "lint": self._lint,
             "file_exists": self._file_exists,
+            "review_code": self._review_code_with_llm,
+            "suggest_fixes": self._suggest_fixes_with_llm,
+            "analyze_project": self._analyze_project_with_llm,
             "get_capabilities": lambda t: TaskOutput.success(summary="Capabilities", capabilities=self.get_capabilities()),
         }
         handler = handlers.get(resolved)
@@ -199,4 +207,159 @@ class QAAgent(StandardBaseAgent):
             path=str(path), exists=True,
             size_bytes=len(content.encode("utf-8")),
             lines=content.count("\n") + 1, non_empty=len(content.strip()) > 0,
+        )
+
+    def _build_context_prompt(self, task: dict) -> str:
+        """Carrega os 3 niveis de contexto se disponiveis e retorna como prefixo do prompt."""
+        parts = []
+        ctx_global = self.load_global_context()
+        if ctx_global:
+            parts.append(f"## Contexto Global do Projeto\n\n{ctx_global}")
+        mission_id = task.get("_mission_id", "")
+        if mission_id:
+            ctx_mission = self.load_mission_context(mission_id)
+            if ctx_mission:
+                parts.append(f"## Contexto da Missão\n\n{ctx_mission}")
+            task_id = task.get("_task_id", "")
+            if task_id and self.agent_id:
+                ctx_task = self.load_task_context(mission_id, task_id, self.agent_id)
+                if ctx_task:
+                    parts.append(f"## Contexto desta Tarefa\n\n{ctx_task}")
+        dep_ctx = task.get("_dependency_context", "")
+        if dep_ctx:
+            parts.append(dep_ctx)
+        return "\n\n".join(parts)
+
+    def _save_artifact(self, task: dict, name: str, content: str):
+        """Salva artefato se a task tiver contexto de missao."""
+        mid = task.get("_mission_id", "")
+        tid = task.get("_task_id", "")
+        if mid and tid:
+            self.save_task_artifact(mid, tid, self.agent_id, name, content)
+
+    def _review_code_with_llm(self, task: dict) -> TaskOutput:
+        file_path = task.get("file_path") or task.get("path")
+        if not file_path:
+            return TaskOutput.needs_direction(
+                rationale="Informe file_path para revisar.",
+                available_actions=["list_directory"],
+            )
+        path = self._resolve(file_path)
+        if not path.exists():
+            return TaskOutput.failure(rationale=f"Arquivo nao encontrado: {path}")
+
+        if path.is_dir():
+            files = [str(p.relative_to(path)) for p in path.rglob("*") if p.is_file()]
+            return TaskOutput.failure(
+                rationale=f"review_code exige arquivo, mas recebeu diretorio: {path}. "
+                          f"Arquivos encontrados: {files[:10]}. "
+                          f"Use analyze_project para revisar o diretorio todo, "
+                          f"ou analyze_artifact para artefatos de design.",
+                available_actions=["analyze_project", "analyze_artifact", "list_directory"],
+            )
+
+        try:
+            content = path.read_text(encoding="utf-8")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao ler {path}: {e}")
+
+        context_prefix = self._build_context_prompt(task)
+        prompt = f"""{context_prefix}
+
+Revise o seguinte codigo e forneça uma analise completa:
+
+```{path.suffix[1:] if path.suffix else ''}
+{content[:8000]}
+```
+
+Analise: boas praticas, seguranca, desempenho, legibilidade, possiveis bugs.
+Forneça uma nota de 0-10 e sugestoes especificas de melhoria."""
+        system_prompt = "Voce e um revisor de codigo sênior. Seja critico e construtivo."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=2048)
+
+        if llm_response:
+            self._save_artifact(task, "review_analise.md", llm_response)
+            return TaskOutput.success(
+                summary=f"Revisao concluida para {path.name}",
+                rationale="Codigo analisado via LLM",
+                file_path=str(path), review=llm_response,
+            )
+        return TaskOutput.failure(
+            rationale="LLM nao disponivel para revisao. Use analise manual.",
+            available_actions=["analyze_artifact", "lint", "validate_python_syntax"],
+        )
+
+    def _suggest_fixes_with_llm(self, task: dict) -> TaskOutput:
+        error_desc = task.get("error") or task.get("description", "")
+        if not error_desc:
+            return TaskOutput.needs_direction(
+                rationale="Descreva o erro no campo 'error' para sugerir correcoes.",
+                available_actions=["run_tests", "lint"],
+            )
+        file_path = task.get("file_path", "")
+
+        context = ""
+        if file_path:
+            path = self._resolve(file_path)
+            if path.exists():
+                try:
+                    context = f"\n\nConteudo do arquivo:\n```\n{path.read_text(encoding='utf-8')[:4000]}\n```"
+                except Exception:
+                    pass
+
+        ctx_prefix = self._build_context_prompt(task)
+        prompt = f"""{ctx_prefix}
+
+Analise o seguinte erro e sugira correcoes:
+
+ERRO: {error_desc}{context}
+
+Forneça: causa raiz, solucao proposta e codigo corrigido se aplicavel."""
+        system_prompt = "Voce e um engenheiro de software focado em debugging. Seja preciso e objetivo."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=2048)
+
+        if llm_response:
+            self._save_artifact(task, "sugestoes_correcao.md", llm_response)
+            return TaskOutput.success(
+                summary="Sugestoes de correcao geradas via LLM",
+                rationale=f"LLM: {self._llm.__class__.__name__ if self._llm else 'N/A'}",
+                error=error_desc, suggestions=llm_response,
+            )
+        return TaskOutput.failure(
+            rationale="LLM nao disponivel para sugerir correcoes.",
+            available_actions=["run_tests", "lint", "analyze_artifact"],
+        )
+
+    def _analyze_project_with_llm(self, task: dict) -> TaskOutput:
+        base_path = self._resolve(task.get("path", "."))
+        if not base_path.exists():
+            return TaskOutput.failure(rationale=f"Diretorio nao encontrado: {base_path}")
+
+        files = list(base_path.rglob("*.py"))[:30]
+        file_list = "\n".join(str(f.relative_to(self.working_dir)) for f in files)
+        total = len(files)
+
+        ctx_prefix = self._build_context_prompt(task)
+        prompt = f"""{ctx_prefix}
+
+Analise a saude do projeto em {base_path}:
+
+Arquivos Python encontrados: {total}
+Primeiros {min(total, 30)} arquivos:
+{file_list}
+
+Forneça: estrutura geral, pontos fortes, riscos potenciais, sugestoes de melhoria."""
+        system_prompt = "Voce e um arquiteto de software especializado em analise de projetos."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=2048)
+
+        if llm_response:
+            self._save_artifact(task, "analise_projeto.md", llm_response)
+            return TaskOutput.success(
+                summary=f"Analise de projeto concluida: {total} arquivos Python",
+                rationale=f"LLM: {self._llm.__class__.__name__ if self._llm else 'N/A'}",
+                path=str(base_path), total_files=total, analysis=llm_response,
+            )
+        return TaskOutput.failure(
+            rationale="LLM nao disponivel para analise de projeto.",
+            available_actions=["run_tests", "lint"],
         )

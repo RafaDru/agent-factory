@@ -20,14 +20,16 @@ from src.llm import get_provider, LLMProvider
 
 class AgentFactoryCoordinator(StandardBaseAgent):
     """
-    Coordenador do projeto AFP.
+    Coordenador do projeto AFP-Team.
     Recebe objetivos de alto nivel, gera planos via LLM e delega
-    para dev e qa.
+    para os workers do time (dev, qa, designer).
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "delegate": {
-            "description": "Delega tarefa para dev ou qa e retorna resultado",
+            "description": "Delega tarefa para dev, qa ou designer e retorna resultado",
             "params": {
                 "agent_id": "str (obrigatorio) - dev | qa | designer",
                 "task": "dict (obrigatorio) - {action, ...}",
@@ -47,108 +49,148 @@ class AgentFactoryCoordinator(StandardBaseAgent):
         },
     }
 
-    PLAN_SYSTEM_PROMPT = """Voce e o coordenador do projeto Agent Factory (AFP).
+    PLAN_SYSTEM_PROMPT = """Voce e o coordenador do projeto Agent Factory Platform Team (AFP-Team).
 Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 
 ## Regra de Ouro da Orquestração
-Você é o Coordenador. Sua responsabilidade é garantir a qualidade.
-1. Receba objetivo.
-2. Delegue sempre ao `designer` para propor o design/protótipo antes de qualquer código.
-3. Delegue ao `dev` a implementação baseada nos artefatos do designer.
-4. Delegue ao `qa` a validação final.
-5. Somente marque como COMPLETED após o QA validar. Se qualquer etapa falhar, aborte e reporte.
+1. Delegue ao `designer` para pesquisar/analisar/prototipar antes de codigo.
+2. Delegue ao `dev` para IMPLEMENTAR incrementalmente:
+   - PRIMEIRA task no arquivo: use `write_file` ou `generate_code` para CRIAR o arquivo
+   - Tasks SEGUINTES no MESMO arquivo: use `refactor_code` para MODIFICAR o arquivo existente (ele le o codigo atual e aplica as mudancas)
+   - NUNCA use `generate_code` duas vezes no mesmo arquivo — ele sobrescreve, nao edita
+   - Apos cada bloco de alteracoes, adicione uma task `run_git` para commitar
+3. Delegue ao `qa` para validar o codigo gerado (review_code, suggest_fixes, analyze_project).
+4. So marque como completo apos QA validar. Se falhar, aborte.
 
-## Subordinados disponiveis (use estes nomes exatos)
-- designer: Planejamento gráfico, protótipos HTML/CSS, UX.
-- dev: Implementação de código, scripts, edição de arquivos.
-- qa: Testes, validação e qualidade.
+## REGRA DE IMPLEMENTACAO INCREMENTAL (OBRIGATORIO)
+- 1 arquivo = 1 task de CRIACAO (write_file/generate_code) + N tasks de EDICAO (refactor_code/edit_file)
+- refactor_code LE o arquivo atual do disco e aplica melhorias — ideal para workflow incremental
+- SEMPRE adicione task de `run_git` com args=["add","-A"] e depois `run_git` com args=["commit","-m","..."] apos cada task de edicao
+- Isso garante que alteracoes de cada task sejam preservadas e rastreaveis
 
-## Formato de resposta
-Responda exclusivamente com um JSON contendo uma chave "plan" (lista de tarefas com depends_on obrigatório).
+## IMPORTANTE: Outputs fluem entre tarefas
+O output de cada tarefa (analysis, html, codigo, review) e AUTOMATICAMENTE passado como contexto para tarefas que dependem dela. Use isso para criar pipelines ricos:
+- Designer analisa → output vira contexto para Dev implementar
+- Dev implementa → output vira contexto para QA revisar
+- QA revisa → output mostra o que precisa ser corrigido
+
+## REGRA CRITICA: review_code exige arquivo especifico
+- `review_code` aceita APENAS caminho de arquivo (.jsx, .py, .ts, etc). NUNCA diretorio.
+- Para revisar design/prototipos do designer, use `analyze_artifact` com file_path apontando para o artifact gerado (ex: artifacts/prototipo.html).
+- Para revisar um projeto inteiro, use `analyze_project`.
+
+## Subordinados
+- designer: Pesquisa design systems, prototipos HTML/CSS, analise UX.
+- dev: Implementacao de codigo, scripts, edicao. USE generate_code/implement_feature para acoes LLM.
+- qa: Testes, revisao de codigo, qualidade.
 
 ## Diretorio de trabalho
 C:/Users/rafae/agent-factory
 
-## Regras de Execucao (OBRIGATORIO)
-- Toda tarefa delegada ao agente 'dev' DEVE ser seguida por uma tarefa de verificacao do agente 'qa'.
-- A tarefa de QA deve ter 'depends_on' apontando para o nome da tarefa do dev.
-- O coordenador deve garantir essa cadeia de validacao antes de marcar a implementacao como concluida.
-- Os agentes disponiveis sao: dev (codigo), qa (testes/validacao), designer (design/prototipo).
+## Acoes disponiveis
 
-## Acoes disponiveis por agente
-
-### dev (codigo, arquivos, scripts)
+### dev — acoes OPERACIONAIS (arquivos, scripts)
 - `read_file` params: file_path
 - `write_file` params: file_path, content
 - `edit_file` params: file_path, old_string, new_string
 - `list_directory` params: path, pattern
 - `run_script` params: script_path, args (opcional)
-- `run_tests` params: path, args (opcional)
 - `run_git` params: args
 - `rename_file` params: src, dst
 - `delete_file` params: file_path
 
-### qa (testes, validacao, qualidade)
+### dev — acoes LLM (geracao de codigo com IA)
+- `generate_code` params: spec (descricao do que gerar), language (react/python/etc), output_path
+- `implement_feature` params: spec (descricao da feature), output_path
+- `refactor_code` params: file_path, instructions (o que refatorar)
+
+### qa — acoes OPERACIONAIS
 - `run_tests` params: path, args (opcional)
 - `validate_python_syntax` params: file_path
 - `analyze_artifact` params: file_path, checks (opcional)
 - `lint` params: path
 - `file_exists` params: file_path
 
-### designer (design, prototipos)
+### qa — acoes LLM (revisao inteligente)
+- `review_code` params: file_path
+- `suggest_fixes` params: error, file_path
+- `analyze_project` params: path
+
+### designer — acoes LLM (pesquisa e criacao)
+- `research_design_systems` params: query
+- `analyze_ux` params: prompt
 - `design_ui` params: prompt
 - `prototype` params: prompt
-- `analyze_ux` params: prompt
 
 ## Formato de resposta
-Responda exclusivamente com um JSON valido contendo uma chave "plan" com uma lista de tarefas:
+Responda com JSON contendo "plan" (lista de tarefas):
 
 ```json
 {
   "plan": [
     {
-      "name": "criar-arquivo-teste",
-      "agent_id": "dev",
+      "name": "pesquisar-design-systems",
+      "agent_id": "designer",
       "task": {
-        "task_id": "step-001",
-        "title": "Criar arquivo de teste",
-        "action": "write_file",
-        "file_path": "TESTE.txt",
-        "content": "conteudo do arquivo"
+        "task_id": "pesquisa-design-systems",
+        "title": "Pesquisar design systems modernos para analytics dashboard",
+        "action": "research_design_systems",
+        "query": "Elastic UI, Grafana, dashboards operacionais"
       },
       "depends_on": []
     },
     {
-      "name": "verificar-arquivo",
+      "name": "analisar-dashboard-atual",
+      "agent_id": "dev",
+      "task": {
+        "task_id": "analisar-dashboard",
+        "title": "Analisar estrutura do dashboard React atual",
+        "action": "read_file",
+        "file_path": "src/components/Dashboard.jsx"
+      },
+      "depends_on": []
+    },
+    {
+      "name": "criar-novo-dashboard",
+      "agent_id": "dev",
+      "task": {
+        "task_id": "criar-dashboard",
+        "title": "Implementar novo dashboard com base na analise UX",
+        "action": "generate_code",
+        "language": "react",
+        "output_path": "src/components/NewDashboard.jsx",
+        "spec": "Criar dashboard React com cards responsivos e graficos"
+      },
+      "depends_on": ["pesquisar-design-systems", "analisar-dashboard-atual"]
+    },
+    {
+      "name": "revisar-codigo-dashboard",
       "agent_id": "qa",
       "task": {
-        "task_id": "step-002",
-        "title": "Validar arquivo",
-        "action": "file_exists",
-        "file_path": "TESTE.txt"
+        "task_id": "revisar-dashboard",
+        "title": "Revisar codigo do novo dashboard",
+        "action": "review_code",
+        "file_path": "src/components/NewDashboard.jsx"
       },
-      "depends_on": ["criar-arquivo-teste"]
+      "depends_on": ["criar-novo-dashboard"]
     }
   ]
 }
 ```
 
 Regras:
-- "name" deve ser unico (usado como identificador de dependencia)
-- "agent_id" deve ser "dev" (codigo), "qa" (testes), ou "designer" (design)
-- "depends_on" lista "name"s de tarefas que devem ser concluidas antes
-- Nao inclua tarefas dependentes de si mesmas
-- Ordene as tarefas respeitando as dependencias
-- Se possivel, paralelize tarefas independentes
-- Use caminhos relativos ao diretorio de trabalho"""
+- "name" deve ser unico em kebab-case
+- "agent_id": "dev" | "qa" | "designer"
+- "depends_on" lista "name"s de tarefas anteriores — o output delas vira contexto
+- Para tarefas de geracao, use generate_code/implement_feature/refactor_code (nao read_file)
+- Ordene por dependencias. Paralelize tarefas independentes.
+- Caminhos relativos ao diretorio de trabalho"""
 
     def __init__(
         self,
         project_id: str,
         notifier: EventNotifier,
         agents: Optional[dict[str, StandardBaseAgent]] = None,
-        llm_provider: Optional[LLMProvider] = None,
-        decision_engine: Optional[DecisionEngine] = None,
         **kwargs,
     ):
         super().__init__(
@@ -156,11 +198,9 @@ Regras:
             project_id=project_id,
             notifier=notifier,
             role=AgentRole.COORDINATOR,
-            context_limit_kb=kwargs.get("context_limit_kb", 15.0),
-            context_file=kwargs.get("context_file"),
+            **kwargs,
         )
-        self.llm_provider = llm_provider or get_provider("auto")
-        self._decision_engine = decision_engine or RuleBasedEngine()
+        self._decision_engine = kwargs.get("decision_engine") or RuleBasedEngine()
         if agents:
             for aid, agent in agents.items():
                 self.register_subordinate(aid, agent)
@@ -224,7 +264,10 @@ Regras:
         system_prompt = self.PLAN_SYSTEM_PROMPT
 
         try:
-            resp = self.llm_provider.chat(
+            if not self._llm:
+                raise StructuredError("Coordenador sem LLM provider configurado.", error_type="misconfiguration")
+
+            resp = self._llm.chat(
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
@@ -232,7 +275,7 @@ Regras:
                 temperature=0.3,
                 max_tokens=4096,
             )
-            model_used = resp.model if hasattr(resp, 'model') and resp.model else type(self.llm_provider).__name__
+            model_used = resp.model if hasattr(resp, 'model') and resp.model else type(self._llm).__name__
             self.notifier.emit(AgentEvent(
                 agent_id=self.agent_id, agent_role=self.role,
                 status=AgentStatus.RUNNING, task_id="llm-model",
@@ -282,6 +325,102 @@ Regras:
 
         return plan
 
+    def _generate_mission_id(self, goal: str) -> str:
+        """Gera um ID de missao legivel a partir do objetivo."""
+        import re
+        words = re.findall(r'\w+', goal.lower())
+        # Pega palavras significativas (≥3 chars), max 6
+        sig = [w for w in words if len(w) >= 3][:6]
+        slug = "-".join(sig) if sig else "missao"
+        return f"missao-{slug}"
+
+    def _build_mission_context(self, goal: str, context: str, tasks: list[dict], mission_id: str = "") -> str:
+        """Monta o Mission_Context.md com objetivo curado, contexto e plano."""
+        title = mission_id or self._generate_mission_id(goal)
+        lines = [
+            f"# Mission Context — {title}",
+            "",
+            "## Objetivo Curado",
+            goal,
+        ]
+        if context:
+            lines += ["", "## Contexto Adicional", context]
+        lines += [
+            "",
+            "## Plano de Trabalho",
+            "",
+            "| # | Tarefa | Agente | Ação | Depende de |",
+            "|---|--------|--------|------|------------|",
+        ]
+        for i, t in enumerate(tasks, 1):
+            name = t.get("name", f"step-{i}")
+            agent = t.get("agent_id", "?")
+            action = t.get("task", {}).get("action", "?")
+            deps = ", ".join(t.get("depends_on", [])) or "—"
+            lines.append(f"| {i} | {name} | {agent} | {action} | {deps} |")
+        lines += ["", "## Critérios de Aceite"]
+        lines += ["- Cada tarefa deve ser validada pelo DecisionEngine"]
+        lines += ["- O output de cada tarefa alimenta a proxima dependente"]
+        lines += ["- Ao final, todas as tarefas devem estar como 'accept'"]
+        return "\n".join(lines)
+
+    def _extract_result_content(self, result: Any) -> str:
+        """Extrai conteudo relevante de um resultado, priorizando rationale e campos ricos."""
+        if isinstance(result, dict):
+            # Priorizar o rationale (texto completo do LLM)
+            rationale = result.get("rationale") or result.get("rationale", "")
+            if rationale and len(str(rationale)) > 50:
+                return str(rationale)
+            # Se tiver review/codigo/analise, usar
+            for rich_key in ("review", "html_code", "code", "analysis", "suggestions",
+                             "plan", "design_systems", "artifact_content", "content"):
+                val = result.get(rich_key, "")
+                if val and len(str(val)) > 50:
+                    return str(val)[:4000]
+            # Se for apenas metadados (path, size), tentar ler o arquivo
+            file_path = result.get("path") or result.get("file_path", "")
+            if file_path and Path(file_path).exists():
+                try:
+                    content = Path(file_path).read_text(encoding="utf-8")
+                    if content:
+                        return f"**Arquivo:** {file_path}\n\n```\n{content[:3000]}\n```"
+                except Exception:
+                    pass
+            # Fallback: repr do dict
+            return f"```json\n{json.dumps(result, ensure_ascii=False, indent=2)[:2000]}\n```"
+        return str(result)[:2000]
+
+    def _build_task_context(self, goal: str, step_name: str, subtask: dict,
+                             agent_id: str, dependency_outputs: dict[str, dict]) -> str:
+        """Monta o Task_Context.md para um agente especifico."""
+        lines = [
+            f"# Task Context — {step_name}",
+            "",
+            "## Objetivo da Missão",
+            goal,
+            "",
+            "## Esta Tarefa",
+            f"Agente: {agent_id}",
+            f"Ação: {subtask.get('action', '?')}",
+            f"Descrição: {subtask.get('title', step_name)}",
+        ]
+        if dependency_outputs:
+            lines += ["", "## Insumos de Tarefas Anteriores"]
+            for dep_name, dep_data in dependency_outputs.items():
+                result_content = self._extract_result_content(dep_data.get("result", ""))
+                if result_content:
+                    lines += [
+                        f"",
+                        f"### Output de: {dep_name} ({dep_data.get('agent_id', '?')})",
+                        "",
+                        result_content,
+                    ]
+        task_params = {k: v for k, v in subtask.items() if k not in ("action", "title", "task_id")}
+        if task_params:
+            lines += ["", "## Parâmetros da Tarefa"]
+            lines += [f"- {k}: {v}" for k, v in task_params.items()]
+        return "\n".join(lines)
+
     def _plan_and_execute(self, task: dict) -> dict:
         goal = task.get("goal", "")
         context = task.get("context", "")
@@ -296,7 +435,7 @@ Regras:
             message=f"Executando plano: {goal[:120]}" if goal else "Executando plano",
         ))
 
-        # Gerar plano via LLM se tasks nao foi fornecido
+        # 1. Gerar plano via LLM se tasks nao foi fornecido
         if tasks is None:
             if not goal:
                 raise StructuredError(
@@ -318,23 +457,38 @@ Regras:
                     "error": f"Falha ao gerar plano: {e}",
                 }
 
+        # 2. Gerar mission_id e criar estrutura de diretorios
+        mission_id = self._generate_mission_id(goal)
+        mission_ctx = self._build_mission_context(goal, context, tasks, mission_id)
+        ctx_path = self.save_mission_context(mission_id, mission_ctx)
+
+        # 3. Log do pedido bruto
+        raw_path = self.get_mission_input_dir(mission_id) / "raw_request.md"
+        raw_path.parent.mkdir(parents=True, exist_ok=True)
+        raw_path.write_text(
+            f"# Raw Request\n\n{json.dumps(task, ensure_ascii=False, indent=2)}",
+            encoding="utf-8",
+        )
+
         self.notifier.emit(AgentEvent(
             agent_id=self.agent_id,
             agent_role=self.role,
             status=AgentStatus.RUNNING,
             task_id="exec-plan",
             project_id=self.project_id,
-            message=f"Plano gerado: {len(tasks)} tarefas para {goal[:80]}" if goal else f"Plano gerado: {len(tasks)} tarefas",
+            message=f"Missao '{mission_id}': {len(tasks)} tarefas. Contexto salvo em {ctx_path}",
         ))
 
         results = []
         completed_ids = set()
+        step_outputs: dict[str, dict] = {}
 
         for idx, step in enumerate(tasks):
             agent_id = step.get("agent_id", "")
             subtask = step.get("task", {})
             depends_on = step.get("depends_on", [])
             step_name = step.get("name", f"step-{idx}")
+            task_id = step_name  # Usar nome humanizado para diretorios
 
             missing = [d for d in depends_on if d not in completed_ids]
             if missing:
@@ -349,12 +503,36 @@ Regras:
             if "title" not in subtask:
                 subtask["title"] = step_name
 
+            # 4. Coletar outputs das dependecias e montar Task_Context.md
+            dependency_outputs = {
+                dep: step_outputs[dep]
+                for dep in depends_on if dep in step_outputs
+            }
+            task_ctx = self._build_task_context(goal, step_name, subtask, agent_id, dependency_outputs)
+            tc_path = self.save_task_context(mission_id, task_id, agent_id, task_ctx)
+
+            # Injetar caminhos dos contextos no subtask para o agente consumir
+            enriched_subtask = dict(subtask)
+            enriched_subtask["_mission_id"] = mission_id
+            enriched_subtask["_task_id"] = task_id
+            enriched_subtask["_mission_context_path"] = str(self.get_mission_context_path(mission_id))
+            enriched_subtask["_task_context_path"] = str(self.get_task_context_path(mission_id, task_id, agent_id))
+
+            if dependency_outputs:
+                enriched_subtask["_dependency_outputs"] = dependency_outputs
+                # Tambem injetar como contexto textual para LLM
+                dep_text = "## Outputs de tarefas anteriores\n\n"
+                for dep_name, dep_data in dependency_outputs.items():
+                    dep_text += f"### {dep_name} ({dep_data.get('agent_id', '?')})\n"
+                    dep_text += self._extract_result_content(dep_data.get("result", ""))[:3000] + "\n\n"
+                enriched_subtask["_dependency_context"] = dep_text
+
             self.notifier.emit(AgentEvent(
                 agent_id=self.agent_id, agent_role=self.role,
                 status=AgentStatus.RUNNING,
-                task_id=subtask.get("task_id", step_name),
+                task_id=task_id,
                 project_id=self.project_id,
-                message=f"Passo '{subtask['title']}' -> {agent_id}",
+                message=f"Passo '{subtask['title']}' -> {agent_id}. Task_Context: {tc_path}",
             ))
 
             max_attempts = 2
@@ -363,7 +541,7 @@ Regras:
 
             for attempt in range(1, max_attempts + 1):
                 try:
-                    tr = self._subordinates[agent_id].run(subtask)
+                    tr = self._subordinates[agent_id].run(enriched_subtask)
                     to = TaskOutput(
                         status=OutputStatus.SUCCESS,
                         summary=tr.summary,
@@ -380,7 +558,7 @@ Regras:
                         self.notifier.emit(AgentEvent(
                             agent_id=self.agent_id, agent_role=self.role,
                             status=AgentStatus.RUNNING,
-                            task_id=subtask.get("task_id", step_name),
+                            task_id=task_id,
                             project_id=self.project_id,
                             message=f"Retry {attempt}/{max_attempts} para '{subtask['title']}'",
                         ))
@@ -389,7 +567,6 @@ Regras:
             if step_result is None:
                 step_result = TaskOutput.failure(rationale=step_error or "Falha apos todas as tentativas")
 
-            # Usar motor de decisao para avaliar o resultado
             decision, justification, _ = self.handle_subordinate_result(
                 result=step_result,
                 goal=goal,
@@ -400,6 +577,18 @@ Regras:
                 max_attempts=max_attempts,
             )
 
+            # 5. Salvar resultado em output/tasks/<task_id>/<agent_id>/result.md
+            body = step_result.rationale or json.dumps(step_result.details or {}, ensure_ascii=False, indent=2)
+            result_content = (
+                f"# Resultado — {step_name}\n\n"
+                f"**Agente:** {agent_id}\n"
+                f"**Status:** {step_result.status.value}\n"
+                f"**Decisao:** {decision.value}\n"
+                f"**Justificativa:** {justification}\n\n"
+                f"## Detalhes\n\n{body}"
+            )
+            self.save_task_result(mission_id, task_id, agent_id, result_content)
+
             entry = {
                 "step": step_name,
                 "agent_id": agent_id,
@@ -407,11 +596,21 @@ Regras:
                 "result": step_result.details or step_result.rationale,
                 "decision": decision.value,
                 "justification": justification,
+                "_mission_id": mission_id,
+                "_output_path": str(self.get_task_output_dir(mission_id, task_id, agent_id)),
             }
             results.append(entry)
 
             if decision in (Decision.ACCEPT, Decision.SKIP):
                 completed_ids.add(step_name)
+                # 6. Armazenar output para uso por tarefas dependentes
+                step_outputs[step_name] = {
+                    "agent_id": agent_id,
+                    "action": subtask.get("action"),
+                    "result": step_result.details or step_result.rationale,
+                    "status": step_result.status.value,
+                    "task_id": task_id,
+                }
             elif decision == Decision.ABORT:
                 break
 
@@ -421,6 +620,8 @@ Regras:
 
         return {
             "status": "ok" if failed == 0 and accepted > 0 else ("partial" if failed > 0 else "error"),
+            "mission_id": mission_id,
+            "mission_context_path": str(ctx_path),
             "goal": goal,
             "total_steps": total,
             "completed": accepted,
@@ -434,6 +635,6 @@ Regras:
             "agent_id": self.agent_id,
             "role": self.role.value,
             "subordinates": list(self._subordinates.keys()),
-            "llm_provider": type(self.llm_provider).__name__,
+            "llm_provider": type(self._llm).__name__ if self._llm else "None",
             "actions": self.ACTIONS,
         }

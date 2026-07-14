@@ -165,67 +165,17 @@ def start_dashboard(port: int, demo: bool = False):
 
     registry = get_registry()
 
-    # Register afp project (Agent Factory Platform)
-    if not registry.project_exists("afp"):
-        registry.register(ProjectConfig(
-            project_id="afp",
-            name="Agent Factory Platform",
-            description="Plataforma de orquestracao de agentes autonomos",
-        ))
+    # === Auto-discovery: escaneia contexts/*/project.json ===
+    from src.project_discovery import register_discovered_projects
+    register_discovered_projects(registry)
 
-    # Register PTA project
+    # === Legacy: PTA project (sem project.json em contexts/) ===
     if not registry.project_exists("pta"):
         registry.register(ProjectConfig(
             project_id="pta",
             name="Personal Trainer Agent",
             description="App mobile com IA e visao computacional",
         ))
-
-    # Register CR-10 SE project
-    if not registry.project_exists("cr10se"):
-        registry.register(ProjectConfig(
-            project_id="cr10se",
-            name="CR-10 SE 3D Printer",
-            description="Otimizacao e monitoramento da Creality CR-10 SE com Klipper",
-        ))
-
-    # Register real agent references for afp project
-    agent_src = Path(__file__).parent / "src" / "agents"
-    ctx_base = Path(__file__).parent / "contexts" / "afp"
-    refs = [
-        AgentReference(
-            agent_id="coordenador",
-            module_path=str(agent_src / "coordinator.py"),
-            class_name="AgentFactoryCoordinator",
-            context_limit_kb=15.0,
-            context_file=str(ctx_base / "coordenador" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="dev",
-            module_path=str(agent_src / "factory_dev.py"),
-            class_name="AgentFactoryDevAgent",
-            context_limit_kb=15.0,
-            context_file=str(ctx_base / "dev" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="qa",
-            module_path=str(agent_src / "qa.py"),
-            class_name="QAAgent",
-            context_limit_kb=10.0,
-            context_file=str(ctx_base / "qa" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="designer",
-            module_path=str(agent_src / "design_factory.py"),
-            class_name="DesignAgent",
-            context_limit_kb=10.0,
-            context_file=str(ctx_base / "design" / "CONTEXTO.md"),
-        ),
-    ]
-    for ref in refs:
-        registry.add_agent_ref("afp", ref)
-
-    # Register PTA agent refs if not already there
     pta_agent_path = Path.home() / "PersonalTrainerAgent" / "agentes" / "__init__.py"
     if pta_agent_path.exists() and not registry.list_agent_refs("pta"):
         pta_refs = [
@@ -241,56 +191,7 @@ def start_dashboard(port: int, demo: bool = False):
         for ref in pta_refs:
             registry.add_agent_ref("pta", ref)
 
-    # Register CR-10 SE agent references
-    cr10se_agent_src = Path(__file__).parent / "src" / "agents"
-    cr10se_ctx_base = Path(__file__).parent / "contexts" / "cr10se"
-    printer_scripts = Path(r"C:\Users\rafae\Documents\Impressao 3D")
-    cr10se_refs = [
-        AgentReference(
-            agent_id="coordenador",
-            module_path=str(cr10se_agent_src / "cr10se_coordinator.py"),
-            class_name="CR10SECoordinator",
-            context_limit_kb=15.0,
-            context_file=str(cr10se_ctx_base / "coordenador" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="klipper",
-            module_path=str(cr10se_agent_src / "cr10se_klipper.py"),
-            class_name="KlipperAgent",
-            context_limit_kb=15.0,
-            context_file=str(cr10se_ctx_base / "klipper" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="pipeline",
-            module_path=str(cr10se_agent_src / "cr10se_pipeline.py"),
-            class_name="PipelineAgent",
-            context_limit_kb=15.0,
-            context_file=str(cr10se_ctx_base / "pipeline" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="visao",
-            module_path=str(cr10se_agent_src / "cr10se_vision.py"),
-            class_name="VisionAgent",
-            context_limit_kb=15.0,
-            context_file=str(cr10se_ctx_base / "visao" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="resume",
-            module_path=str(cr10se_agent_src / "cr10se_resume.py"),
-            class_name="ResumeAgent",
-            context_limit_kb=15.0,
-            context_file=str(cr10se_ctx_base / "resume" / "CONTEXTO.md"),
-        ),
-        AgentReference(
-            agent_id="qa",
-            module_path=str(cr10se_agent_src / "cr10se_qa.py"),
-            class_name="PrintQAAgent",
-            context_limit_kb=10.0,
-            context_file=str(cr10se_ctx_base / "qa" / "CONTEXTO.md"),
-        ),
-    ]
-    for ref in cr10se_refs:
-        registry.add_agent_ref("cr10se", ref)
+    # === Notifiers for each project ===
 
     # Build dashboard server with notifiers from registry
     server = None
@@ -338,9 +239,9 @@ def run_demo_agents(registry):
     """Load and run real agents to populate the dashboard with live events."""
     from src.protocols.schema import AgentEvent, AgentStatus, AgentRole
 
-    print("\n[Demo] 🎬 Carregando agentes reais...")
+    print("\n[Demo] 🎬 Carregando agentes do AFP-Team...")
 
-    project_id = "afp"
+    project_id = "AFP-Team"
 
     # Load agents from registry (this triggers real imports)
     try:
@@ -387,7 +288,7 @@ def run_demo_agents(registry):
         "task_id": "startup-plan",
         "title": "Plano Inicial",
         "action": "plan_and_execute",
-        "goal": "Validar ambiente de desenvolvimento Agent Factory",
+        "goal": "Listar os arquivos do projeto e em seguida fazer uma pesquisa de design systems para dashboards",
         "tasks": [
             {
                 "name": "list-src",
@@ -398,15 +299,15 @@ def run_demo_agents(registry):
                     "path": str(Path(__file__).parent / "src"),
                     "pattern": "**/*.py",
                 },
+                "depends_on": [],
             },
             {
-                "name": "run-tests",
-                "agent_id": "qa",
+                "name": "research-dashboards",
+                "agent_id": "designer",
                 "task": {
-                    "task_id": "step-tests",
-                    "action": "run_tests",
-                    "path": "tests/",
-                    "args": ["--tb=short", "-q"],
+                    "task_id": "step-research",
+                    "action": "research_design_systems",
+                    "query": "dashboards para monitoramento de sistemas",
                 },
                 "depends_on": ["list-src"],
             },
@@ -431,7 +332,7 @@ def _demo_fallback(notifier):
         notifier.emit(AgentEvent(
             agent_id=agent_id, agent_role=role,
             status=AgentStatus.RUNNING, task_id="startup",
-            project_id="afp", message=msg,
+            project_id="AFP-Team", message=msg,
         ))
         time.sleep(1)
 
@@ -443,7 +344,7 @@ def _demo_fallback(notifier):
         notifier.emit(AgentEvent(
             agent_id=agent_id, agent_role=AgentRole.WORKER,
             status=AgentStatus.COMPLETED, task_id="startup",
-            project_id="afp", message=msg,
+            project_id="AFP-Team", message=msg,
         ))
         time.sleep(1)
 

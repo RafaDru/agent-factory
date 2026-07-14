@@ -6,6 +6,8 @@ Eventos são servidos via API REST, frontend faz polling.
 """
 
 import json
+import os
+import time
 from pathlib import Path
 from typing import Optional, Any
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -14,51 +16,53 @@ from urllib.parse import urlparse, parse_qs
 
 from ..protocols.events import EventNotifier
 
-
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     """HTTPServer com suporte a múltiplas threads."""
     daemon_threads = True
 
-
 class DashboardHandler(SimpleHTTPRequestHandler):
     """Handler HTTP para o dashboard."""
-    
+
     notifiers: dict[str, EventNotifier] = {}
     context_stores: dict[str, Any] = {}
     agent_providers: dict[str, str] = {}  # agent_id → "local_multi" | "cloud" | "auto"
-    
+
     def do_GET(self):
         parsed = urlparse(self.path)
         path = parsed.path
         params = parse_qs(parsed.query)
         project_id = params.get("project", [None])[0]
-        
+
         if path == "/" or path == "/index.html":
             self._serve_dashboard()
         elif path == "/api/events":
             self._serve_events(project_id)
+        elif path == "/api/events/stream":
+            self._serve_events_sse()
         elif path == "/api/status":
             self._serve_status(project_id)
         elif path == "/api/context":
             self._serve_context(project_id)
         elif path == "/api/projects":
             self._serve_projects()
+        elif path == "/api/missions":
+            self._serve_missions()
         elif path.startswith("/api/agent/") and path.endswith("/provider"):
             self._serve_agent_provider(path)
         elif path == "/api/debug":
             self._serve_debug()
         else:
             self.send_error(404)
-    
+
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
-        
+
         if path.startswith("/api/agent/") and path.endswith("/provider"):
             self._post_agent_provider(path)
         else:
             self.send_error(404)
-    
+
     def _serve_agent_provider(self, path: str):
         """GET: retorna o provider configurado para um agente."""
         import re
@@ -73,7 +77,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps({"agent_id": agent_id, "provider": provider}).encode("utf-8"))
-    
+
     def _post_agent_provider(self, path: str):
         """POST: atualiza o provider de um agente."""
         import re
@@ -82,19 +86,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_error(400)
             return
         agent_id = m.group(1)
-        
+
         content_len = int(self.headers.get("Content-Length", 0))
         if content_len == 0:
             self.send_error(400, "Body required")
             return
-        
+
         body = json.loads(self.rfile.read(content_len))
         provider = body.get("provider", "auto")
         valid = ("auto", "local_multi", "cloud")
         if provider not in valid:
             self.send_error(400, f"Provider inválido. Opções: {valid}")
             return
-        
+
         self.agent_providers[agent_id] = provider
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -105,7 +109,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             "provider": provider,
             "previous": self.agent_providers.get(agent_id, "auto"),
         }).encode("utf-8"))
-    
+
     def _serve_dashboard(self):
         """Serve o HTML do dashboard."""
         dashboard_path = Path(__file__).parent / "index.html"
@@ -118,7 +122,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.wfile.write(content.encode("utf-8"))
         else:
             self.send_error(404, "Dashboard not found")
-    
+
     def _get_notifier(self, project_id: Optional[str] = None) -> Optional[EventNotifier]:
         if project_id and project_id in self.notifiers:
             return self.notifiers[project_id]
@@ -127,7 +131,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if project_id is None and len(self.notifiers) > 0:
             return list(self.notifiers.values())[0]
         return None
-    
+
     def _get_context_store(self, project_id: Optional[str] = None) -> Optional[Any]:
         if project_id and project_id in self.context_stores:
             return self.context_stores[project_id]
@@ -136,7 +140,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         if project_id is None and len(self.context_stores) > 0:
             return list(self.context_stores.values())[0]
         return None
-    
+
     def _serve_events(self, project_id: Optional[str] = None):
         """Serve eventos em JSON, incluindo provider config por agente."""
         if project_id:
@@ -144,7 +148,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             notifiers = [notifier] if notifier else []
         else:
             notifiers = list(self.notifiers.values())
-        
+
         all_events = []
         for n in notifiers:
             try:
@@ -152,11 +156,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 all_events.extend(evts)
             except Exception as e:
                 print(f"[Dashboard] Erro ao ler eventos de {n.project_id}: {e}")
-        
-        print(f"[Dashboard] _serve_events project={project_id} notifiers={list(self.notifiers.keys())} events_per_notifier={[len(n.get_events()) for n in self.notifiers.values()]} total={len(all_events)}")
-        
+
         all_events.sort(key=lambda e: e.timestamp, reverse=True)
-        
+
         # Extrair modelo do ultimo evento "llm-model" de cada agente
         agent_models: dict[str, str] = {}
         for e in reversed(all_events):
@@ -169,19 +171,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     m = e.payload.get("model") or e.payload.get("provider_model")
                     if m:
                         agent_models[aid] = m
-        
+
         result = {
             "events": [e.model_dump(mode="json") for e in all_events],
             "providers": dict(self.agent_providers),
             "agent_models": agent_models,
         }
-        
+
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps(result, default=str).encode("utf-8"))
-    
+
     def _serve_status(self, project_id: Optional[str] = None):
         """Serve status atual em JSON."""
         notifier = self._get_notifier(project_id)
@@ -189,19 +191,19 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             data = notifier.get_status()
         else:
             data = {"project_id": project_id, "phase": "unknown", "progress": 0}
-        
+
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
-    
+
     def _serve_context(self, project_id: Optional[str] = None):
         """Serve métricas reais de contexto do ContextStore + event metrics."""
         store = self._get_context_store(project_id)
         notifier = self._get_notifier(project_id)
         data = {"agents": {}, "project": project_id or "unknown"}
-        
+
         def _get_entry(agent_id):
             entry = {}
             if store:
@@ -222,7 +224,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                         entry["context_tracking"] = event.metrics["context"]
                         break
             return entry
-        
+
         agent_ids = self._list_agent_ids(project_id)
         if not agent_ids and store:
             try:
@@ -230,16 +232,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 data["project_stats"] = stats
             except Exception:
                 pass
-        
+
         for agent_id in agent_ids:
             data["agents"][agent_id] = _get_entry(agent_id)
-        
+
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
-    
+
     def _list_agent_ids(self, project_id: Optional[str] = None) -> list[str]:
         """Lista IDs de agentes de um projeto via notifier."""
         notifier = self._get_notifier(project_id)
@@ -249,17 +251,44 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         for event in notifier.get_events():
             seen.add(event.agent_id)
         return sorted(seen)
-    
+
     def _serve_projects(self):
-        """Lista todos os projetos registrados."""
-        data = list(self.notifiers.keys())
-        
+        """Lista todos os projetos com metadados: Projeto > Time > Agentes."""
+        projects = []
+        for pid in self.notifiers.keys():
+            meta = {
+                "project_id": pid,
+                "project_name": pid,
+                "team_name": pid,
+                "icon": "📦",
+                "agent_emojis": {},
+            }
+
+            proj_json = Path("contexts") / pid / "project.json"
+            if proj_json.exists():
+                try:
+                    data = json.loads(proj_json.read_text(encoding="utf-8"))
+                    meta["project_name"] = data.get("project_name", pid)
+                    meta["team_id"] = data.get("team_id", pid)
+                    meta["team_name"] = data.get("team_name", data.get("project_name", pid))
+                    meta["description"] = data.get("description", "")
+                    meta["icon"] = data.get("icon", "📦")
+                    meta["working_dir"] = data.get("working_dir", "")
+                    meta["agents_source"] = data.get("agents_source", "")
+                    meta["agents"] = data.get("agents", [])
+                    for a in data.get("agents", []):
+                        if "agent_id" in a and "emoji" in a:
+                            meta["agent_emojis"][a["agent_id"]] = a["emoji"]
+                except Exception:
+                    pass
+            projects.append(meta)
+
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
-        self.wfile.write(json.dumps(data).encode("utf-8"))
-    
+        self.wfile.write(json.dumps(projects, ensure_ascii=False).encode("utf-8"))
+
     def log_message(self, format, *args):
         """Suprimir logs padrao."""
         pass
@@ -284,17 +313,105 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
 
+    def _serve_events_sse(self):
+        """SSE endpoint: transmite eventos em tempo real."""
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("Connection", "keep-alive")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+
+        EventNotifier.register_sse_client(self)
+        try:
+            while True:
+                time.sleep(1)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            EventNotifier.unregister_sse_client(self)
+
+    def _serve_missions(self):
+        """Lista missoes ativas com progresso e status."""
+        missions_dir = Path(".agent-factory") / "missions"
+        missions = []
+
+        if missions_dir.exists():
+            for mission_dir in sorted(missions_dir.iterdir(), reverse=True):
+                if not mission_dir.is_dir() or mission_dir.name.startswith("_"):
+                    continue
+
+                # Contar tasks e status
+                tasks_out = mission_dir / "output" / "tasks"
+                task_count = 0
+                task_statuses = []
+
+                if tasks_out.exists():
+                    for task_dir in sorted(tasks_out.iterdir()):
+                        if task_dir.is_dir():
+                            task_count += 1
+                            # Verificar status em result.md de cada agent
+                            for agent_dir in task_dir.iterdir():
+                                if agent_dir.is_dir():
+                                    result = agent_dir / "result.md"
+                                    if result.exists():
+                                        txt = result.read_text(encoding="utf-8")
+                                        st = "completed" if "**Status:** success" in txt else "failed" if "**Status:** failure" in txt else "pending"
+                                        task_statuses.append({
+                                            "task": task_dir.name,
+                                            "agent": agent_dir.name,
+                                            "status": st,
+                                        })
+
+                completed = sum(1 for t in task_statuses if t["status"] == "completed")
+                failed = sum(1 for t in task_statuses if t["status"] == "failed")
+
+                # Ler Mission_Context
+                ctx_path = mission_dir / "input" / "Mission_Context.md"
+                objective = ""
+                if ctx_path.exists():
+                    content = ctx_path.read_text(encoding="utf-8")
+                    for line in content.split("\n"):
+                        if line.startswith("## Objetivo Cur"):
+                            # Proxima linha tem o objetivo
+                            continue
+                        if objective and line.startswith("##"):
+                            break
+                        if objective or (objective == "" and line.strip() and not line.startswith("#")):
+                            objective += line + "\n"
+                    if not objective:
+                        objective = content.split("## Objetivo Cur")[1].split("\n")[0].strip() if "## Objetivo Cur" in content else ""
+
+                missions.append({
+                    "id": mission_dir.name,
+                    "objective": objective.strip()[:200],
+                    "task_count": task_count,
+                    "completed": completed,
+                    "failed": failed,
+                    "task_statuses": task_statuses,
+                })
+
+        data = {
+            "missions": missions,
+            "total": len(missions),
+        }
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode("utf-8"))
 
 class DashboardServer:
     """
     Server do dashboard.
-    
+
     Uso:
         notifier = EventNotifier("my-project")
         server = DashboardServer(notifier, port=8080)
         server.start()
     """
-    
+
     def __init__(
         self,
         notifier: EventNotifier,
@@ -306,28 +423,28 @@ class DashboardServer:
         self.port = port
         self.host = host
         self._server: Optional[HTTPServer] = None
-        
+
         DashboardHandler.notifiers[notifier.project_id] = notifier
         if context_store:
             DashboardHandler.context_stores[notifier.project_id] = context_store
-    
+
     def add_notifier(self, notifier: EventNotifier):
         DashboardHandler.notifiers[notifier.project_id] = notifier
-    
+
     def add_context_store(self, project_id: str, context_store: Any):
         DashboardHandler.context_stores[project_id] = context_store
-    
+
     def start(self):
         """Inicia o server."""
         self._server = ThreadingHTTPServer((self.host, self.port), DashboardHandler)
-        
+
         print(f"Dashboard: http://{self.host}:{self.port}")
         print(f"Projetos: {list(DashboardHandler.notifiers.keys())}")
         if DashboardHandler.context_stores:
             print(f"ContextStores ativos: {list(DashboardHandler.context_stores.keys())}")
-        
+
         self._server.serve_forever()
-    
+
     def stop(self):
         """Para o server."""
         if self._server:

@@ -1,0 +1,93 @@
+
+    +----------------------------------------------+
+    |        Agent Factory -- v2.0.0-beta           |
+    |    Local Multi-Model Squad Ready              |
+    +----------------------------------------------+
+    
+[Ollama] ✅ Já está rodando
+
+[Modelos] 4 disponíveis:
+  • qwen3.6:latest            (22.3 GB)
+  • gemma4:latest             (8.9 GB)
+  • qwen2.5-coder:7b          (4.4 GB)
+  • gemma3:4b                 (3.1 GB)
+
+[MCP] 🚀 Iniciando servidor MCP na porta 8081
+[MCP] ✅ Server ready: http://127.0.0.1:8081/sse
+[MCP] 📖 Configure no OpenCode como MCP server com URL acima
+
+  [AFP-Team] eventos em: .agent-factory/events/AFP-Team/
+
+  [cr10se] eventos em: .agent-factory/events/cr10se/
+
+  [pta] eventos em: .agent-factory/events/pta/
+
+[Dashboard] http://localhost:8080
+[Dashboard] Projetos: ['AFP-Team', 'cr10se', 'pta']
+Dashboard: http://localhost:8080
+Projetos: ['AFP-Team', 'cr10se', 'pta']
+ContextStores ativos: ['AFP-Team', 'cr10se', 'pta']
+
+[Demo] 🎬 Carregando agentes do AFP-Team...
+[Demo] ✅ Agentes carregados. Executando tarefas...
+  [dev] capabilities: completed
+  [qa] validacao: completed
+  [SmartRouter] fallback: groq falhou -> RateLimitError: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b
+  [SmartRouter] fallback: mimo falhou -> BadRequestError: Error code: 400 - {'error': {'code': '400', 'message': 'Unsupported model mimo-v2-f
+  [SmartRouter] fallback: deepseek falhou -> APIStatusError: Error code: 402 - {'error': {'message': 'Insufficient Balance', 'type': 'unknown_err
+  [SmartRouter] task_type=coder provider=mistral model=mistral/mistral-small-latest tokens=2608
+  [coordenador] plano: success
+[Demo] ✅ Agentes reais executados com sucesso
+
+──────────────────────────────────────────────────
+Agent Factory pronto! Pressione Ctrl+C para encerrar.
+──────────────────────────────────────────────────
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=None notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=AFP-Team notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=265
+[Dashboard] _serve_events project=cr10se notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0
+[Dashboard] _serve_events project=pta notifiers=['AFP-Team', 'cr10se', 'pta'] events_per_notifier=[265, 0, 0] total=0

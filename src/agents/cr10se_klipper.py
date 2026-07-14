@@ -12,7 +12,8 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent, AgentRole
+from src.agents.base import StructuredError
 from src.protocols.events import EventNotifier
 
 PRINTER_DIR = Path(r"C:\Users\rafae\Documents\Impressao 3D")
@@ -21,11 +22,13 @@ SSH_USER = "root"
 SSH_PASS = "Creality2023"
 
 
-class KlipperAgent(AgentBase):
+class KlipperAgent(StandardBaseAgent):
     """
     Agente de comunicacao com a CR-10 SE.
     Envia GCode via SSH/UDS, le status, modifica config, faz upload.
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "send_gcode": {

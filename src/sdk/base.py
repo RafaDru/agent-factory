@@ -15,13 +15,22 @@ from src.protocols.events import EventNotifier
 from src.agents.base import AgentBase
 from src.sdk.decision import DecisionEngine, RuleBasedEngine, DecisionContext
 from src.sdk.hooks import HookRegistry, HookPoint, HookContext
+from src.llm import get_provider, LLMProvider
+
+MISSIONS_DIR = Path(".agent-factory") / "missions"
+GLOBAL_CONTEXT_FILE = "GLOBAL_CONTEXT.md"
 
 
 class StandardBaseAgent(AgentBase):
     """
     SDK Padrao para Agentes do Agent Factory.
     Herda de AgentBase para compatibilidade com o loader/registry.
+
+    Cada agente pode ter seu proprio LLM provider para tomada de decisao.
+    Defina _DEFAULT_LLM na subclasse ou passe llm_provider via kwargs.
     """
+
+    _DEFAULT_LLM: Optional[str] = None
 
     def __init__(self, agent_id: str, project_id: str, notifier: EventNotifier, role: AgentRole, **kwargs):
         super().__init__(
@@ -37,6 +46,15 @@ class StandardBaseAgent(AgentBase):
         self._decision_engine: Optional[DecisionEngine] = None
         self._hooks = HookRegistry()
         self._register_default_hooks()
+
+        provider_name = kwargs.get("llm_provider") or self._DEFAULT_LLM
+        if provider_name:
+            try:
+                self._llm: Optional[LLMProvider] = get_provider(provider_name)
+            except Exception:
+                self._llm = None
+        else:
+            self._llm = None
 
     def _register_default_hooks(self):
         """Registra hooks padrao: telemetria, decisao, logging."""
@@ -140,7 +158,8 @@ class StandardBaseAgent(AgentBase):
                 for k, v in payload.pop("details").items():
                     if k not in payload:
                         payload[k] = v
-            payload.pop("rationale", None)
+            # Manter rationale para que agentes downstream (coordinator)
+            # possam extrair o texto completo do LLM
         else:
             payload = {"result": output} if output is not None else {}
 
@@ -154,6 +173,128 @@ class StandardBaseAgent(AgentBase):
             output=payload,
             summary=f"{status.value.upper()}: {task.get('action', 'Execucao')}",
         )
+
+    # === LLM Thinking Method ===
+
+    def _llm_think(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.3,
+        max_tokens: int = 2048,
+    ) -> Optional[str]:
+        """
+        Usa o LLM provider do agente para raciocinar sobre um prompt.
+
+        Retorna a resposta do LLM ou None se o provider nao estiver disponivel.
+        """
+        if not self._llm or not self._llm.is_available():
+            return None
+        
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            resp = self._llm.chat(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            return resp.content
+        except Exception:
+            return None
+
+    # === Gerenciamento de Contexto de 3 Niveis ===
+
+    def get_project_root(self) -> Path:
+        """Diretorio raiz do projeto (onde esta GLOBAL_CONTEXT.md)."""
+        return self.working_dir if hasattr(self, 'working_dir') and self.working_dir else Path.cwd()
+
+    def load_global_context(self) -> str:
+        """Le o GLOBAL_CONTEXT.md do projeto."""
+        path = self.get_project_root() / GLOBAL_CONTEXT_FILE
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+        return ""
+
+    def get_missions_dir(self) -> Path:
+        """Retorna o diretorio base de missoes (.agent-factory/missions/)."""
+        return self.get_project_root() / MISSIONS_DIR
+
+    def get_mission_dir(self, mission_id: str) -> Path:
+        """Retorna o diretorio de uma missao especifica."""
+        return self.get_missions_dir() / mission_id
+
+    def get_mission_input_dir(self, mission_id: str) -> Path:
+        return self.get_mission_dir(mission_id) / "input"
+
+    def get_mission_output_dir(self, mission_id: str) -> Path:
+        return self.get_mission_dir(mission_id) / "output"
+
+    def get_mission_context_path(self, mission_id: str) -> Path:
+        return self.get_mission_input_dir(mission_id) / "Mission_Context.md"
+
+    def load_mission_context(self, mission_id: str) -> str:
+        path = self.get_mission_context_path(mission_id)
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+        return ""
+
+    def get_task_context_path(self, mission_id: str, task_id: str, agent_id: str) -> Path:
+        return self.get_mission_input_dir(mission_id) / "tasks" / task_id / agent_id / "Task_Context.md"
+
+    def load_task_context(self, mission_id: str, task_id: str, agent_id: str) -> str:
+        path = self.get_task_context_path(mission_id, task_id, agent_id)
+        if path.exists():
+            return path.read_text(encoding="utf-8")
+        return ""
+
+    def get_task_output_dir(self, mission_id: str, task_id: str, agent_id: str) -> Path:
+        return self.get_mission_output_dir(mission_id) / "tasks" / task_id / agent_id
+
+    def save_task_result(self, mission_id: str, task_id: str, agent_id: str, content: str):
+        """Salva o resultado da execucao de um agente em output/."""
+        out_dir = self.get_task_output_dir(mission_id, task_id, agent_id)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / "result.md"
+        path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def save_task_artifact(self, mission_id: str, task_id: str, agent_id: str,
+                           name: str, content: str, binary: bool = False) -> str:
+        """Salva um artefato (codigo, prototipo, relatorio) em output/tasks/.../artifacts/."""
+        out_dir = self.get_task_output_dir(mission_id, task_id, agent_id) / "artifacts"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        path = out_dir / name
+        if binary:
+            path.write_bytes(content.encode("utf-8") if isinstance(content, str) else content)
+        else:
+            path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def save_mission_context(self, mission_id: str, content: str) -> str:
+        """Escreve o Mission_Context.md no diretorio input/ da missao."""
+        path = self.get_mission_context_path(mission_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def save_task_context(self, mission_id: str, task_id: str, agent_id: str, content: str) -> str:
+        """Escreve o Task_Context.md para uma tarefa/agente especifico."""
+        path = self.get_task_context_path(mission_id, task_id, agent_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+        return str(path)
+
+    def load_all_contexts(self, mission_id: str, task_id: str) -> dict[str, str]:
+        """Carrega os 3 niveis de contexto e retorna como dict."""
+        return {
+            "global": self.load_global_context(),
+            "mission": self.load_mission_context(mission_id),
+            "task": self.load_task_context(mission_id, task_id, self.agent_id),
+        }
 
     # === Delegacao e tratamento de subordinados ===
 

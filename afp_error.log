@@ -1,13 +1,53 @@
-INFO:     Started server process [43592]
+INFO:     Started server process [41448]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:9091 (Press CTRL+C to quit)
-[07/12/26 10:35:45] INFO     Processing request of type           server.py:733
-                             CallToolRequest                                   
-                    INFO     Processing request of type           server.py:733
-                             ListToolsRequest                                  
-                    INFO     Processing request of type           server.py:733
-                             CallToolRequest                                   
-[07/12/26 10:35:46] INFO     HTTP Request: POST                 _client.py:1025
+INFO:     Uvicorn running on http://127.0.0.1:8081 (Press CTRL+C to quit)
+[07/14/26 10:09:00] INFO     HTTP Request: POST                 _client.py:1025
                              https://api.groq.com/openai/v1/cha                
                              t/completions "HTTP/1.1 200 OK"                   
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 64578)
+Traceback (most recent call last):
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\rafae\agent-factory\src\dashboard\server.py", line 43, in do_GET
+    self._serve_context(project_id)
+  File "C:\Users\rafae\agent-factory\src\dashboard\server.py", line 241, in _serve_context
+    self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 834, in write
+    self._sock.sendall(b)
+ConnectionAbortedError: [WinError 10053] Uma conexão estabelecida foi anulada pelo software no computador host
+----------------------------------------
+----------------------------------------
+Exception occurred during processing of request from ('127.0.0.1', 62991)
+Traceback (most recent call last):
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 691, in process_request_thread
+    self.finish_request(request, client_address)
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 361, in finish_request
+    self.RequestHandlerClass(request, client_address, self)
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 671, in __init__
+    super().__init__(*args, **kwargs)
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 755, in __init__
+    self.handle()
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 436, in handle
+    self.handle_one_request()
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\http\server.py", line 424, in handle_one_request
+    method()
+  File "C:\Users\rafae\agent-factory\src\dashboard\server.py", line 43, in do_GET
+    self._serve_context(project_id)
+  File "C:\Users\rafae\agent-factory\src\dashboard\server.py", line 241, in _serve_context
+    self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
+  File "C:\Users\rafae\AppData\Local\Programs\Python\Python311\Lib\socketserver.py", line 834, in write
+    self._sock.sendall(b)
+ConnectionAbortedError: [WinError 10053] Uma conexão estabelecida foi anulada pelo software no computador host
+----------------------------------------

@@ -8,6 +8,80 @@ from mcp.server.fastmcp import FastMCP
 from src.registry import get_registry
 from src.protocols.schema import AgentStatus
 
+CONTEXT_TEMPLATE_COORD = """# {agent_id} — {project_name}
+
+## Proposito
+{description}
+
+## Subordinados Disponiveis
+{subordinates_section}
+
+## Acoes Disponiveis
+| Acao | Descricao |
+|------|-----------|
+| plan_and_execute | Recebe objetivo, gera plano via LLM e executa DAG de tarefas |
+| delegate | Delega tarefa para subordinado e retorna resultado |
+| get_capabilities | Retorna as acoes disponiveis neste agente |
+
+## Exemplos
+```json
+{{"action": "plan_and_execute", "goal": "Analisar codigo e sugerir melhorias", "context": "..."}}
+```
+
+## Working Directory
+`{working_dir}`"""
+
+CONTEXT_TEMPLATE_WORKER = """# {agent_id} — {project_name}
+
+## Proposito
+{description}
+
+## Acoes Disponiveis
+| Acao | Descricao |
+|------|-----------|
+{actions_table}
+
+## Exemplos
+```json
+{{"action": "execute", "param": "value"}}
+```
+
+## Working Directory
+`{working_dir}`"""
+
+DEFAULT_ACTIONS = {
+    "dev": [
+        ("read_file", "Le conteudo de um arquivo"),
+        ("write_file", "Escreve conteudo em um arquivo"),
+        ("edit_file", "Edita um arquivo (substitui trecho)"),
+        ("generate_code", "Gera codigo via LLM"),
+        ("implement_feature", "Planeja e implementa feature via LLM"),
+    ],
+    "qa": [
+        ("run_tests", "Executa pytest"),
+        ("validate_python_syntax", "Valida sintaxe Python"),
+        ("review_code", "Revisa codigo via LLM"),
+        ("analyze_artifact", "Analisa artefato do disco"),
+        ("file_exists", "Verifica existencia de arquivo"),
+    ],
+    "designer": [
+        ("research_design_systems", "Pesquisa design systems"),
+        ("analyze_ux", "Analisa UX/UI"),
+        ("design_ui", "Cria propostas de UI"),
+        ("prototype", "Gera prototipo HTML/CSS"),
+    ],
+    "default": [
+        ("execute", "Executa tarefa principal"),
+        ("get_capabilities", "Retorna capacidades"),
+    ],
+}
+
+AGENT_EMOJIS = {
+    "coordenador": "🎯", "dev": "⚙️", "qa": "🧪", "designer": "🎨",
+    "negocios": "💼", "desenvolvedor": "⚙️", "design": "🎨",
+    "klipper": "🔌", "pipeline": "📐", "visao": "👁️", "resume": "🔄",
+}
+
 mcp = FastMCP(
     "Agent Factory Platform",
     instructions="""Agent Factory Platform (AFP) — expose agentes como ferramentas para LLMs.
@@ -292,6 +366,211 @@ def figma_get_file(file_key: str) -> dict[str, Any]:
         return {"error": f"Figma API HTTP {e.code}: {e.reason}"}
     except Exception as e:
         return {"error": str(e)}
+
+
+# ── Project Creation Tools ────────────────────────────────────────────────────
+
+
+@mcp.tool()
+def register_project(
+    project_id: str = "",
+    name: str = "",
+    description: str = "",
+    agents: list[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Registra um novo projeto no Agent Factory. QUESTIONARIO INTERATIVO.
+
+    Use esta ferramenta como um assistente passo-a-passo para criar projetos.
+    Se campos estiverem vazios, a ferramenta retorna perguntas para preencher.
+
+    PASSO 1: Chame com project_id vazio "" -> retorna instrucoes iniciais
+    PASSO 2: Forneca project_id, name, description
+    PASSO 3: Forneca agents (lista de agentes com agent_id, description, type)
+    PASSO 4: Ferramenta cria tudo e retorna confirmacao
+
+    Args:
+        project_id: ID curto do projeto (ex: "meu-app", "chatbot-ai")
+        name: Nome completo do projeto (ex: "Meu App com IA")
+        description: Descricao do que o time de agentes vai fazer
+        agents: Lista de agentes. Cada agente: {agent_id, description, type}
+                type pode ser: "coordenador", "dev", "qa", "designer", "custom"
+
+    Returns:
+        Instrucoes do proximo passo ou confirmacao de criacao.
+    """
+    if not agents:
+        agents = []
+
+    # PASSO 1: Sem project_id - retornar instrucoes
+    if not project_id:
+        return {
+            "step": 1,
+            "title": "Criar Novo Projeto - Questionario",
+            "message": "Vou te guiar na criacao de um time de agentes. Responda as perguntas abaixo:",
+            "questions": [
+                {"field": "project_id", "question": "Qual o ID curto do projeto? (ex: 'chatbot-ai', 'ecommerce')", "example": "meu-app", "required": True},
+                {"field": "name", "question": "Qual o nome completo do projeto?", "example": "Chatbot com IA Generativa", "required": True},
+                {"field": "description", "question": "O que o time de agentes vai fazer neste projeto?", "example": "Desenvolver um chatbot com IA para atendimento ao cliente", "required": True},
+            ],
+            "next_step": "Responda com project_id, name e description para continuar.",
+        }
+
+    # PASSO 2: Tem project_id mas sem agents - pedir agents
+    if not agents:
+        return {
+            "step": 2,
+            "title": f"Projeto '{project_id}' - Definir Agentes",
+            "project_so_far": {"project_id": project_id, "name": name or project_id, "description": description or ""},
+            "message": "Agora defina os agentes do time. Voce pode usar tipos pre-definidos ou customizados.",
+            "agent_types": {
+                "coordenador": "Orquestrador: planeja via LLM e delega tarefas",
+                "dev": "Desenvolvedor: codigo, arquivos, scripts, git, LLM",
+                "qa": "QA: testes, revisao de codigo, qualidade",
+                "designer": "Designer: pesquisa design systems, prototipos, UX",
+                "custom": "Agente customizado com capacidades basicas",
+            },
+            "example_agents": [
+                {"agent_id": "coordenador", "description": "Orquestrador do time", "type": "coordenador"},
+                {"agent_id": "dev", "description": "Desenvolvedor principal", "type": "dev"},
+                {"agent_id": "qa", "description": "Qualidade e testes", "type": "qa"},
+            ],
+            "next_step": "Forneca a lista de agents com agent_id, description e type.",
+        }
+
+    # PASSO 3: Criar tudo
+    registry = _get_registry()
+    if registry.project_exists(project_id):
+        return {"step": "error", "error": f"Projeto '{project_id}' ja existe. Use add_agent para adicionar agentes."}
+
+    contexts_base = Path("contexts") / project_id
+    contexts_base.mkdir(parents=True, exist_ok=True)
+
+    from src.protocols.schema import ProjectConfig
+    registry.register(ProjectConfig(project_id=project_id, name=name or project_id, description=description or ""))
+
+    created_agents = []
+    has_coordinator = any(a.get("type") == "coordenador" or a.get("agent_id") == "coordenador" for a in agents)
+
+    for agent_data in agents:
+        agent_id = agent_data.get("agent_id", "")
+        agent_type = agent_data.get("type", "custom")
+        agent_desc = agent_data.get("description", f"Agente {agent_id}")
+        emoji = AGENT_EMOJIS.get(agent_id, AGENT_EMOJIS.get(agent_type, "🤖"))
+        if not agent_id:
+            continue
+
+        agent_dir = contexts_base / agent_id
+        agent_dir.mkdir(parents=True, exist_ok=True)
+
+        if agent_type == "coordenador" or agent_id == "coordenador":
+            sub_ids = [a.get("agent_id") for a in agents if a.get("agent_id") != "coordenador"]
+            sub_section = "\n".join(f"### {sid}\nSem descricao definida." for sid in sub_ids) if sub_ids else "### (sem subordinados ainda)"
+            context_content = CONTEXT_TEMPLATE_COORD.format(agent_id=agent_id, project_name=name or project_id, description=agent_desc, subordinates_section=sub_section, working_dir=str(Path.cwd()))
+        else:
+            actions = DEFAULT_ACTIONS.get(agent_type, DEFAULT_ACTIONS["default"])
+            actions_table = "\n".join(f"| {a[0]} | {a[1]} |" for a in actions)
+            context_content = CONTEXT_TEMPLATE_WORKER.format(agent_id=agent_id, project_name=name or project_id, description=agent_desc, actions_table=actions_table, working_dir=str(Path.cwd()))
+
+        ctx_file = agent_dir / "CONTEXTO.md"
+        ctx_file.write_text(context_content, encoding="utf-8")
+        created_agents.append({"agent_id": agent_id, "type": agent_type, "context_file": str(ctx_file), "emoji": emoji})
+
+    project_json = {
+        "project_id": project_id,
+        "project_name": name or project_id,
+        "team_id": project_id + "-Team",
+        "team_name": (name or project_id) + " Team",
+        "description": description or "",
+        "icon": "📦",
+        "working_dir": str(Path.cwd()),
+        "agents_source": "src/agents/",
+        "agents": [
+            {
+                "agent_id": a["agent_id"],
+                "module_path": f"src/agents/{project_id}_{a['agent_id']}.py",
+                "class_name": f"{project_id.title().replace('-','')}{a['agent_id'].title().replace('-','')}",
+                "context_limit_kb": 10.0,
+                "llm_provider": "auto",
+                "emoji": AGENT_EMOJIS.get(a.get("agent_id",""), AGENT_EMOJIS.get(a.get("type",""), "🤖")),
+                "description": a.get("description", ""),
+            }
+            for a in agents
+        ],
+    }
+    (contexts_base / "project.json").write_text(json.dumps(project_json, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    result = {
+        "step": "complete", "status": "created",
+        "project": {"project_id": project_id, "name": name or project_id},
+        "agents_created": len(created_agents), "agents": created_agents,
+        "files_created": [str(contexts_base / "project.json")] + [str(contexts_base / a["agent_id"] / "CONTEXTO.md") for a in created_agents],
+        "next_steps": [
+            "Implemente as classes Python dos agentes em src/agents/",
+            "Reinicie o Agent Factory para o auto-discovery registrar o projeto",
+            "Use add_agent para adicionar mais agentes depois",
+        ],
+    }
+    if not has_coordinator:
+        result["warning"] = "Nenhum agente 'coordenador' definido. Adicione um para usar run_objective."
+    return result
+
+
+@mcp.tool()
+def add_agent(project_id: str, agent_id: str = "", description: str = "", agent_type: str = "custom") -> dict[str, Any]:
+    """Adiciona um novo agente a um projeto existente. QUESTIONARIO.
+
+    PASSO 1: Chame com agent_id vazio -> retorna agentes existentes e pergunta
+    PASSO 2: Forneca agent_id, description, agent_type -> cria o agente
+
+    Args:
+        project_id: ID do projeto existente
+        agent_id: ID do novo agente (ex: "devops", "security")
+        description: O que este agente faz
+        agent_type: Tipo pre-definido ou "custom"
+    Returns:
+        Instrucoes ou confirmacao da criacao.
+    """
+    registry = _get_registry()
+    if not registry.project_exists(project_id):
+        return {"error": f"Projeto '{project_id}' nao encontrado.", "available_projects": [p.project_id for p in registry.list_projects()], "hint": "Use list_projects() para ver projetos disponiveis."}
+
+    existing = registry.list_agent_refs(project_id)
+    if not agent_id:
+        return {
+            "step": 1, "project_id": project_id,
+            "existing_agents": list(existing.keys()) if existing else [],
+            "message": f"Projeto '{project_id}' tem {len(existing) if existing else 0} agente(s).",
+            "questions": [
+                {"field": "agent_id", "question": "Qual o ID do novo agente?", "example": "devops", "required": True},
+                {"field": "description", "question": "O que este agente faz?", "example": "Gerencia infraestrutura e deploy", "required": True},
+                {"field": "agent_type", "question": "Qual o tipo do agente?", "options": ["dev", "qa", "designer", "custom"], "required": True},
+            ],
+        }
+    if agent_id in existing:
+        return {"error": f"Agente '{agent_id}' ja existe no projeto '{project_id}'.", "existing_agents": list(existing.keys())}
+
+    contexts_base = Path("contexts") / project_id
+    agent_dir = contexts_base / agent_id
+    agent_dir.mkdir(parents=True, exist_ok=True)
+    actions = DEFAULT_ACTIONS.get(agent_type, DEFAULT_ACTIONS["default"])
+    actions_table = "\n".join(f"| {a[0]} | {a[1]} |" for a in actions)
+    context_content = CONTEXT_TEMPLATE_WORKER.format(agent_id=agent_id, project_name=project_id, description=description or f"Agente {agent_id}", actions_table=actions_table, working_dir=str(Path.cwd()))
+    ctx_file = agent_dir / "CONTEXTO.md"
+    ctx_file.write_text(context_content, encoding="utf-8")
+
+    emoji = AGENT_EMOJIS.get(agent_type, "🤖")
+    proj_json = contexts_base / "project.json"
+    if proj_json.exists():
+        data = json.loads(proj_json.read_text(encoding="utf-8"))
+        data.setdefault("agents", []).append({"agent_id": agent_id, "module_path": f"src/agents/{project_id}_{agent_id}.py", "class_name": f"{project_id.title().replace('-','')}{agent_id.title().replace('-','')}", "context_limit_kb": 10.0, "llm_provider": "auto", "emoji": emoji, "description": description or ""})
+        proj_json.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return {
+        "step": "complete", "status": "created",
+        "agent": {"agent_id": agent_id, "project_id": project_id, "type": agent_type, "emoji": emoji},
+        "context_file": str(ctx_file),
+        "next_steps": ["Implemente a classe Python do agente", f"Module path sugerido: src/agents/{project_id}_{agent_id}.py", "Reinicie o Agent Factory para carregar o novo agente"],
+    }
 
 
 # ── Resources ────────────────────────────────────────────────────────────────

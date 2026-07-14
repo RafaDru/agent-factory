@@ -12,17 +12,20 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent, AgentRole
+from src.agents.base import StructuredError
 from src.protocols.events import EventNotifier
 
 PRINTER_DIR = Path(r"C:\Users\rafae\Documents\Impressao 3D")
 
 
-class PrintQAAgent(AgentBase):
+class PrintQAAgent(StandardBaseAgent):
     """
     Agente de qualidade para impressao 3D.
     Valida GCode, configuracoes, executa diagnosticos e verifica estado da impressora.
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "validate_gcode": {

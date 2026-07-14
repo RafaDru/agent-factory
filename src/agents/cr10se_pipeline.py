@@ -12,17 +12,20 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
-from src.agents.base import AgentBase, AgentRole, StructuredError
+from src.sdk.base import StandardBaseAgent, AgentRole
+from src.agents.base import StructuredError
 from src.protocols.events import EventNotifier
 
 PRINTER_DIR = Path(r"C:\Users\rafae\Documents\Impressao 3D")
 
 
-class PipelineAgent(AgentBase):
+class PipelineAgent(StandardBaseAgent):
     """
     Agente de pipeline de impressao.
     Orquestra o fluxo completo: fatiamento, otimizacao, upload e inicio de impressao.
     """
+
+    _DEFAULT_LLM = "auto"
 
     ACTIONS = {
         "run_pipeline": {
