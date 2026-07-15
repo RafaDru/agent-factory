@@ -302,7 +302,7 @@ class OpenAICompatibleProvider(LLMProvider):
                     base_url=self.base_url,
                     api_key=self._api_key,
                     max_retries=self.max_retries,
-                    timeout=120,
+                    timeout=300,
                 )
             except ImportError:
                 raise ImportError("openai não instalado. Execute: pip install openai")
@@ -399,6 +399,32 @@ class OpenCodeGoProvider(OpenAICompatibleProvider):
     ):
         super().__init__(
             base_url=base_url or "https://opencode.ai/zen/go/v1",
+            api_key=api_key or os.getenv("OPENCODEGO_API_KEY") or os.getenv("OPENCODE_API_KEY"),
+            model=model,
+        )
+
+    def _get_env_key_name(self) -> str:
+        return "OPENCODEGO_API_KEY"
+
+
+class OpenCodeZenProvider(OpenAICompatibleProvider):
+    """
+    Provedor OpenCode Zen — gateway completo com 50+ modelos.
+    OpenAI-compatible API via https://opencode.ai/zen/v1.
+
+    API Key: OPENCODEGO_API_KEY (mesma do Go)
+    Modelos: deepseek-v4-pro, deepseek-v4-flash, deepseek-v4-flash-free (gratuito),
+             gemini-3-flash, gpt-5.1-codex, claude-sonnet-4, etc.
+    """
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "deepseek-v4-pro",
+        base_url: Optional[str] = None,
+    ):
+        super().__init__(
+            base_url=base_url or "https://opencode.ai/zen/v1",
             api_key=api_key or os.getenv("OPENCODEGO_API_KEY") or os.getenv("OPENCODE_API_KEY"),
             model=model,
         )
@@ -832,6 +858,7 @@ def get_provider(
     """
     PROVIDER_MAP = {
         "opencode": (OpenCodeGoProvider, ["api_key", "model", "base_url"]),
+        "opencode_zen": (OpenCodeZenProvider, ["api_key", "model", "base_url"]),
         "groq": (GroqProvider, []),
         "gemini": (GeminiProvider, ["api_key", "model"]),
         "deepseek": (DeepSeekProvider, ["api_key", "model"]),
@@ -1031,27 +1058,19 @@ class SmartRouterProvider(LLMProvider):
     """
     Roteia chamadas para o melhor provedor baseado no tipo de tarefa,
     com fallback automatico em caso de erro de consumo (rate limit, overload).
-
-    Ranking de eficacia por task_type (melhor primeiro):
-      coder:     mimo → deepseek → groq → mistral → cerebras → hf → ollama-coder
-      reasoner:  groq → deepseek → mimo → mistral → cerebras → ollama
-      analysis:  groq → deepseek → openrouter → mistral → hf → ollama
-      fast:      groq → cerebras → ollama-fast
-      planner:   groq → deepseek → mimo → mistral → ollama
-      default:   groq → deepseek → mimo → openrouter → cerebras → mistral → hf → ollama
     """
 
     _PROVIDER_CACHE: dict[str, LLMProvider] = {}
 
-    # Ranking: OpenCode Go primeiro, Gemini ultimo (custos)
+    # Ranking: OpenCode Go primeiro, depois Zen (fallback), Gemini ultimo
     RANKINGS: dict[str, list[str]] = {
-        "coder": ["opencode", "groq", "deepseek", "cerebras", "mistral", "huggingface", "gemini"],
-        "reasoner": ["opencode", "groq", "deepseek", "cerebras", "mistral", "gemini"],
-        "analysis": ["opencode", "groq", "deepseek", "openrouter", "mistral", "huggingface", "gemini"],
-        "fast": ["opencode", "groq", "cerebras"],
-        "planner": ["opencode", "groq", "deepseek", "mistral", "gemini"],
-        "review": ["opencode", "groq", "deepseek", "mistral", "huggingface", "gemini"],
-        "default": ["opencode", "groq", "deepseek", "openrouter", "cerebras", "mistral", "huggingface", "gemini"],
+        "coder": ["opencode", "opencode_zen", "groq", "deepseek", "cerebras", "mistral", "huggingface", "gemini"],
+        "reasoner": ["opencode", "opencode_zen", "groq", "deepseek", "cerebras", "mistral", "gemini"],
+        "analysis": ["opencode", "opencode_zen", "groq", "deepseek", "openrouter", "mistral", "huggingface", "gemini"],
+        "fast": ["opencode", "opencode_zen", "groq", "cerebras"],
+        "planner": ["opencode", "opencode_zen", "groq", "deepseek", "mistral", "gemini"],
+        "review": ["opencode", "opencode_zen", "groq", "deepseek", "mistral", "huggingface", "gemini"],
+        "default": ["opencode", "opencode_zen", "groq", "deepseek", "openrouter", "cerebras", "mistral", "huggingface", "gemini"],
     }
 
     def __init__(self, verbose: bool = True):

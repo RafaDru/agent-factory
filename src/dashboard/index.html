@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,8 +7,20 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
+        /* Variáveis globais (independem do tema) */
         :root {
-            --bg-deep: #0a0a0f;
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --radius-full: 9999px;
+            --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* ========== TEMA DARK (padrão) ========== */
+        :root[data-theme="dark"] {
+            --bg: #0a0a0f;
             --bg-card: rgba(16, 16, 26, 0.7);
             --bg-card-hover: rgba(22, 22, 36, 0.8);
             --bg-glass: rgba(255, 255, 255, 0.03);
@@ -26,12 +38,40 @@
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
-            --radius-lg: 20px;
-            --radius-md: 14px;
-            --radius-sm: 10px;
-            --radius-xs: 6px;
-            --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            --cyan-rgb: 34, 211, 238;
+            --purple-rgb: 168, 85, 247;
+            --text-primary-rgb: 241, 245, 249;
+            --grid-line: rgba(255, 255, 255, 0.015);
+            --card-shadow: none;
+            --card-hover-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ========== TEMA LIGHT ========== */
+        :root[data-theme="light"] {
+            --bg: #f8f9fa;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f3f5;
+            --bg-glass: rgba(0, 0, 0, 0.02);
+            --border-glass: rgba(0, 0, 0, 0.08);
+            --border-neon-cyan: rgba(8, 145, 178, 0.2);
+            --border-neon-purple: rgba(124, 58, 237, 0.2);
+            --cyan: #0891b2;
+            --cyan-glow: rgba(8, 145, 178, 0.25);
+            --purple: #7c3aed;
+            --purple-glow: rgba(124, 58, 237, 0.25);
+            --green: #16a34a;
+            --yellow: #ca8a04;
+            --red: #dc2626;
+            --orange: #ea580c;
+            --text-primary: #1a1a2e;
+            --text-secondary: #4b5563;
+            --text-muted: #9ca3af;
+            --cyan-rgb: 8, 145, 178;
+            --purple-rgb: 124, 58, 237;
+            --text-primary-rgb: 26, 26, 46;
+            --grid-line: rgba(0, 0, 0, 0.05);
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --card-hover-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
         }
 
         * {
@@ -41,13 +81,14 @@
         }
 
         body {
-            background: var(--bg-deep);
+            background: var(--bg);
             font-family: var(--font-family);
             color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         body::before {
@@ -58,9 +99,9 @@
             width: 100%;
             height: 100%;
             background:
-                radial-gradient(ellipse at 20% 10%, rgba(34, 211, 238, 0.06) 0%, transparent 55%),
-                radial-gradient(ellipse at 75% 60%, rgba(168, 85, 247, 0.05) 0%, transparent 55%),
-                radial-gradient(ellipse at 50% 90%, rgba(34, 211, 238, 0.03) 0%, transparent 50%);
+                radial-gradient(ellipse at 20% 10%, rgba(var(--cyan-rgb), 0.06) 0%, transparent 55%),
+                radial-gradient(ellipse at 75% 60%, rgba(var(--purple-rgb), 0.05) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 90%, rgba(var(--cyan-rgb), 0.03) 0%, transparent 50%);
             pointer-events: none;
             z-index: 0;
         }
@@ -73,8 +114,8 @@
             width: 100%;
             height: 100%;
             background-image:
-                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+                linear-gradient(var(--grid-line) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
             background-size: 60px 60px;
             pointer-events: none;
             z-index: 0;
@@ -109,7 +150,7 @@
 
         .header:hover {
             border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+            box-shadow: var(--card-hover-shadow);
         }
 
         .header-left {
@@ -221,6 +262,7 @@
             transition: var(--transition-smooth);
             position: relative;
             overflow: hidden;
+            box-shadow: var(--card-shadow);
         }
 
         .project-card::before {

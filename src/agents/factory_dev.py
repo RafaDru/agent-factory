@@ -413,7 +413,7 @@ Instrucoes: {instructions}
 
 Retorne APENAS o codigo refatorado completo dentro de um bloco ```."""
         system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=16384)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=32000)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
