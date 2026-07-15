@@ -1337,10 +1337,20 @@
                     API.fetchProjects(),
                     API.fetchMissions()
                 ]);
-                state.projects = projects;
+                // Normalize flat API data to nested structure expected by UI
+                state.projects = (projects || []).map(p => ({
+                    id: p.project_id,
+                    name: p.project_name || p.project_id,
+                    icon: p.icon || '📁',
+                    teams: [{
+                        id: p.team_id || p.project_id,
+                        name: p.team_name || 'Team',
+                        agents: (p.agents || []).map(a => ({ id: a.agent_id, ...a }))
+                    }],
+                }));
                 state.missions = missions;
-                // Initialize agent states from projects
-                projects.forEach(project => {
+                // Initialize agent states from normalized projects
+                state.projects.forEach(project => {
                     project.teams?.forEach(team => {
                         team.agents?.forEach(agent => {
                             if (!state.agentsState[agent.id]) {

@@ -3,9 +3,9 @@
   "project_name": "Impressao 3D",
   "team_id": "3D-Team",
   "team_name": "3D Team",
-  "description": "Otimizacao e monitoramento da Creality CR-10 SE com Klipper. Agentes a serem definidos no proprio projeto.",
+  "description": "Time especializado em impressao 3D na Creality CR-10 SE com Klipper. Firmware, monitoramento visual LLM e otimizacao de GCode.",
   "icon": "🖨️",
-  "working_dir": "C:/Users/rafae/Documents/Impressao 3D",
+  "working_dir": "C:/Users/rafae/Documents/Impressão 3D",
   "agents_source": "src/agents/",
   "agents": [
     {
@@ -15,52 +15,34 @@
       "context_limit_kb": 15.0,
       "llm_provider": "auto",
       "emoji": "🎯",
-      "description": "Coordenador da impressora 3D"
+      "description": "Coordenador do time 3D"
     },
     {
-      "agent_id": "klipper",
-      "module_path": "src/agents/cr10se_klipper.py",
-      "class_name": "KlipperAgent",
-      "context_limit_kb": 10.0,
+      "agent_id": "firmware",
+      "module_path": "src/agents/cr10se_firmware.py",
+      "class_name": "FirmwareAgent",
+      "context_limit_kb": 20.0,
       "llm_provider": "auto",
-      "emoji": "🔌",
-      "description": "Comunicacao SSH/WS com Klipper"
+      "emoji": "🔧",
+      "description": "Especialista em hardware e firmware CR-10 SE"
     },
     {
-      "agent_id": "pipeline",
-      "module_path": "src/agents/cr10se_pipeline.py",
-      "class_name": "PipelineAgent",
-      "context_limit_kb": 10.0,
-      "llm_provider": "auto",
-      "emoji": "📐",
-      "description": "Pipeline STL -> GCode -> print"
-    },
-    {
-      "agent_id": "visao",
-      "module_path": "src/agents/cr10se_vision.py",
-      "class_name": "VisionAgent",
-      "context_limit_kb": 10.0,
+      "agent_id": "visao-llm",
+      "module_path": "src/agents/cr10se_visao_llm.py",
+      "class_name": "VisaoLLMAgent",
+      "context_limit_kb": 15.0,
       "llm_provider": "auto",
       "emoji": "👁️",
-      "description": "Monitoramento OpenCV"
+      "description": "Analise visual de impressao via LLM"
     },
     {
-      "agent_id": "resume",
-      "module_path": "src/agents/cr10se_resume.py",
-      "class_name": "ResumeAgent",
-      "context_limit_kb": 10.0,
+      "agent_id": "gcode-opt",
+      "module_path": "src/agents/cr10se_gcode_opt.py",
+      "class_name": "GCodeOptimizerAgent",
+      "context_limit_kb": 15.0,
       "llm_provider": "auto",
-      "emoji": "🔄",
-      "description": "Retomada de impressao"
-    },
-    {
-      "agent_id": "qa",
-      "module_path": "src/agents/cr10se_qa.py",
-      "class_name": "PrintQAAgent",
-      "context_limit_kb": 10.0,
-      "llm_provider": "auto",
-      "emoji": "🧪",
-      "description": "Qualidade e diagnostico"
+      "emoji": "⚡",
+      "description": "Otimizacao extrema de GCode e fatiamento"
     }
   ]
 }

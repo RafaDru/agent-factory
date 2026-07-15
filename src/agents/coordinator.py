@@ -273,7 +273,7 @@ Regras:
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.3,
-                max_tokens=8192,
+                max_tokens=16384,
             )
             model_used = resp.model if hasattr(resp, 'model') and resp.model else type(self._llm).__name__
             self.notifier.emit(AgentEvent(

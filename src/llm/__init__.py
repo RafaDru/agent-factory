@@ -377,6 +377,36 @@ class DeepSeekProvider(OpenAICompatibleProvider):
         return "DEEPSEEK_API_KEY"
 
 
+class OpenCodeGoProvider(OpenAICompatibleProvider):
+    """
+    Provedor OpenCode Go — modelos DeepSeek V4 Pro/Flash.
+    OpenAI-compatible API via https://opencode.ai/zen/go/v1.
+
+    API Key: OPENCODEGO_API_KEY ou OPENCODE_API_KEY
+    Modelos: deepseek-v4-pro, deepseek-v4-flash, qwen3.5-plus, etc.
+    """
+
+    OPENCODEGO_DEFAULTS = {
+        "model": "deepseek-v4-pro",
+        "base_url": "https://opencode.ai/zen/go/v1",
+    }
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: str = "deepseek-v4-pro",
+        base_url: Optional[str] = None,
+    ):
+        super().__init__(
+            base_url=base_url or "https://opencode.ai/zen/go/v1",
+            api_key=api_key or os.getenv("OPENCODEGO_API_KEY") or os.getenv("OPENCODE_API_KEY"),
+            model=model,
+        )
+
+    def _get_env_key_name(self) -> str:
+        return "OPENCODEGO_API_KEY"
+
+
 class OpenRouterProvider(OpenAICompatibleProvider):
     """
     Provedor OpenRouter (https://openrouter.ai).
@@ -423,18 +453,21 @@ class GeminiProvider(LLMProvider):
     """
 
     GEMINI_DEFAULTS = {
-        "model": "gemini-2.0-flash",
+        "model": "gemini-2.5-flash",
         "base_url": "https://generativelanguage.googleapis.com/v1beta",
     }
 
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gemini-2.0-flash",
+        model: str = "gemini-2.5-flash",
     ):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
         self.model = model
         self._client = None
+
+    def _get_env_key_name(self) -> str:
+        return "GEMINI_API_KEY"
 
     def _get_client(self):
         if self._client is None:
@@ -798,8 +831,9 @@ def get_provider(
         "local_multi": squad de 4 modelos locais com roteamento inteligente
     """
     PROVIDER_MAP = {
+        "opencode": (OpenCodeGoProvider, ["api_key", "model", "base_url"]),
         "groq": (GroqProvider, []),
-        "gemini": (GeminiProvider, []),
+        "gemini": (GeminiProvider, ["api_key", "model"]),
         "deepseek": (DeepSeekProvider, ["api_key", "model"]),
         "openrouter": (OpenRouterProvider, ["api_key", "model"]),
         "cerebras": (CerebrasProvider, ["api_key", "model"]),
@@ -1009,15 +1043,15 @@ class SmartRouterProvider(LLMProvider):
 
     _PROVIDER_CACHE: dict[str, LLMProvider] = {}
 
-    # Ranking: melhor modelo primeiro (atualizado Jul/2026)
+    # Ranking: OpenCode Go primeiro, Gemini ultimo (custos)
     RANKINGS: dict[str, list[str]] = {
-        "coder": ["groq", "mimo", "deepseek", "mistral", "cerebras", "huggingface"],
-        "reasoner": ["groq", "deepseek", "mimo", "mistral", "cerebras"],
-        "analysis": ["groq", "deepseek", "openrouter", "mistral", "huggingface"],
-        "fast": ["groq", "cerebras"],
-        "planner": ["groq", "deepseek", "mimo", "mistral"],
-        "review": ["groq", "deepseek", "mistral", "huggingface"],
-        "default": ["groq", "deepseek", "mimo", "openrouter", "cerebras", "mistral", "huggingface"],
+        "coder": ["opencode", "groq", "deepseek", "cerebras", "mistral", "huggingface", "gemini"],
+        "reasoner": ["opencode", "groq", "deepseek", "cerebras", "mistral", "gemini"],
+        "analysis": ["opencode", "groq", "deepseek", "openrouter", "mistral", "huggingface", "gemini"],
+        "fast": ["opencode", "groq", "cerebras"],
+        "planner": ["opencode", "groq", "deepseek", "mistral", "gemini"],
+        "review": ["opencode", "groq", "deepseek", "mistral", "huggingface", "gemini"],
+        "default": ["opencode", "groq", "deepseek", "openrouter", "cerebras", "mistral", "huggingface", "gemini"],
     }
 
     def __init__(self, verbose: bool = True):

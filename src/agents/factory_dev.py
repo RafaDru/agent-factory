@@ -309,7 +309,7 @@ Retorne APENAS o codigo gerado, sem explicacoes, dentro de um bloco ``` com a li
 Se houver multiplos arquivos, retorne cada um em seu proprio bloco ``` com o caminho como comentario no inicio."""
 
         system_prompt = "Voce e um engenheiro de software sênior. Gere codigo limpo, seguro e bem estruturado."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=8192)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=16384)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
@@ -362,7 +362,7 @@ Forneca:
 
 Retorne o plano seguido pelos blocos de codigo com ```."""
         system_prompt = "Voce e um arquiteto de software sênior. Planeje implementacoes claras e modulares."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=8192)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=16384)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
@@ -413,7 +413,7 @@ Instrucoes: {instructions}
 
 Retorne APENAS o codigo refatorado completo dentro de um bloco ```."""
         system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=8192)
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=16384)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
@@ -425,6 +425,20 @@ Retorne APENAS o codigo refatorado completo dentro de um bloco ```."""
                     cleaned = cleaned[first_nl + 1:]
                 if cleaned.endswith("```"):
                     cleaned = cleaned[:-3].strip()
+            # Validar saida: se for HTML, verificar tags essenciais
+            if path.suffix in (".html", ".htm"):
+                missing = []
+                if "</html>" not in cleaned:
+                    missing.append("</html>")
+                if "<script>" in content and "</script>" not in cleaned:
+                    missing.append("</script>")
+                if missing:
+                    return TaskOutput.failure(
+                        rationale=f"LLM truncou o HTML — tags ausentes: {', '.join(missing)}. "
+                                  f"Resposta: {len(cleaned)} chars (original: {len(content)}). "
+                                  f"Use max_tokens maior ou divida em partes menores.",
+                        available_actions=["edit_file", "write_file"],
+                    )
             path.write_text(cleaned, encoding="utf-8")
             return TaskOutput.success(
                 summary=f"Codigo refatorado via LLM e salvo em {path}",
