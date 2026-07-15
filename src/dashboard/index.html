@@ -1,36 +1,37 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agent Factory Platform - Dashboard</title>
+    <title>Agent Factory Platform — Dashboard</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
         :root {
             --bg-deep: #0a0a0f;
-            --bg-surface: rgba(255, 255, 255, 0.1);
-            --bg-overlay: rgba(30, 30, 45, 0.8);
-            --text-primary: #e2e8f0;
+            --bg-card: rgba(16, 16, 26, 0.7);
+            --bg-card-hover: rgba(22, 22, 36, 0.8);
+            --bg-glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.06);
+            --border-neon-cyan: rgba(34, 211, 238, 0.3);
+            --border-neon-purple: rgba(168, 85, 247, 0.3);
+            --cyan: #22d3ee;
+            --cyan-glow: rgba(34, 211, 238, 0.5);
+            --purple: #a855f7;
+            --purple-glow: rgba(168, 85, 247, 0.5);
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --orange: #f97316;
+            --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
-            --accent-cyan: #22d3ee;
-            --accent-purple: #a855f7;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --border: rgba(255, 255, 255, 0.2);
-            --sp-1: 4px;
-            --sp-2: 8px;
-            --sp-3: 12px;
-            --sp-4: 16px;
-            --sp-5: 20px;
-            --sp-6: 24px;
-            --sp-8: 32px;
-            --radius-sm: 6px;
-            --radius-md: 8px;
-            --radius-lg: 12px;
-            --radius-xl: 16px;
-            --radius-full: 9999px;
-            --transition-fast: 150ms ease;
-            --transition-normal: 250ms ease;
+            --text-muted: #64748b;
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --radius-xs: 6px;
+            --transition-smooth: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
         * {
@@ -40,137 +41,164 @@
         }
 
         body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             background: var(--bg-deep);
+            font-family: var(--font-family);
             color: var(--text-primary);
             min-height: 100vh;
-            line-height: 1.5;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: var(--sp-4);
-        }
-
-        /* Glass Morphism - Refined */
-        .glass-card {
-            background: var(--bg-surface);
-            backdrop-filter: blur(10px) saturate(180%);
-            -webkit-backdrop-filter: blur(10px) saturate(180%);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: var(--sp-4);
-            transition: all var(--transition-normal);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .glass-card::before {
+        body::before {
             content: '';
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg,
-                transparent,
-                var(--accent-cyan),
-                transparent
-            );
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse at 20% 10%, rgba(34, 211, 238, 0.06) 0%, transparent 55%),
+                radial-gradient(ellipse at 75% 60%, rgba(168, 85, 247, 0.05) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 90%, rgba(34, 211, 238, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .glass-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 0 20px var(--accent-cyan), 0 8px 32px rgba(34, 211, 238, 0.3);
-        }
-
-        /* Neon Accents - Enhanced */
-        .neon-glow {
-            box-shadow:
-                0 0 10px #22d3ee,
-                0 0 20px #a855f7;
-            border: 1px solid var(--accent-cyan);
-        }
-
-        .neon-glow-purple {
-            box-shadow:
-                0 0 10px #a855f7,
-                0 0 20px #22d3ee;
-            border: 1px solid var(--accent-purple);
-        }
-
-        .neon-border {
-            position: relative;
-        }
-
-        .neon-border::after {
+        body::after {
             content: '';
-            position: absolute;
-            top: -1px;
-            left: -1px;
-            right: -1px;
-            bottom: -1px;
-            background: linear-gradient(
-                135deg,
-                var(--accent-cyan),
-                var(--accent-purple),
-                var(--accent-cyan)
-            );
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            pointer-events: none;
+            z-index: 0;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+        }
+
+        #app {
+            position: relative;
+            z-index: 1;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px 32px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 28px;
+            margin-bottom: 32px;
+            background: var(--bg-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
             border-radius: var(--radius-lg);
-            z-index: -1;
-            opacity: 0.3;
+            position: sticky;
+            top: 24px;
+            z-index: 100;
+            transition: var(--transition-smooth);
         }
 
-        /* Status Animations - Enhanced */
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; box-shadow: 0 0 15px var(--accent-cyan); }
+        .header:hover {
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
         }
 
-        .status-running {
-            animation: pulse 2s infinite;
-            color: var(--accent-cyan);
-            text-shadow: 0 0 5px var(--accent-cyan);
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
         }
 
-        .status-ready { color: var(--success); }
-        .status-stopped { color: var(--warning); }
-        .status-failed { color: var(--error); }
-
-        /* Neon Text */
-        .neon-text {
-            text-shadow:
-                0 0 5px var(--accent-cyan),
-                0 0 10px var(--accent-purple);
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--cyan), var(--purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -1px;
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.25), 0 0 60px rgba(168, 85, 247, 0.15);
         }
 
-        /* Glass Buttons */
-        .glass-button {
-            background: var(--bg-surface);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: var(--sp-2) var(--sp-4);
-            color: var(--text-primary);
+        .logo-text {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--cyan), var(--purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border-radius: var(--radius-sm);
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid transparent;
             cursor: pointer;
-            transition: all var(--transition-normal);
-            font-size: 14px;
+            transition: var(--transition-smooth);
+            background: var(--bg-glass);
+            backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .glass-button:hover {
-            background: rgba(34, 211, 238, 0.1);
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px var(--accent-cyan);
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--border-neon-cyan);
+            box-shadow: 0 0 15px var(--cyan-glow);
         }
 
-        .glass-button.active {
-            background: rgba(34, 211, 238, 0.2);
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 15px var(--accent-cyan);
+        .btn-back {
+            display: none;
         }
 
-        /* Layout Components */
+        /* Breadcrumb */
+        .breadcrumb {
+            margin-bottom: 24px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .breadcrumb span {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .breadcrumb span:hover {
+            color: var(--cyan);
+        }
+
+        .breadcrumb .separator {
+            color: var(--text-muted);
+            cursor: default;
+        }
+
+        /* Views */
         .view {
             display: none;
         }
@@ -179,953 +207,1182 @@
             display: block;
         }
 
-        .grid-layout {
+        /* Project Cards Grid */
+        .projects-grid {
             display: grid;
-            gap: var(--sp-4);
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 24px;
         }
 
-        .grid-3-col {
-            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        }
-
-        .grid-2-col {
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-        }
-
-        /* Agent Card Specific - Enhanced */
-        .agent-card {
+        .project-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
             position: relative;
-            min-height: 220px;
-            transition: all var(--transition-normal);
+            overflow: hidden;
         }
 
-        .agent-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 0 20px var(--accent-cyan);
+        .project-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
+            opacity: 0;
+            transition: opacity 0.35s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.15), 0 0 60px rgba(168, 85, 247, 0.1);
+            border-color: var(--border-neon-cyan);
+            background: var(--bg-card-hover);
+        }
+
+        .project-card:hover::before {
+            opacity: 1;
+        }
+
+        .project-name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--text-primary), var(--cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .project-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--cyan);
+        }
+
+        .stat-value.purple {
+            color: var(--purple);
+        }
+
+        .active-agents {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border-glass);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        /* Teams Grid */
+        .teams-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .team-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 24px;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+        }
+
+        .team-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--border-neon-purple);
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
+            background: var(--bg-card-hover);
+        }
+
+        .team-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .team-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .team-meta span {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px 10px;
+            border-radius: var(--radius-xs);
+        }
+
+        /* Team Detail View */
+        .team-detail-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .team-detail-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        /* Agent Card */
+        .agent-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            position: relative;
+            transition: var(--transition-smooth);
+            overflow: hidden;
+        }
+
+        .agent-card.running {
+            border-color: var(--green);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.1);
+        }
+
+        .agent-card.failed {
+            border-color: var(--red);
+        }
+
+        .agent-card.stopped {
+            border-color: var(--yellow);
+        }
+
+        .agent-card.ready {
+            border-color: var(--cyan);
+        }
+
+        .agent-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
         .agent-avatar {
             width: 48px;
             height: 48px;
-            border-radius: var(--radius-full);
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--cyan), var(--purple));
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
-            position: absolute;
-            top: var(--sp-2);
-            left: var(--sp-2);
-            box-shadow: 0 0 10px var(--accent-cyan);
-            border: 2px solid var(--bg-deep);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            border: 2px solid transparent;
+            transition: border-color 0.3s;
+        }
+
+        .agent-card.running .agent-avatar {
+            border-color: var(--green);
+            animation: avatarPulse 2s infinite;
+        }
+
+        @keyframes avatarPulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            70% { box-shadow: 0 0 0 12px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        .agent-info {
+            flex: 1;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .agent-role {
+            font-size: 0.8rem;
+            color: var(--text-muted);
         }
 
         .agent-status {
-            position: absolute;
-            top: var(--sp-2);
-            right: var(--sp-2);
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: var(--radius-full);
+            font-size: 0.75rem;
             font-weight: 600;
-            font-size: 12px;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            margin-top: 6px;
         }
 
-        .agent-main-status {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: var(--sp-1);
-            text-shadow: 0 0 5px currentColor;
+        .status-running {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+            animation: pulse 2s infinite;
         }
 
-        .agent-sub-status {
-            font-size: 12px;
+        .status-ready {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--cyan);
+            border: 1px solid var(--cyan);
+        }
+
+        .status-stopped {
+            background: rgba(234, 179, 8, 0.2);
+            color: var(--yellow);
+            border: 1px solid var(--yellow);
+        }
+
+        .status-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+
+        .sub-status {
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            margin-bottom: var(--sp-2);
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        .agent-task {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        .sub-status::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--cyan);
+        }
+
+        .task-center {
             text-align: center;
-            width: 100%;
-            padding: 0 var(--sp-2);
+            margin: 16px 0;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: var(--radius-sm);
         }
 
-        .agent-task h3 {
-            font-size: 16px;
+        .task-name {
+            font-size: 1rem;
             font-weight: 600;
-            margin-bottom: var(--sp-1);
             color: var(--text-primary);
-            text-shadow: 0 0 3px var(--accent-cyan);
         }
 
-        .agent-task p {
-            font-size: 12px;
+        .mission-name {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .llm-mode {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
             color: var(--text-secondary);
+            margin: 12px 0;
         }
 
-        .agent-mode {
-            position: absolute;
-            bottom: var(--sp-2);
-            left: var(--sp-2);
-            font-size: 10px;
-            color: var(--text-secondary);
-            background: rgba(0, 0, 0, 0.3);
-            padding: var(--sp-1) var(--sp-2);
-            border-radius: var(--radius-sm);
+        .llm-badge {
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--cyan);
+            padding: 2px 8px;
+            border-radius: var(--radius-xs);
+            font-weight: 600;
         }
 
-        .agent-context {
-            position: absolute;
-            bottom: var(--sp-2);
-            right: var(--sp-2);
-            width: 80px;
-        }
-
-        .progress-bar {
-            height: 4px;
+        .context-bar {
+            height: 6px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
+            border-radius: 3px;
             overflow: hidden;
-            border: 1px solid var(--border);
+            margin: 8px 0;
         }
 
-        .progress-fill {
+        .context-fill {
             height: 100%;
-            border-radius: 2px;
-            transition: width 0.3s ease;
+            border-radius: 3px;
+            transition: width 0.5s ease, background 0.5s;
         }
 
-        .progress-low { background: var(--success); }
-        .progress-medium { background: var(--warning); }
-        .progress-high { background: var(--error); }
+        .context-low { background: var(--green); }
+        .context-medium { background: var(--yellow); }
+        .context-high { background: var(--red); }
 
-        .agent-last-run {
-            position: absolute;
-            bottom: var(--sp-2);
-            left: var(--sp-2);
-            right: var(--sp-2);
-            font-size: 10px;
-            color: var(--text-secondary);
-            text-align: center;
-            background: rgba(0, 0, 0, 0.3);
-            padding: var(--sp-1);
-            border-radius: var(--radius-sm);
+        .context-text {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-align: right;
         }
 
-        /* Timeline Components - Enhanced */
-        .timeline-container {
-            position: relative;
-            padding: var(--sp-4) 0;
+        .last-execution {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-glass);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .last-execution span {
+            white-space: nowrap;
+        }
+
+        .timer {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--cyan);
+            margin-top: 8px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Timeline Panel */
+        .timeline-panel {
+            background: var(--bg-card);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: var(--sp-3);
-            height: 100%;
-            overflow-y: auto;
         }
 
-        .timeline-connector {
-            position: absolute;
-            left: 50%;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: linear-gradient(to bottom, transparent, var(--accent-cyan), transparent);
-            transform: translateX(-50%);
+        .timeline-header {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .timeline-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: var(--radius-xs);
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: var(--transition-smooth);
+            color: var(--text-secondary);
+        }
+
+        .tab-btn.active {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--cyan);
+        }
+
+        .timeline-items {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
         }
 
         .timeline-item {
-            position: relative;
-            padding: var(--sp-3) var(--sp-4);
-            margin-bottom: var(--sp-3);
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 16px;
             cursor: pointer;
-            transition: all var(--transition-fast);
+            transition: var(--transition-smooth);
+            position: relative;
         }
 
-        .timeline-item:hover {
-            transform: translateY(-2px);
+        .timeline-item.coordinator {
+            justify-content: flex-start;
         }
 
-        .timeline-item::after {
-            content: '';
-            position: absolute;
-            left: 50%;
-            top: var(--sp-3);
-            width: 12px;
-            height: 12px;
-            border-radius: var(--radius-full);
-            background: var(--accent-cyan);
-            transform: translateX(-50%);
-            border: 2px solid var(--bg-deep);
-            box-shadow: 0 0 10px var(--accent-cyan);
+        .timeline-item.agent {
+            justify-content: flex-end;
         }
+
+        .timeline-bubble {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            transition: var(--transition-smooth);
+        }
+
+        .timeline-item.coordinator .timeline-bubble {
+            border-top-left-radius: 4px;
+            border-left: 2px solid var(--cyan);
+        }
+
+        .timeline-item.agent .timeline-bubble {
+            border-top-right-radius: 4px;
+            border-right: 2px solid var(--purple);
+        }
+
+        .timeline-bubble:hover {
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.15);
+            border-color: var(--border-neon-cyan);
+        }
+
+        .timeline-actor {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+        }
+
+        .coordinator-actor { color: var(--cyan); }
+        .agent-actor { color: var(--purple); }
 
         .timeline-message {
-            position: relative;
-            z-index: 2;
-            padding: var(--sp-2);
-            border-radius: var(--radius-md);
-            max-width: 80%;
-            margin-left: auto;
-            margin-right: auto;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
         }
 
-        .timeline-coordinator {
-            background: rgba(168, 85, 247, 0.1);
-            margin-left: 0;
-            border-left: 3px solid var(--accent-purple);
-            box-shadow: -5px 0 15px rgba(168, 85, 247, 0.1);
-            align-self: flex-start;
-            margin-right: auto;
-        }
-
-        .timeline-agent {
-            background: rgba(34, 211, 238, 0.1);
-            margin-right: 0;
-            margin-left: auto;
-            border-right: 3px solid var(--accent-cyan);
-            box-shadow: 5px 0 15px rgba(34, 211, 238, 0.1);
-            align-self: flex-end;
-        }
-
-        .timeline-arrow {
-            position: absolute;
-            top: var(--sp-3);
-            width: 20px;
-            height: 20px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            transform: rotate(45deg);
-            z-index: 1;
-        }
-
-        .timeline-coordinator .timeline-arrow {
-            left: -12px;
-        }
-
-        .timeline-agent .timeline-arrow {
-            right: -12px;
-        }
-
-        .floating-card {
-            position: fixed;
-            background: var(--bg-surface);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: var(--sp-3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            z-index: 100;
-            max-width: 500px;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .floating-card.hidden {
+        .timeline-details {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
             display: none;
         }
 
-        .floating-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: var(--sp-2);
-            padding-bottom: var(--sp-2);
-            border-bottom: 1px solid var(--border);
+        .timeline-item.expanded .timeline-details {
+            display: block;
         }
 
-        .close-floating {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 16px;
-            transition: all var(--transition-fast);
-        }
-
-        .close-floating:hover {
-            color: var(--accent-cyan);
-            transform: rotate(90deg);
-        }
-
-        .floating-card-content {
-            display: flex;
-            flex-direction: column;
-            gap: var(--sp-2);
-        }
-
-        .interaction-details {
-            background: rgba(0, 0, 0, 0.2);
-            padding: var(--sp-2);
-            border-radius: var(--radius-sm);
-            border-left: 3px solid var(--accent-cyan);
-        }
-
-        .interaction-input, .interaction-output {
-            margin-bottom: var(--sp-2);
-        }
-
-        .interaction-input h4, .interaction-output h4 {
-            color: var(--accent-purple);
-            margin-bottom: var(--sp-1);
-            font-size: 14px;
-        }
-
-        .interaction-output h4 {
-            color: var(--accent-cyan);
-        }
-
-        .interaction-content {
-            background: var(--bg-overlay);
-            padding: var(--sp-2);
-            border-radius: var(--radius-sm);
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        .timeline-details pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px;
+            border-radius: var(--radius-xs);
             max-height: 200px;
-            overflow-y: auto;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+            margin-top: 4px;
         }
 
-        /* Navigation - Enhanced */
-        .nav-menu {
-            display: flex;
-            gap: var(--sp-2);
-            margin-bottom: var(--sp-4);
-            padding: var(--sp-2) var(--sp-4);
-            background: var(--bg-overlay);
-            border-radius: var(--radius-md);
-            overflow-x: auto;
-            border: 1px solid var(--border);
+        .connector {
+            width: 2px;
+            height: 20px;
+            background: var(--border-glass);
+            margin: 0 auto;
         }
 
-        .nav-item {
-            padding: var(--sp-2) var(--sp-3);
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border-radius: var(--radius-sm);
-            transition: all var(--transition-fast);
-            white-space: nowrap;
-            display: flex;
-            align-items: center;
-            gap: var(--sp-1);
-        }
+        .connector.coordinator { background: var(--cyan); }
+        .connector.agent { background: var(--purple); }
 
-        .nav-item.active {
-            background: rgba(34, 211, 238, 0.2);
-            color: var(--text-primary);
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px var(--accent-cyan);
-        }
-
-        .nav-item:hover {
-            background: rgba(34, 211, 238, 0.1);
-        }
-
-        /* Logs Panel - Enhanced */
-        .logs-panel {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: var(--bg-overlay);
-            padding: var(--sp-2) var(--sp-4);
-            display: flex;
-            gap: var(--sp-2);
-            overflow-x: auto;
-            z-index: 50;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .log-filter {
-            padding: var(--sp-1) var(--sp-2);
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-secondary);
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all var(--transition-fast);
-        }
-
-        .log-filter.active {
-            background: rgba(34, 211, 238, 0.2);
-            border-color: var(--accent-cyan);
-            color: var(--text-primary);
-            box-shadow: 0 0 10px var(--accent-cyan);
-        }
-
-        .log-filter:hover {
-            background: rgba(34, 211, 238, 0.1);
-        }
-
-        /* Timeline Sidebar */
-        .timeline-sidebar {
-            position: fixed;
-            right: 0;
-            top: 0;
-            width: 400px;
-            height: 100vh;
-            background: var(--bg-overlay);
-            backdrop-filter: blur(16px);
-            border-left: 1px solid var(--border);
-            transform: translateX(100%);
-            transition: transform var(--transition-normal);
-            z-index: 60;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .timeline-sidebar.active {
-            transform: translateX(0);
-        }
-
-        .timeline-sidebar-header {
-            padding: var(--sp-3) var(--sp-4);
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .timeline-sidebar-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .close-sidebar {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            font-size: 20px;
-        }
-
-        .timeline-sidebar-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--sp-3);
-        }
-
-        .timeline-empty-state {
+        /* Loading & Error */
+        .loading, .error, .empty-state {
             text-align: center;
-            padding: var(--sp-8);
-            color: var(--text-secondary);
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1rem;
         }
 
-        /* Logs Panel Content */
-        .logs-content {
-            margin-top: 40px;
-            background: var(--bg-overlay);
-            border-radius: var(--radius-md);
-            padding: var(--sp-3);
-            border: 1px solid var(--border);
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
         }
 
-        .log-entry {
-            padding: var(--sp-2);
-            border-bottom: 1px solid var(--border);
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
         }
 
-        .log-entry.info {
-            color: var(--text-secondary);
+        .error {
+            color: var(--red);
         }
 
-        .log-entry.warning {
-            color: var(--warning);
-        }
-
-        .log-entry.error {
-            color: var(--error);
-        }
-
-        .log-entry.debug {
-            color: var(--accent-cyan);
-        }
-
-        /* Debug Panel Content */
-        .debug-content {
-            margin-top: 40px;
-            background: var(--bg-overlay);
-            border-radius: var(--radius-md);
-            padding: var(--sp-3);
-            border: 1px solid var(--border);
-        }
-
-        .debug-section {
-            margin-bottom: var(--sp-3);
-        }
-
-        .debug-section h3 {
-            color: var(--accent-purple);
-            margin-bottom: var(--sp-2);
-            font-size: 14px;
-        }
-
-        .debug-data {
-            background: var(--bg-surface);
-            padding: var(--sp-2);
-            border-radius: var(--radius-sm);
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        /* Events Panel Content */
-        .events-content {
-            margin-top: 40px;
-            background: var(--bg-overlay);
-            border-radius: var(--radius-md);
-            padding: var(--sp-3);
-            border: 1px solid var(--border);
-        }
-
-        .event-item {
-            padding: var(--sp-2);
-            border-bottom: 1px solid var(--border);
-            font-size: 12px;
-        }
-
-        .event-item.coordinator {
-            background: rgba(168, 85, 247, 0.1);
-            border-left: 3px solid var(--accent-purple);
-        }
-
-        .event-item.agent {
-            background: rgba(34, 211, 238, 0.1);
-            border-left: 3px solid var(--accent-cyan);
-        }
-
-        .event-timestamp {
-            color: var(--text-secondary);
-            font-size: 10px;
-            margin-bottom: var(--sp-1);
-        }
-
-        .event-message {
-            color: var(--text-primary);
-        }
-
-        /* Responsive - Enhanced */
-        @media (max-width: 1024px) {
-            .grid-3-col, .grid-2-col {
-                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            }
-
-            .timeline-sidebar {
-                width: 350px;
-            }
-        }
-
+        /* Responsive */
         @media (max-width: 768px) {
-            .container {
-                padding: var(--sp-2);
+            #app {
+                padding: 16px;
             }
 
-            .grid-3-col, .grid-2-col {
+            .projects-grid, .agents-grid, .teams-grid {
                 grid-template-columns: 1fr;
             }
 
-            .timeline-sidebar {
-                width: 100%;
+            .team-detail-layout {
+                grid-template-columns: 1fr;
             }
 
-            .timeline-coordinator {
-                margin-left: 10%;
-            }
-
-            .timeline-agent {
-                margin-right: 10%;
-            }
-
-            .nav-menu {
-                padding: var(--sp-1) var(--sp-2);
-            }
-
-            .nav-item {
-                padding: var(--sp-1) var(--sp-2);
-                font-size: 14px;
-            }
-
-            .logs-panel {
-                flex-direction: column;
-                padding: var(--sp-2);
-            }
-
-            .log-filter {
-                width: 100%;
-                text-align: center;
+            .timeline-panel {
+                max-height: 400px;
             }
         }
 
         @media (max-width: 480px) {
-            .glass-card {
-                padding: var(--sp-2);
+            .header {
+                padding: 14px 16px;
             }
 
-            .agent-avatar {
-                width: 40px;
-                height: 40px;
-                font-size: 20px;
-            }
-
-            .agent-main-status {
-                font-size: 16px;
-            }
-
-            .timeline-sidebar {
-                width: 100%;
-            }
-
-            .timeline-sidebar-header {
-                flex-direction: column;
-                gap: var(--sp-2);
+            .logo-text {
+                font-size: 1.1rem;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation State -->
-    <div id="app-state" class="hidden">projects</div>
-    <div id="current-project" class="hidden"></div>
-    <div id="current-team" class="hidden"></div>
-
-    <!-- Logs Panel -->
-    <div id="logs-panel" class="logs-panel hidden">
-        <button class="log-filter active" data-filter="all">Todos</button>
-        <button class="log-filter" data-filter="error">Erros</button>
-        <button class="log-filter" data-filter="warning">Avisos</button>
-        <button class="log-filter" data-filter="info">Informações</button>
-        <button class="log-filter" data-filter="debug">Debug</button>
-    </div>
-
-    <!-- Main Container -->
-    <div class="container">
-        <!-- Projects View -->
-        <div id="projects-view" class="view active">
-            <h1 class="text-3xl font-bold text-center mb-8 neon-text">Agent Factory Platform</h1>
-
-            <div id="projects-grid" class="grid-layout grid-3-col">
-                <!-- Projects will be loaded here -->
+    <div id="app">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo-icon">AF</div>
+                <span class="logo-text">Agent Factory</span>
             </div>
-        </div>
-
-        <!-- Teams View -->
-        <div id="teams-view" class="view">
-            <div class="nav-menu">
-                <button class="nav-item glass-button" data-view="projects">
-                    <span>🏠</span> Projetos
+            <div class="header-actions">
+                <button class="btn btn-back" id="btnBack" onclick="navigateBack()" title="Back">
+                    ← Back
                 </button>
-                <button class="nav-item glass-button active" data-view="teams">
-                    <span>👥</span> Times
+                <button class="btn" id="btnRefresh" onclick="refreshData()" title="Refresh">
+                    ↻
                 </button>
             </div>
+        </header>
 
-            <h2 id="teams-title" class="text-2xl font-bold mb-6 neon-text"></h2>
+        <!-- Breadcrumb -->
+        <div class="breadcrumb" id="breadcrumb"></div>
 
-            <div id="teams-grid" class="grid-layout grid-2-col">
-                <!-- Teams will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Agents View -->
-        <div id="agents-view" class="view">
-            <div class="nav-menu">
-                <button class="nav-item glass-button" data-view="projects">
-                    <span>🏠</span> Projetos
-                </button>
-                <button class="nav-item glass-button" data-view="teams">
-                    <span>👥</span> Times
-                </button>
-                <button class="nav-item glass-button active" data-view="agents">
-                    <span>🤖</span> Agentes
-                </button>
-                <button id="timeline-toggle" class="nav-item glass-button">
-                    <span>📊</span> Timeline
-                </button>
-            </div>
-
-            <h2 id="agents-title" class="text-2xl font-bold mb-6 neon-text"></h2>
-
-            <div id="agents-grid" class="grid-layout grid-3-col">
-                <!-- Agents will be loaded here -->
-            </div>
-        </div>
-
-        <!-- Logs View -->
-        <div id="logs-view" class="view">
-            <div class="nav-menu">
-                <button class="nav-item glass-button active" data-view="logs">
-                    <span>📝</span> Logs
-                </button>
-                <button class="nav-item glass-button" data-view="debug">
-                    <span>🐛</span> Debug
-                </button>
-                <button class="nav-item glass-button" data-view="events">
-                    <span>📡</span> Events
-                </button>
-            </div>
-
-            <h2 class="text-2xl font-bold mb-6 neon-text">Logs e Debug</h2>
-
-            <!-- Logs Content -->
-            <div id="logs-content" class="logs-content">
-                <div class="logs-table">
-                    <!-- Log entries will be loaded here -->
-                </div>
-            </div>
-
-            <!-- Debug Content -->
-            <div id="debug-content" class="debug-content hidden">
-                <div class="debug-section">
-                    <h3>Dados dos Agentes</h3>
-                    <div id="agents-debug-data" class="debug-data"></div>
-                </div>
-                <div class="debug-section">
-                    <h3>Dados do Sistema</h3>
-                    <div id="system-debug-data" class="debug-data"></div>
-                </div>
-            </div>
-
-            <!-- Events Content -->
-            <div id="events-content" class="events-content hidden">
-                <div id="events-list">
-                    <!-- Events will be loaded here -->
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Timeline Sidebar -->
-    <div id="timeline-sidebar" class="timeline-sidebar">
-        <div class="timeline-sidebar-header">
-            <h3 class="timeline-sidebar-title">Fluxo de Interações</h3>
-            <button class="close-sidebar">✕</button>
-        </div>
-        <div id="timeline-sidebar-content" class="timeline-sidebar-content">
-            <div class="timeline-empty-state">
-                Selecione um agente para ver o fluxo de interações
-            </div>
-        </div>
-    </div>
-
-    <!-- Floating Card for Details -->
-    <div id="floating-card" class="floating-card hidden">
-        <div class="floating-card-header">
-            <h3 id="floating-card-title" class="font-semibold"></h3>
-            <button class="close-floating">✕</button>
-        </div>
-        <div id="floating-card-content" class="floating-card-content"></div>
+        <!-- Views -->
+        <div id="view-projects" class="view active"></div>
+        <div id="view-teams" class="view"></div>
+        <div id="view-team-detail" class="view"></div>
     </div>
 
     <script>
-        // State Management - Refactored with clear separation of concerns
+        // ==================== STATE MANAGEMENT ====================
         const state = {
             projects: [],
-            teams: [],
-            agents: [],
             missions: [],
-            events: [],
-            logs: [],
+            agentsState: {}, // agentId -> { status, subStatus, task, mission, timer, context, lastExecution, events }
             currentView: 'projects',
-            currentProject: null,
-            currentTeam: null,
-            currentAgent: null,
-            eventSource: null,
-            navigationHistory: []
+            currentProjectId: null,
+            currentTeamId: null,
+            navigationStack: [],
+            sseConnection: null,
+            connectionStatus: 'connecting',
+            eventTimers: {} // agentId -> intervalId for elapsed time
         };
 
-        // DOM Elements - Organized by component
-        const elements = {
-            // Views
-            projectsView: document.getElementById('projects-view'),
-            teamsView: document.getElementById('teams-view'),
-            agentsView: document.getElementById('agents-view'),
-            logsView: document.getElementById('logs-view'),
-
-            // Grids
-            projectsGrid: document.getElementById('projects-grid'),
-            teamsGrid: document.getElementById('teams-grid'),
-            agentsGrid: document.getElementById('agents-grid'),
-
-            // Content panels
-            logsContent: document.getElementById('logs-content'),
-            debugContent: document.getElementById('debug-content'),
-            eventsContent: document.getElementById('events-content'),
-
-            // Titles
-            teamsTitle: document.getElementById('teams-title'),
-            agentsTitle: document.getElementById('agents-title'),
-
-            // State indicators
-            appState: document.getElementById('app-state'),
-            currentProjectState: document.getElementById('current-project'),
-            currentTeamState: document.getElementById('current-team'),
-
-            // Panels
-            logsPanel: document.getElementById('logs-panel'),
-            floatingCard: document.getElementById('floating-card'),
-            floatingCardTitle: document.getElementById('floating-card-title'),
-            floatingCardContent: document.getElementById('floating-card-content'),
-
-            // Timeline sidebar
-            timelineSidebar: document.getElementById('timeline-sidebar'),
-            timelineSidebarContent: document.getElementById('timeline-sidebar-content'),
-            timelineToggle: document.getElementById('timeline-toggle'),
-            closeSidebar: document.querySelector('.close-sidebar'),
-
-            // Logs panel
-            logFilters: document.querySelectorAll('.log-filter'),
-
-            // Controls
-            closeFloating: document.querySelector('.close-floating'),
-            navItems: document.querySelectorAll('.nav-item')
+        // ==================== API ====================
+        const API = {
+            async fetchProjects() {
+                const res = await fetch('/api/projects');
+                if (!res.ok) throw new Error('Failed to fetch projects');
+                return res.json();
+            },
+            async fetchMissions() {
+                const res = await fetch('/api/missions');
+                if (!res.ok) throw new Error('Failed to fetch missions');
+                return res.json();
+            },
+            connectSSE() {
+                if (state.sseConnection) {
+                    state.sseConnection.close();
+                }
+                state.connectionStatus = 'connecting';
+                const es = new EventSource('/api/events/stream');
+                es.onopen = () => {
+                    state.connectionStatus = 'connected';
+                    console.log('SSE connected');
+                };
+                es.onerror = () => {
+                    state.connectionStatus = 'error';
+                    console.warn('SSE connection error, reconnecting...');
+                    // Reconnect after 5s
+                    setTimeout(() => API.connectSSE(), 5000);
+                };
+                es.addEventListener('agent_event', (e) => {
+                    try {
+                        const event = JSON.parse(e.data);
+                        handleAgentEvent(event);
+                    } catch (err) {
+                        console.error('Error parsing SSE event:', err);
+                    }
+                });
+                state.sseConnection = es;
+            }
         };
 
-        // Initialize the dashboard - Refactored with clear flow
-        async function init() {
-            try {
-                // Load initial data
-                await loadProjects();
-                await loadMissions();
-                await loadSystemData();
+        // ==================== EVENT HANDLING ====================
+        function handleAgentEvent(event) {
+            const agentId = event.agent_id;
+            if (!agentId) return;
 
-                // Setup event listeners
-                setupNavigation();
-                setupEventSource();
-                setupLogsPanel();
-                setupFloatingCard();
-                setupTimelineSidebar();
-
-                // Show appropriate view based on state
-                updateView();
-
-                // Log initialization
-                console.log('Dashboard initialized successfully');
-            } catch (error) {
-                console.error('Failed to initialize dashboard:', error);
-                logError('Falha ao inicializar o dashboard');
+            // Initialize agent state if not exists
+            if (!state.agentsState[agentId]) {
+                state.agentsState[agentId] = {
+                    status: 'ready',
+                    subStatus: '',
+                    task: null,
+                    mission: null,
+                    timer: 0,
+                    timerStart: null,
+                    context: 0,
+                    lastExecution: null,
+                    events: []
+                };
             }
-        }
 
-        // Data Loading Functions - Refactored with error handling
-        async function loadProjects() {
-            try {
-                const response = await fetch('/api/projects');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                state.projects = await response.json();
-                renderProjects();
-            } catch (error) {
-                console.error('Error loading projects:', error);
-                logError(`Falha ao carregar projetos: ${error.message}`);
-                showErrorMessage('Não foi possível carregar os projetos');
-            }
-        }
-
-        async function loadMissions() {
-            try {
-                const response = await fetch('/api/missions');
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                state.missions = await response.json();
-            } catch (error) {
-                console.error('Error loading missions:', error);
-                logError(`Falha ao carregar missões: ${error.message}`);
-            }
-        }
-
-        async function loadSystemData() {
-            try {
-                // Load system status
-                const statusResponse = await fetch('/api/status');
-                if (statusResponse.ok) {
-                    const systemStatus = await statusResponse.json();
-                    state.systemStatus = systemStatus;
+            const agentState = state.agentsState[agentId];
+            
+            // Update status
+            if (event.status) {
+                agentState.status = event.status.toLowerCase();
+                // If running, start timer
+                if (agentState.status === 'running' && !agentState.timerStart) {
+                    agentState.timerStart = Date.now();
+                    if (state.eventTimers[agentId]) clearInterval(state.eventTimers[agentId]);
+                    state.eventTimers[agentId] = setInterval(() => updateTimer(agentId), 1000);
+                } else if (agentState.status !== 'running') {
+                    if (state.eventTimers[agentId]) {
+                        clearInterval(state.eventTimers[agentId]);
+                        delete state.eventTimers[agentId];
+                    }
+                    agentState.timerStart = null;
+                    agentState.timer = 0;
                 }
+            }
 
-                // Load context data
-                const contextResponse = await fetch('/api/context');
-                if (contextResponse.ok) {
-                    const contextData = await contextResponse.json();
-                    state.contextData = contextData;
+            // Sub-status
+            if (event.sub_status || event.message) {
+                agentState.subStatus = event.sub_status || event.message.toLowerCase();
+            }
+
+            // Task and mission
+            if (event.task_id) agentState.task = event.task_id;
+            if (event.mission_id) agentState.mission = event.mission_id;
+            else if (event.payload && event.payload.mission) agentState.mission = event.payload.mission;
+
+            // Metrics
+            if (event.metrics) {
+                if (event.metrics.context !== undefined) {
+                    agentState.context = event.metrics.context;
                 }
-            } catch (error) {
-                console.error('Error loading system data:', error);
-                logError(`Falha ao carregar dados do sistema: ${error.message}`);
+            }
+
+            // Last execution
+            agentState.lastExecution = {
+                timestamp: event.timestamp || new Date().toISOString(),
+                mission: agentState.mission,
+                task: agentState.task,
+                status: agentState.status,
+                duration: event.metrics?.duration_ms || 0
+            };
+
+            // Add to timeline events
+            agentState.events.unshift({
+                id: Date.now(),
+                type: event.agent_id.includes('coordinator') ? 'coordinator' : 'agent',
+                actor: event.agent_id,
+                message: event.message || event.status,
+                payload: event.payload,
+                timestamp: event.timestamp || new Date().toISOString()
+            });
+            // Keep max 100 events per agent
+            if (agentState.events.length > 100) agentState.events.pop();
+
+            // Re-render if currently viewing that agent
+            if (state.currentView === 'team-detail') {
+                renderTeamDetail();
             }
         }
 
-        // Log Management Functions
-        function logInfo(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = `[${timestamp}] [INFO] ${message}`;
-            state.logs.push({ type: 'info', message: logEntry });
-            renderLogs();
+        function updateTimer(agentId) {
+            const agentState = state.agentsState[agentId];
+            if (agentState && agentState.timerStart && agentState.status === 'running') {
+                const elapsed = Math.floor((Date.now() - agentState.timerStart) / 1000);
+                agentState.timer = elapsed;
+                // Update timer display
+                const timerEl = document.getElementById(`timer-${agentId}`);
+                if (timerEl) {
+                    timerEl.textContent = formatTime(elapsed);
+                }
+            }
         }
 
-        function logWarning(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = `[${timestamp}] [WARNING] ${message}`;
-            state.logs.push({ type: 'warning', message: logEntry });
-            renderLogs();
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        function logError(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = `[${timestamp}] [ERROR] ${message}`;
-            state.logs.push({ type: 'error', message: logEntry });
-            renderLogs();
+        // ==================== NAVIGATION ====================
+        function navigateTo(view, params = {}) {
+            state.navigationStack.push({ view: state.currentView, params: { projectId: state.currentProjectId, teamId: state.currentTeamId } });
+            switchView(view, params);
         }
 
-        function logDebug(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = `[${timestamp}] [DEBUG] ${message}`;
-            state.logs.push({ type: 'debug', message: logEntry });
-            renderLogs();
+        function navigateBack() {
+            if (state.navigationStack.length === 0) return;
+            const prev = state.navigationStack.pop();
+            switchView(prev.view, prev.params);
         }
 
-        function renderLogs() {
-            if (!state.logs.length) return;
+        function switchView(view, params = {}) {
+            // Hide all views
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            
+            // Show requested view
+            const viewEl = document.getElementById(`view-${view}`);
+            if (viewEl) viewEl.classList.add('active');
 
-            const logsTable = elements.logsContent.querySelector('.logs-table');
-            logsTable.innerHTML = '';
+            state.currentView = view;
+            state.currentProjectId = params.projectId || null;
+            state.currentTeamId = params.teamId || null;
 
-            state.logs.forEach(log => {
-                const logEntry = document.createElement('div');
-                logEntry.className = `log-entry ${log.type}`;
-                logEntry.textContent = log.message;
-                logsTable.appendChild(logEntry);
+            // Update UI
+            updateBreadcrumb();
+            updateBackButton();
+            renderCurrentView();
+        }
+
+        function updateBreadcrumb() {
+            const bc = document.getElementById('breadcrumb');
+            bc.innerHTML = '';
+            const items = [];
+            items.push({ label: 'Projects', action: () => switchView('projects') });
+            
+            if (state.currentProjectId) {
+                const project = state.projects.find(p => p.id === state.currentProjectId);
+                items.push({ label: project?.name || state.currentProjectId, action: () => switchView('teams', { projectId: state.currentProjectId }) });
+            }
+            if (state.currentTeamId && state.currentProjectId) {
+                const project = state.projects.find(p => p.id === state.currentProjectId);
+                const team = project?.teams?.find(t => t.id === state.currentTeamId);
+                items.push({ label: team?.name || state.currentTeamId, action: () => {} });
+            }
+
+            items.forEach((item, index) => {
+                if (index > 0) {
+                    const sep = document.createElement('span');
+                    sep.className = 'separator';
+                    sep.textContent = '/';
+                    bc.appendChild(sep);
+                }
+                const span = document.createElement('span');
+                span.textContent = item.label;
+                span.addEventListener('click', item.action);
+                bc.appendChild(span);
             });
         }
 
-        function filterLogs(filter) {
-            const logsTable = elements.logsContent.querySelector('.logs-table');
-            logsTable.innerHTML = '';
+        function updateBackButton() {
+            const btnBack = document.getElementById('btnBack');
+            btnBack.style.display = state.currentView === 'projects' ? 'none' : 'flex';
+        }
 
-            state.logs.filter(log => {
-                if (filter === 'all') return true;
-                return log.type === filter;
-            }).forEach(log => {
-                const logEntry = document.createElement('div');
-                logEntry.className = `log-entry ${log.type}`;
-                logEntry.textContent = log.message;
-                logsTable.appendChild(logEntry);
+        // ==================== RENDER FUNCTIONS ====================
+        function renderCurrentView() {
+            switch (state.currentView) {
+                case 'projects':
+                    renderProjects();
+                    break;
+                case 'teams':
+                    renderTeams();
+                    break;
+                case 'team-detail':
+                    renderTeamDetail();
+                    break;
+                default:
+                    renderProjects();
+            }
+        }
+
+        function renderProjects() {
+            const container = document.getElementById('view-projects');
+            if (!state.projects || state.projects.length === 0) {
+                container.innerHTML = '<div class="empty-state">No projects found</div>';
+                return;
+            }
+
+            let html = '<div class="projects-grid">';
+            state.projects.forEach(project => {
+                const teamsCount = project.teams?.length || 0;
+                const agentsCount = project.teams?.reduce((sum, team) => sum + (team.agents?.length || 0), 0) || 0;
+                const totalExecutions = project.total_executions || 0; // Assuming data has it
+                const activeAgents = project.active_agents || 0; // from real-time state
+                // Calculate active agents from our state
+                let activeCount = 0;
+                project.teams?.forEach(team => {
+                    team.agents?.forEach(agent => {
+                        const agentState = state.agentsState[agent.id];
+                        if (agentState && agentState.status === 'running') activeCount++;
+                    });
+                });
+
+                html += `
+                <div class="project-card" onclick="navigateTo('teams', { projectId: '${project.id}' })">
+                    <div class="project-name">${project.name || project.id}</div>
+                    <div class="project-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Teams</span>
+                            <span class="stat-value">${teamsCount}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Agents</span>
+                            <span class="stat-value purple">${agentsCount}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Executions</span>
+                            <span class="stat-value">${totalExecutions}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Active</span>
+                            <span class="stat-value purple">${activeCount}</span>
+                        </div>
+                    </div>
+                    <div class="active-agents">
+                        <span class="pulse-dot"></span>
+                        ${activeCount} agent${activeCount !== 1 ? 's' : ''} running
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderTeams() {
+            const container = document.getElementById('view-teams');
+            const project = state.projects.find(p => p.id === state.currentProjectId);
+            if (!project) {
+                container.innerHTML = '<div class="error">Project not found</div>';
+                return;
+            }
+            if (!project.teams || project.teams.length === 0) {
+                container.innerHTML = '<div class="empty-state">No teams in this project</div>';
+                return;
+            }
+
+            let html = '<div class="teams-grid">';
+            project.teams.forEach(team => {
+                const agentsCount = team.agents?.length || 0;
+                html += `
+                <div class="team-card" onclick="navigateTo('team-detail', { projectId: '${project.id}', teamId: '${team.id}' })">
+                    <div class="team-name">${team.name || team.id}</div>
+                    <div class="team-meta">
+                        <span>${agentsCount} agents</span>
+                        <span>ID: ${team.id}</span>
+                    </div>
+                </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function renderTeamDetail() {
+            const container = document.getElementById('view-team-detail');
+            const project = state.projects.find(p => p.id === state.currentProjectId);
+            if (!project) {
+                container.innerHTML = '<div class="error">Project not found</div>';
+                return;
+            }
+            const team = project.teams?.find(t => t.id === state.currentTeamId);
+            if (!team) {
+                container.innerHTML = '<div class="error">Team not found</div>';
+                return;
+            }
+
+            let agentsHtml = '';
+            if (!team.agents || team.agents.length === 0) {
+                agentsHtml = '<div class="empty-state">No agents in this team</div>';
+            } else {
+                agentsHtml = '<div class="agents-grid">';
+                team.agents.forEach(agent => {
+                    const agentState = state.agentsState[agent.id] || {
+                        status: 'ready',
+                        subStatus: 'idle',
+                        task: null,
+                        mission: null,
+                        timer: 0,
+                        timerStart: null,
+                        context: 0,
+                        lastExecution: null,
+                        events: []
+                    };
+                    const statusClass = agentState.status;
+                    const contextPct = agentState.context || 0;
+                    let contextClass = 'context-low';
+                    if (contextPct >= 80) contextClass = 'context-high';
+                    else if (contextPct >= 50) contextClass = 'context-medium';
+
+                    // Avatar emoji based on role/agent type
+                    const emoji = getAgentEmoji(agent.role || agent.id);
+
+                    const timerDisplay = agentState.status === 'running' ? `
+                        <div class="timer" id="timer-${agent.id}">${formatTime(agentState.timer || 0)}</div>
+                    ` : '';
+
+                    const lastExecHtml = agentState.lastExecution ? `
+                        <div class="last-execution">
+                            <span>${new Date(agentState.lastExecution.timestamp).toLocaleString()}</span>
+                            <span>• ${agentState.lastExecution.mission || 'N/A'}</span>
+                            <span>• ${agentState.lastExecution.task || 'N/A'}</span>
+                            <span>• ${agentState.lastExecution.status}</span>
+                            <span>• ${formatDuration(agentState.lastExecution.duration)}</span>
+                        </div>
+                    ` : '';
+
+                    agentsHtml += `
+                    <div class="agent-card ${statusClass}" id="agent-${agent.id}">
+                        <div class="agent-card-header">
+                            <div class="agent-avatar">${emoji}</div>
+                            <div class="agent-info">
+                                <div class="agent-name">${agent.name || agent.id}</div>
+                                <div class="agent-role">${agent.role || 'Agent'}</div>
+                                <div class="agent-status status-${statusClass}">${agentState.status.toUpperCase()}</div>
+                                <div class="sub-status">${agentState.subStatus || 'idle'}</div>
+                            </div>
+                        </div>
+                        <div class="task-center">
+                            <div class="task-name">${agentState.task || 'No active task'}</div>
+                            <div class="mission-name">${agentState.mission || ''}</div>
+                        </div>
+                        ${timerDisplay}
+                        <div class="llm-mode">
+                            <span>Mode: <span class="llm-badge">${agent.llm_mode || 'AUTO'}</span></span>
+                            <span>${agent.llm_model || 'groq/llama-3.3-70b'}</span>
+                        </div>
+                        <div class="context-bar">
+                            <div class="context-fill ${contextClass}" style="width: ${Math.min(contextPct, 100)}%"></div>
+                        </div>
+                        <div class="context-text">Context: ${contextPct}%</div>
+                        ${lastExecHtml}
+                    </div>`;
+                });
+                agentsHtml += '</div>';
+            }
+
+            // Timeline
+            let timelineHtml = renderTimeline(team.agents);
+
+            container.innerHTML = `
+                <div class="team-detail-layout">
+                    <div>
+                        <h2 style="margin-bottom: 20px;">${team.name || team.id} — Agents</h2>
+                        ${agentsHtml}
+                    </div>
+                    <div class="timeline-panel">
+                        ${timelineHtml}
+                    </div>
+                </div>
+            `;
+
+            // Restart timers for running agents
+            team.agents.forEach(agent => {
+                const agentState = state.agentsState[agent.id];
+                if (agentState && agentState.status === 'running' && !state.eventTimers[agent.id]) {
+                    agentState.timerStart = Date.now() - (agentState.timer || 0) * 1000;
+                    state.eventTimers[agent.id] = setInterval(() => updateTimer(agent.id), 1000);
+                }
             });
         }
 
-        function renderDebug() {
-            if (state.agents && state.agents.length > 0) {
-                const agentsDebugData = document.getElementById('agents-debug-data');
-                agentsDebugData.textContent = JSON.stringify(state.agents
+        function renderTimeline(agents) {
+            // Collect all events from all agents in the team
+            let allEvents = [];
+            agents.forEach(agent => {
+                const agentState = state.agentsState[agent.id];
+                if (agentState && agentState.events) {
+                    allEvents = allEvents.concat(agentState.events.map(e => ({...e, agentId: agent.id})));
+                }
+            });
+            allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            // Limit to 50
+            allEvents = allEvents.slice(0, 50);
+
+            if (allEvents.length === 0) {
+                return `
+                    <div class="timeline-header">Interaction Flow</div>
+                    <div class="empty-state">No interactions yet</div>
+                `;
+            }
+
+            let html = `
+                <div class="timeline-header">
+                    <span>Interaction Flow</span>
+                    <div class="timeline-tabs">
+                        <button class="tab-btn active">Timeline</button>
+                        <button class="tab-btn">Logs</button>
+                    </div>
+                </div>
+                <div class="timeline-items">
+            `;
+
+            allEvents.forEach((event, index) => {
+                const isCoordinator = event.type === 'coordinator';
+                const actorLabel = isCoordinator ? 'Coordinator' : event.actor;
+                const actorClass = isCoordinator ? 'coordinator-actor' : 'agent-actor';
+                const sideClass = isCoordinator ? 'coordinator' : 'agent';
+                
+                html += `
+                <div class="timeline-item ${sideClass}" onclick="toggleTimelineDetails(this)" data-event-id="${event.id}">
+                    <div class="timeline-bubble">
+                        <div class="timeline-actor ${actorClass}">${actorLabel}</div>
+                        <div class="timeline-message">${event.message || 'Event'}</div>
+                        <div class="timeline-details">
+                            <strong>Input/Output:</strong>
+                            <pre>${event.payload ? JSON.stringify(event.payload, null, 2) : 'No payload'}</pre>
+                        </div>
+                    </div>
+                </div>
+                `;
+                if (index < allEvents.length - 1) {
+                    html += `<div class="connector ${sideClass}"></div>`;
+                }
+            });
+
+            html += '</div>';
+            return html;
+        }
+
+        function toggleTimelineDetails(element) {
+            element.classList.toggle('expanded');
+        }
+
+        function getAgentEmoji(role) {
+            const emojis = {
+                'coordinator': '🎯',
+                'dev': '💻',
+                'qa': '🧪',
+                'designer': '🎨',
+                'planner': '📋',
+                'default': '🤖'
+            };
+            const key = (role || '').toLowerCase();
+            return emojis[key] || emojis.default;
+        }
+
+        function formatDuration(ms) {
+            if (!ms) return '0ms';
+            if (ms < 1000) return `${ms}ms`;
+            const secs = Math.floor(ms / 1000);
+            if (secs < 60) return `${secs}s`;
+            const mins = Math.floor(secs / 60);
+            const remainingSecs = secs % 60;
+            return `${mins}m ${remainingSecs}s`;
+        }
+
+        // ==================== INITIALIZATION ====================
+        async function loadInitialData() {
+            try {
+                const [projects, missions] = await Promise.all([
+                    API.fetchProjects(),
+                    API.fetchMissions()
+                ]);
+                state.projects = projects;
+                state.missions = missions;
+                // Initialize agent states from projects
+                projects.forEach(project => {
+                    project.teams?.forEach(team => {
+                        team.agents?.forEach(agent => {
+                            if (!state.agentsState[agent.id]) {
+                                state.agentsState[agent.id] = {
+                                    status: 'ready',
+                                    subStatus: 'idle',
+                                    task: null,
+                                    mission: null,
+                                    timer: 0,
+                                    timerStart: null,
+                                    context: 0,
+                                    lastExecution: null,
+                                    events: []
+                                };
+                            }
+                        });
+                    });
+                });
+                renderCurrentView();
+            } catch (error) {
+                console.error('Failed to load initial data:', error);
+                document.getElementById('view-projects').innerHTML = '<div class="error">Failed to load projects. Is the server running?</div>';
+            }
+        }
+
+        async function refreshData() {
+            await loadInitialData();
+        }
+
+        // Start application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInitialData();
+            API.connectSSE();
+        });
+
+        // Handle window resize - no specific action needed due to CSS
+
+        // Expose functions to global scope for onclick handlers
+        window.navigateTo = navigateTo;
+        window.navigateBack = navigateBack;
+        window.refreshData = refreshData;
+        window.toggleTimelineDetails = toggleTimelineDetails;
+    </script>
+</body>
+</html>
