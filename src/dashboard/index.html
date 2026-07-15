@@ -90,7 +90,6 @@
             min-height: 100vh;
         }
 
-        /* Header */
         .header {
             display: flex;
             align-items: center;
@@ -174,7 +173,6 @@
             display: none;
         }
 
-        /* Breadcrumb */
         .breadcrumb {
             margin-bottom: 24px;
             font-size: 0.9rem;
@@ -198,7 +196,6 @@
             cursor: default;
         }
 
-        /* Views */
         .view {
             display: none;
         }
@@ -207,7 +204,6 @@
             display: block;
         }
 
-        /* Project Cards Grid */
         .projects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -316,71 +312,12 @@
             100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
 
-        /* Teams Grid */
-        .teams-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .team-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid var(--border-glass);
-            border-radius: var(--radius-md);
-            padding: 24px;
-            cursor: pointer;
-            transition: var(--transition-smooth);
-        }
-
-        .team-card:hover {
-            transform: translateY(-4px);
-            border-color: var(--border-neon-purple);
-            box-shadow: 0 0 20px rgba(168, 85, 247, 0.15);
-            background: var(--bg-card-hover);
-        }
-
-        .team-name {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 12px;
-        }
-
-        .team-meta {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-
-        .team-meta span {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 4px 10px;
-            border-radius: var(--radius-xs);
-        }
-
-        /* Team Detail View */
-        .team-detail-layout {
-            display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 24px;
-        }
-
-        @media (max-width: 1024px) {
-            .team-detail-layout {
-                grid-template-columns: 1fr;
-            }
-        }
-
         .agents-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 20px;
         }
 
-        /* Agent Card */
         .agent-card {
             background: var(--bg-card);
             backdrop-filter: blur(14px);
@@ -593,7 +530,6 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Timeline Panel */
         .timeline-panel {
             background: var(--bg-card);
             backdrop-filter: blur(14px);
@@ -737,7 +673,6 @@
         .connector.coordinator { background: var(--cyan); }
         .connector.agent { background: var(--purple); }
 
-        /* Loading & Error */
         .loading, .error, .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -760,17 +695,12 @@
             color: var(--red);
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             #app {
                 padding: 16px;
             }
 
-            .projects-grid, .agents-grid, .teams-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .team-detail-layout {
+            .projects-grid, .agents-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -812,7 +742,6 @@
 
         <!-- Views -->
         <div id="view-projects" class="view active"></div>
-        <div id="view-teams" class="view"></div>
         <div id="view-team-detail" class="view"></div>
     </div>
 
@@ -824,11 +753,10 @@
             agentsState: {}, // agentId -> { status, subStatus, task, mission, timer, context, lastExecution, events }
             currentView: 'projects',
             currentProjectId: null,
-            currentTeamId: null,
             navigationStack: [],
             sseConnection: null,
             connectionStatus: 'connecting',
-            eventTimers: {} // agentId -> intervalId for elapsed time
+            eventTimers: {} // agentId -> intervalId
         };
 
         // ==================== API ====================
@@ -856,7 +784,6 @@
                 es.onerror = () => {
                     state.connectionStatus = 'error';
                     console.warn('SSE connection error, reconnecting...');
-                    // Reconnect after 5s
                     setTimeout(() => API.connectSSE(), 5000);
                 };
                 es.addEventListener('agent_event', (e) => {
@@ -876,7 +803,6 @@
             const agentId = event.agent_id;
             if (!agentId) return;
 
-            // Initialize agent state if not exists
             if (!state.agentsState[agentId]) {
                 state.agentsState[agentId] = {
                     status: 'ready',
@@ -892,11 +818,9 @@
             }
 
             const agentState = state.agentsState[agentId];
-            
-            // Update status
+
             if (event.status) {
                 agentState.status = event.status.toLowerCase();
-                // If running, start timer
                 if (agentState.status === 'running' && !agentState.timerStart) {
                     agentState.timerStart = Date.now();
                     if (state.eventTimers[agentId]) clearInterval(state.eventTimers[agentId]);
@@ -911,24 +835,20 @@
                 }
             }
 
-            // Sub-status
             if (event.sub_status || event.message) {
                 agentState.subStatus = event.sub_status || event.message.toLowerCase();
             }
 
-            // Task and mission
             if (event.task_id) agentState.task = event.task_id;
             if (event.mission_id) agentState.mission = event.mission_id;
             else if (event.payload && event.payload.mission) agentState.mission = event.payload.mission;
 
-            // Metrics
             if (event.metrics) {
                 if (event.metrics.context !== undefined) {
                     agentState.context = event.metrics.context;
                 }
             }
 
-            // Last execution
             agentState.lastExecution = {
                 timestamp: event.timestamp || new Date().toISOString(),
                 mission: agentState.mission,
@@ -937,7 +857,6 @@
                 duration: event.metrics?.duration_ms || 0
             };
 
-            // Add to timeline events
             agentState.events.unshift({
                 id: Date.now(),
                 type: event.agent_id.includes('coordinator') ? 'coordinator' : 'agent',
@@ -946,10 +865,9 @@
                 payload: event.payload,
                 timestamp: event.timestamp || new Date().toISOString()
             });
-            // Keep max 100 events per agent
+
             if (agentState.events.length > 100) agentState.events.pop();
 
-            // Re-render if currently viewing that agent
             if (state.currentView === 'team-detail') {
                 renderTeamDetail();
             }
@@ -960,7 +878,6 @@
             if (agentState && agentState.timerStart && agentState.status === 'running') {
                 const elapsed = Math.floor((Date.now() - agentState.timerStart) / 1000);
                 agentState.timer = elapsed;
-                // Update timer display
                 const timerEl = document.getElementById(`timer-${agentId}`);
                 if (timerEl) {
                     timerEl.textContent = formatTime(elapsed);
@@ -976,7 +893,10 @@
 
         // ==================== NAVIGATION ====================
         function navigateTo(view, params = {}) {
-            state.navigationStack.push({ view: state.currentView, params: { projectId: state.currentProjectId, teamId: state.currentTeamId } });
+            state.navigationStack.push({
+                view: state.currentView,
+                params: { projectId: state.currentProjectId }
+            });
             switchView(view, params);
         }
 
@@ -987,18 +907,13 @@
         }
 
         function switchView(view, params = {}) {
-            // Hide all views
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-            
-            // Show requested view
             const viewEl = document.getElementById(`view-${view}`);
             if (viewEl) viewEl.classList.add('active');
 
             state.currentView = view;
             state.currentProjectId = params.projectId || null;
-            state.currentTeamId = params.teamId || null;
 
-            // Update UI
             updateBreadcrumb();
             updateBackButton();
             renderCurrentView();
@@ -1007,21 +922,18 @@
         function updateBreadcrumb() {
             const bc = document.getElementById('breadcrumb');
             bc.innerHTML = '';
-            const items = [];
-            items.push({ label: 'Projects', action: () => switchView('projects') });
-            
+            const items = [{ label: 'Projects', action: () => switchView('projects') }];
+
             if (state.currentProjectId) {
                 const project = state.projects.find(p => p.id === state.currentProjectId);
-                items.push({ label: project?.name || state.currentProjectId, action: () => switchView('teams', { projectId: state.currentProjectId }) });
-            }
-            if (state.currentTeamId && state.currentProjectId) {
-                const project = state.projects.find(p => p.id === state.currentProjectId);
-                const team = project?.teams?.find(t => t.id === state.currentTeamId);
-                items.push({ label: team?.name || state.currentTeamId, action: () => {} });
+                items.push({
+                    label: project?.name || state.currentProjectId,
+                    action: () => {}
+                });
             }
 
-            items.forEach((item, index) => {
-                if (index > 0) {
+            items.forEach((item, idx) => {
+                if (idx > 0) {
                     const sep = document.createElement('span');
                     sep.className = 'separator';
                     sep.textContent = '/';
@@ -1041,19 +953,8 @@
 
         // ==================== RENDER FUNCTIONS ====================
         function renderCurrentView() {
-            switch (state.currentView) {
-                case 'projects':
-                    renderProjects();
-                    break;
-                case 'teams':
-                    renderTeams();
-                    break;
-                case 'team-detail':
-                    renderTeamDetail();
-                    break;
-                default:
-                    renderProjects();
-            }
+            if (state.currentView === 'projects') renderProjects();
+            else if (state.currentView === 'team-detail') renderTeamDetail();
         }
 
         function renderProjects() {
@@ -1065,34 +966,20 @@
 
             let html = '<div class="projects-grid">';
             state.projects.forEach(project => {
-                const teamsCount = project.teams?.length || 0;
-                const agentsCount = project.teams?.reduce((sum, team) => sum + (team.agents?.length || 0), 0) || 0;
-                const totalExecutions = project.total_executions || 0; // Assuming data has it
-                const activeAgents = project.active_agents || 0; // from real-time state
-                // Calculate active agents from our state
+                const agentsCount = project.agents?.length || 0;
                 let activeCount = 0;
-                project.teams?.forEach(team => {
-                    team.agents?.forEach(agent => {
-                        const agentState = state.agentsState[agent.id];
-                        if (agentState && agentState.status === 'running') activeCount++;
-                    });
+                project.agents?.forEach(agent => {
+                    const aState = state.agentsState[agent.id];
+                    if (aState && aState.status === 'running') activeCount++;
                 });
 
                 html += `
-                <div class="project-card" onclick="navigateTo('teams', { projectId: '${project.id}' })">
-                    <div class="project-name">${project.name || project.id}</div>
+                <div class="project-card" onclick="navigateTo('team-detail', { projectId: '${project.id}' })">
+                    <div class="project-name">${project.name}</div>
                     <div class="project-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Teams</span>
-                            <span class="stat-value">${teamsCount}</span>
-                        </div>
                         <div class="stat-item">
                             <span class="stat-label">Agents</span>
                             <span class="stat-value purple">${agentsCount}</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Executions</span>
-                            <span class="stat-value">${totalExecutions}</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label">Active</span>
@@ -1109,34 +996,6 @@
             container.innerHTML = html;
         }
 
-        function renderTeams() {
-            const container = document.getElementById('view-teams');
-            const project = state.projects.find(p => p.id === state.currentProjectId);
-            if (!project) {
-                container.innerHTML = '<div class="error">Project not found</div>';
-                return;
-            }
-            if (!project.teams || project.teams.length === 0) {
-                container.innerHTML = '<div class="empty-state">No teams in this project</div>';
-                return;
-            }
-
-            let html = '<div class="teams-grid">';
-            project.teams.forEach(team => {
-                const agentsCount = team.agents?.length || 0;
-                html += `
-                <div class="team-card" onclick="navigateTo('team-detail', { projectId: '${project.id}', teamId: '${team.id}' })">
-                    <div class="team-name">${team.name || team.id}</div>
-                    <div class="team-meta">
-                        <span>${agentsCount} agents</span>
-                        <span>ID: ${team.id}</span>
-                    </div>
-                </div>`;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
         function renderTeamDetail() {
             const container = document.getElementById('view-team-detail');
             const project = state.projects.find(p => p.id === state.currentProjectId);
@@ -1144,18 +1003,13 @@
                 container.innerHTML = '<div class="error">Project not found</div>';
                 return;
             }
-            const team = project.teams?.find(t => t.id === state.currentTeamId);
-            if (!team) {
-                container.innerHTML = '<div class="error">Team not found</div>';
-                return;
-            }
 
             let agentsHtml = '';
-            if (!team.agents || team.agents.length === 0) {
-                agentsHtml = '<div class="empty-state">No agents in this team</div>';
+            if (!project.agents || project.agents.length === 0) {
+                agentsHtml = '<div class="empty-state">No agents in this project</div>';
             } else {
                 agentsHtml = '<div class="agents-grid">';
-                team.agents.forEach(agent => {
+                project.agents.forEach(agent => {
                     const agentState = state.agentsState[agent.id] || {
                         status: 'ready',
                         subStatus: 'idle',
@@ -1173,9 +1027,7 @@
                     if (contextPct >= 80) contextClass = 'context-high';
                     else if (contextPct >= 50) contextClass = 'context-medium';
 
-                    // Avatar emoji based on role/agent type
                     const emoji = getAgentEmoji(agent.role || agent.id);
-
                     const timerDisplay = agentState.status === 'running' ? `
                         <div class="timer" id="timer-${agent.id}">${formatTime(agentState.timer || 0)}</div>
                     ` : '';
@@ -1220,13 +1072,12 @@
                 agentsHtml += '</div>';
             }
 
-            // Timeline
-            let timelineHtml = renderTimeline(team.agents);
+            const timelineHtml = renderTimeline(project.agents);
 
             container.innerHTML = `
                 <div class="team-detail-layout">
                     <div>
-                        <h2 style="margin-bottom: 20px;">${team.name || team.id} — Agents</h2>
+                        <h2 style="margin-bottom: 20px;">${project.name} — Agents</h2>
                         ${agentsHtml}
                     </div>
                     <div class="timeline-panel">
@@ -1236,26 +1087,24 @@
             `;
 
             // Restart timers for running agents
-            team.agents.forEach(agent => {
-                const agentState = state.agentsState[agent.id];
-                if (agentState && agentState.status === 'running' && !state.eventTimers[agent.id]) {
-                    agentState.timerStart = Date.now() - (agentState.timer || 0) * 1000;
+            project.agents.forEach(agent => {
+                const aState = state.agentsState[agent.id];
+                if (aState && aState.status === 'running' && !state.eventTimers[agent.id]) {
+                    aState.timerStart = Date.now() - (aState.timer || 0) * 1000;
                     state.eventTimers[agent.id] = setInterval(() => updateTimer(agent.id), 1000);
                 }
             });
         }
 
         function renderTimeline(agents) {
-            // Collect all events from all agents in the team
             let allEvents = [];
             agents.forEach(agent => {
-                const agentState = state.agentsState[agent.id];
-                if (agentState && agentState.events) {
-                    allEvents = allEvents.concat(agentState.events.map(e => ({...e, agentId: agent.id})));
+                const aState = state.agentsState[agent.id];
+                if (aState && aState.events) {
+                    allEvents = allEvents.concat(aState.events.map(e => ({ ...e, agentId: agent.id })));
                 }
             });
             allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            // Limit to 50
             allEvents = allEvents.slice(0, 50);
 
             if (allEvents.length === 0) {
@@ -1276,12 +1125,12 @@
                 <div class="timeline-items">
             `;
 
-            allEvents.forEach((event, index) => {
+            allEvents.forEach((event, idx) => {
                 const isCoordinator = event.type === 'coordinator';
                 const actorLabel = isCoordinator ? 'Coordinator' : event.actor;
                 const actorClass = isCoordinator ? 'coordinator-actor' : 'agent-actor';
                 const sideClass = isCoordinator ? 'coordinator' : 'agent';
-                
+
                 html += `
                 <div class="timeline-item ${sideClass}" onclick="toggleTimelineDetails(this)" data-event-id="${event.id}">
                     <div class="timeline-bubble">
@@ -1292,9 +1141,8 @@
                             <pre>${event.payload ? JSON.stringify(event.payload, null, 2) : 'No payload'}</pre>
                         </div>
                     </div>
-                </div>
-                `;
-                if (index < allEvents.length - 1) {
+                </div>`;
+                if (idx < allEvents.length - 1) {
                     html += `<div class="connector ${sideClass}"></div>`;
                 }
             });
@@ -1337,38 +1185,44 @@
                     API.fetchProjects(),
                     API.fetchMissions()
                 ]);
-                // Normalize flat API data to nested structure expected by UI
+
+                // -------- Normalização dos dados --------
                 state.projects = (projects || []).map(p => ({
                     id: p.project_id,
                     name: p.project_name || p.project_id,
                     icon: p.icon || '📁',
-                    teams: [{
-                        id: p.team_id || p.project_id,
-                        name: p.team_name || 'Team',
-                        agents: (p.agents || []).map(a => ({ id: a.agent_id, ...a }))
-                    }],
+                    agents: (p.agents || []).map(a => ({
+                        id: a.agent_id,
+                        name: a.agent_name,
+                        role: a.role,
+                        llm_mode: a.llm_mode,
+                        llm_model: a.llm_model,
+                        ...a
+                    }))
                 }));
+                // ----------------------------------------
+
                 state.missions = missions;
-                // Initialize agent states from normalized projects
+
+                // Inicializa estado dos agentes
                 state.projects.forEach(project => {
-                    project.teams?.forEach(team => {
-                        team.agents?.forEach(agent => {
-                            if (!state.agentsState[agent.id]) {
-                                state.agentsState[agent.id] = {
-                                    status: 'ready',
-                                    subStatus: 'idle',
-                                    task: null,
-                                    mission: null,
-                                    timer: 0,
-                                    timerStart: null,
-                                    context: 0,
-                                    lastExecution: null,
-                                    events: []
-                                };
-                            }
-                        });
+                    project.agents?.forEach(agent => {
+                        if (!state.agentsState[agent.id]) {
+                            state.agentsState[agent.id] = {
+                                status: 'ready',
+                                subStatus: 'idle',
+                                task: null,
+                                mission: null,
+                                timer: 0,
+                                timerStart: null,
+                                context: 0,
+                                lastExecution: null,
+                                events: []
+                            };
+                        }
                     });
                 });
+
                 renderCurrentView();
             } catch (error) {
                 console.error('Failed to load initial data:', error);
@@ -1386,9 +1240,7 @@
             API.connectSSE();
         });
 
-        // Handle window resize - no specific action needed due to CSS
-
-        // Expose functions to global scope for onclick handlers
+        // Expose functions globally
         window.navigateTo = navigateTo;
         window.navigateBack = navigateBack;
         window.refreshData = refreshData;
