@@ -480,6 +480,16 @@
             gap: 8px;
             margin-bottom: 16px;
         }
+        .agent-log-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            opacity: 0.6;
+        }
+        .agent-log-btn:hover {
+            opacity: 1;
+        }
 
         .agent-avatar {
             width: 48px;
@@ -1829,6 +1839,7 @@
                                 <div class="last-task-badge ${lastStatusInfo.statusClass}">${L.last} ${lastLabel}</div>
                                 ${(agentState.status === 'running' || agentState.status === 'completed' || agentState.status === 'success' || agentState.status === 'failed') ? `<div class="sub-status">${agentState.task || agentState.subStatus || L.executing}</div>` : ''}
                             </div>
+                            <button class="agent-log-btn" onclick="openAgentLog('${agent.id}')" title="Logs deste agente">📋</button>
                         </div>
                         <div class="task-center">
                             <div class="task-name">${agentState.task || L.noActiveTask}</div>
@@ -2250,6 +2261,23 @@
         window.refreshData = refreshData;
         window.toggleTimelineDetails = toggleTimelineDetails;
 
+        function openAgentLog(agentId) {
+            const logsPanel = document.getElementById('logs-panel');
+            if (logsPanel) {
+                logsPanel.style.display = 'block';
+            }
+            if (typeof updateAgentFilterOptions === 'function') {
+                updateAgentFilterOptions();
+            }
+            const filterAgent = document.getElementById('log-filter-agent');
+            if (filterAgent) {
+                filterAgent.value = agentId;
+            }
+            if (typeof applyFilters === 'function') {
+                applyFilters();
+            }
+        }
+
         // Theme toggle
         function toggleTheme() {
             const html = document.documentElement;
@@ -2393,22 +2421,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
 
-        // Click on agent card opens logs filtered for that agent
-        document.addEventListener('click', function(e) {
-            const card = e.target.closest('.agent-card');
-            if (!card) return;
-            const agentId = card.dataset.agentId;
-            if (!agentId) return;
-            if (logsPanel) {
-                logsPanel.style.display = 'block';
-            }
-            updateAgentFilterOptions();
-            if (filterAgent) {
-                filterAgent.value = agentId;
-            }
-            applyFilters();
-            updateLogFilterInfo(agentId);
-        });
+
 
         if (logsToggle && logsPanel) {
             logsToggle.addEventListener('click', () => {

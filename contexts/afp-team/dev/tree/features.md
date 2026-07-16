@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Commit padding increase
+- **Acao**: run_git
+- **Resumo**: [master 8cd69d6] increase card padding and header gap
+
+
 ### Commit das alterações do base.py
 - **Acao**: run_git
 - **Resumo**: [master 538bb05] feat: add provider and model to event metrics
