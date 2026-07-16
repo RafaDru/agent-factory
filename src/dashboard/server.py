@@ -6,6 +6,7 @@ Gerencia múltiplos projetos, agentes e eventos em tempo real.
 """
 
 import json
+import os
 import time
 from pathlib import Path
 from typing import Optional, Any, Dict, List
@@ -14,6 +15,32 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
 from ..protocols.events import EventNotifier
+
+CONFIG_FILE = '.agent-factory/agent_config.json'
+agent_config: Dict[str, Dict[str, str]] = {}
+
+def load_config() -> None:
+    """Carrega a configuração de agentes do arquivo JSON."""
+    global agent_config
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+                agent_config = json.load(f)
+        else:
+            agent_config = {}
+    except (json.JSONDecodeError, IOError):
+        agent_config = {}
+
+def save_config() -> None:
+    """Salva a configuração de agentes no arquivo JSON."""
+    global agent_config
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        json.dump(agent_config, f, indent=2)
+
+# Carrega a configuração ao iniciar o módulo
+load_config()
+
 
 class ThreadingHTTPServer(ThreadingMixIn, HTTPServer):
     """HTTPServer com suporte a múltiplas threads para melhor performance."""
@@ -55,6 +82,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         elif path.startswith("/api/agent/") and path.endswith("/provider"):
             self._serve_agent_provider(path)
         elif path == "/api/debug":
+        elif path == "/api/agent-config":
+            self._serve_agent_config()
             self._serve_debug()
         else:
             self.send_error(404, "Endpoint não encontrado")
@@ -65,6 +94,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         path = parsed.path
 
         if path.startswith("/api/agent/") and path.endswith("/provider"):
+        elif path == "/api/agent-config":
+            self._post_agent_config()
             self._post_agent_provider(path)
         else:
             self.send_error(404, "Endpoint POST não encontrado")
@@ -300,6 +331,59 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
+
+    def _serve_agent_config(self) -> None:
+        """Endpoint GET para obter configuração de LLM de um agente."""
+        parsed = urlparse(self.path)
+        params = parse_qs(parsed.query)
+        agent_id = params.get("agent_id", [None])[0]
+
+        if not agent_id:
+            self.send_error(400, "Parâmetro agent_id é obrigatório")
+            return
+
+        config = agent_config.get(agent_id, {"llm_provider": "AUTO"})
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(config).encode("utf-8"))
+
+    def _post_agent_config(self) -> None:
+        """Endpoint POST para atualizar configuração de LLM de um agente."""
+        content_len = int(self.headers.get("Content-Length", 0))
+        if content_len == 0:
+            self.send_error(400, "Corpo da requisição é obrigatório")
+            return
+
+        try:
+            body = json.loads(self.rfile.read(content_len))
+        except json.JSONDecodeError:
+            self.send_error(400, "JSON inválido")
+            return
+
+        agent_id = body.get("agent_id")
+        llm_provider = body.get("llm_provider")
+
+        if not agent_id or not llm_provider:
+            self.send_error(400, "Campos agent_id e llm_provider são obrigatórios")
+            return
+
+        global agent_config
+        agent_config[agent_id] = {"llm_provider": llm_provider}
+        save_config()
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps({
+            "status": "ok",
+            "agent_id": agent_id,
+            "llm_provider": llm_provider
+        }).encode("utf-8"))
+
 
     def _list_agent_ids(self, project_id: Optional[str] = None) -> List[str]:
         """Lista IDs de todos os agentes de um projeto.
