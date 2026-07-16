@@ -15,6 +15,7 @@ from src.protocols.events import EventNotifier
 from src.agents.base import AgentBase
 from src.sdk.decision import DecisionEngine, RuleBasedEngine, DecisionContext
 from src.sdk.hooks import HookRegistry, HookPoint, HookContext
+from src.sdk.context_tree import hook_context_triage, hook_persist_learning
 from src.llm import get_provider, LLMProvider
 
 MISSIONS_DIR = Path(".agent-factory") / "missions"
@@ -78,6 +79,16 @@ class StandardBaseAgent(AgentBase):
         def _hook_log_delegate(ctx: HookContext):
             ctx.agent.emit(AgentStatus.RUNNING,
                            f"Delegando '{ctx.action}' para {ctx.delegated_to}", ctx.task)
+
+        # Context Tree: carrega contexto relevante antes da acao
+        @self._hooks.register(HookPoint.PRE_ACTION)
+        def _hook_context_triage(ctx: HookContext):
+            hook_context_triage(ctx)
+
+        # Context Tree: persiste aprendizado apos acao bem-sucedida
+        @self._hooks.register(HookPoint.POST_ACTION)
+        def _hook_persist_learning(ctx: HookContext):
+            hook_persist_learning(ctx)
 
     def register_subordinate(self, agent_id: str, agent: AgentBase):
         self._subordinates[agent_id] = agent

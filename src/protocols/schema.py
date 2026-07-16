@@ -42,6 +42,8 @@ class AgentRole(str, Enum):
     COORDINATOR = "coordinator"
     WORKER = "worker"
     REVIEWER = "reviewer"
+    DESIGNER = "designer"
+    ARCHITECT = "architect"
 
 
 class AgentEvent(BaseModel):
