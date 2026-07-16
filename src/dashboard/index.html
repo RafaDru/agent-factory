@@ -945,6 +945,20 @@
         padding: 8px 16px;
         font-size: 0.85rem;
     }
+
+    .logs-close-btn {
+        background: transparent;
+        border: none;
+        color: var(--text-primary);
+        font-size: 1.5rem;
+        cursor: pointer;
+        padding: 0 8px;
+        line-height: 1;
+        transition: color 0.2s;
+    }
+    .logs-close-btn:hover {
+        color: var(--cyan);
+    }
     </style>
 </head>
 <body>
@@ -1786,6 +1800,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (filterType) {
             filterType.addEventListener('change', applyFilters);
         }
+
+        // Close button for logs panel
+        const closeBtn = document.querySelector('.logs-close-btn');
+        if (closeBtn && logsPanel) {
+            closeBtn.addEventListener('click', () => {
+                logsPanel.style.display = 'none';
+            });
+        }
     })();
 });
 </script>
@@ -1806,6 +1828,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <option value="complete">Complete</option>
             </select>
         </div>
+        <button class="logs-close-btn" title="Close logs">✕</button>
     </div>
     <div id="log-entries" class="log-entries"></div>
     <button id="clear-logs" class="btn">Clear</button>
