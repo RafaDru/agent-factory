@@ -15,6 +15,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
 from ..protocols.events import EventNotifier
+from ..registry import get_registry
 
 CONFIG_FILE = '.agent-factory/agent_config.json'
 agent_config: Dict[str, Dict[str, str]] = {}
@@ -669,7 +670,6 @@ class DashboardServer:
 
     def __init__(
         self,
-        notifier: EventNotifier,
         port: int = 8080,
         host: str = "localhost",
         context_store: Optional[Any] = None,
@@ -677,20 +677,25 @@ class DashboardServer:
         """Inicializa o servidor do dashboard.
 
         Args:
-            notifier: Instância de EventNotifier para o projeto principal
             port: Porta para o servidor HTTP
             host: Host para o servidor HTTP
             context_store: Instância de ContextStore opcional
         """
-        self.notifier = notifier
         self.port = port
         self.host = host
         self._server: Optional[HTTPServer] = None
 
-        # Registrar notifier e context store
-        DashboardHandler.notifiers[notifier.project_id] = notifier
+        # Obter notifiers do registry
+        registry = get_registry()
+        for notifier in registry.get_notifiers():
+            DashboardHandler.notifiers[notifier.project_id] = notifier
+
+        # Registrar context store se fornecida
         if context_store:
-            DashboardHandler.context_stores[notifier.project_id] = context_store
+            # Se houver apenas um notifier, associar ao seu project_id
+            if len(DashboardHandler.notifiers) == 1:
+                pid = next(iter(DashboardHandler.notifiers.keys()))
+                DashboardHandler.context_stores[pid] = context_store
 
     def add_notifier(self, notifier: EventNotifier) -> None:
         """Adiciona um novo EventNotifier para outro projeto.
