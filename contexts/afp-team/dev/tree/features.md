@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Commit negocios context
+- **Acao**: run_git
+- **Resumo**: [master c2e7ac9] add negocios agent context
+
+
 ### Commit running badge
 - **Acao**: run_git
 - **Resumo**: [master 664d50f] add running agents indicator on first page

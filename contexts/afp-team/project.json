@@ -52,6 +52,16 @@
       "llm_provider": "auto",
       "emoji": "🏛️",
       "description": "Arquitetura: revisao arquitetural, padroes, coerencia tecnica"
+    },
+    {
+      "agent_id": "negocios",
+      "module_path": "src/agents/design_factory.py",
+      "class_name": "DesignAgent",
+      "context_limit_kb": 10.0,
+      "llm_provider": "auto",
+      "emoji": "💼",
+      "role": "designer",
+      "description": "Negócios: definir prioridades, validar ROI, contato com stakeholders"
     }
   ]
 }
