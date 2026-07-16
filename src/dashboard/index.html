@@ -1465,7 +1465,8 @@
                 actor: event.agent_id,
                 message: event.message || event.status,
                 payload: event.payload,
-                timestamp: event.timestamp || new Date().toISOString()
+                timestamp: event.timestamp || new Date().toISOString(),
+                taskId: event.task_id || event.trace_id || null
             });
 
             if (agentState.events.length > 100) agentState.events.pop();
@@ -1591,7 +1592,8 @@
                             actor: agentId,
                             message: event.message || event.status || 'Event',
                             payload: event.payload,
-                            timestamp: event.timestamp || new Date().toISOString()
+                            timestamp: event.timestamp || new Date().toISOString(),
+                            taskId: event.task_id || event.trace_id || null
                         });
                         if (agentState.events.length > 100) agentState.events.pop();
                     }
@@ -1907,7 +1909,7 @@
 
             const groups = {};
             allEvents.forEach(event => {
-                const key = event.task_id || event.trace_id || L.uncategorized;
+                const key = event.taskId || event.task_id || event.trace_id || new Date(event.timestamp).toLocaleDateString();
                 if (!groups[key]) groups[key] = [];
                 groups[key].push(event);
             });

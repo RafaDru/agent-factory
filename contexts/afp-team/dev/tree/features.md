@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Commit das alterações do base.py
+- **Acao**: run_git
+- **Resumo**: [master 538bb05] feat: add provider and model to event metrics
+
+
 ### Commit (segunda parte) da atualização do contexto
 - **Acao**: run_git
 - **Resumo**: [master 70d7640] docs: adicionar liÃ§Ã£o sobre run_command com gh
