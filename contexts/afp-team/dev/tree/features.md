@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Commit running badge
+- **Acao**: run_git
+- **Resumo**: [master 664d50f] add running agents indicator on first page
+
+
 ### Commit log button addition
 - **Acao**: run_git
 - **Resumo**: [master c3a3847] add per-agent log button
