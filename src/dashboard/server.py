@@ -17,6 +17,8 @@ from urllib.parse import urlparse, parse_qs
 from ..protocols.events import EventNotifier
 from ..registry import get_registry
 
+from ..sdk.context_tree import ContextTree
+
 CONFIG_FILE = '.agent-factory/agent_config.json'
 agent_config: Dict[str, Dict[str, str]] = {}
 
@@ -86,6 +88,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._serve_debug()
         elif path == "/api/smoke":
             self._serve_smoke()
+
+        elif path == "/api/context/stats":
+            self._serve_context_stats(project_id)
         elif path.startswith("/api/agent/") and path.endswith("/provider"):
             self._serve_agent_provider(path)
         else:
@@ -721,6 +726,51 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps({"results": results}, default=str).encode("utf-8"))
+
+
+    def _serve_context_stats(self, project_id: Optional[str] = None) -> None:
+        """Endpoint para obter estatísticas da ContextTree de todos os agentes.
+
+        Args:
+            project_id: ID do projeto (opcional, se None, retorna todos)
+
+        Returns:
+            None: Envia resposta JSON com estatísticas agregadas
+        """
+        results = []
+        # Iterar sobre todos os notifiers (projetos)
+        for pid, notifier in self.notifiers.items():
+            if project_id and pid != project_id:
+                continue
+            # Listar agentes do projeto
+            agent_ids = self._list_agent_ids(pid)
+            for agent_id in agent_ids:
+                try:
+                    # Construir caminho do contexto do agente
+                    context_dir = Path("contexts") / pid / agent_id
+                    if not context_dir.exists():
+                        continue
+                    # Carregar ContextTree
+                    tree = ContextTree(context_dir)
+                    stats = tree.stats()
+                    # Adicionar project_id e agent_id
+                    stats["project_id"] = pid
+                    stats["agent_id"] = agent_id
+                    results.append(stats)
+                except Exception as e:
+                    # Em caso de erro, incluir entrada com erro
+                    results.append({
+                        "project_id": pid,
+                        "agent_id": agent_id,
+                        "error": str(e)
+                    })
+        # Ordenar por project_id e agent_id
+        results.sort(key=lambda x: (x.get("project_id", ""), x.get("agent_id", "")))
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(results, default=str).encode("utf-8"))
 
 class DashboardServer:
     """

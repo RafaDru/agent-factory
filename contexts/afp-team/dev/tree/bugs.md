@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit (segunda parte) do script de adição de issues
+- **Acao**: run_git
+- **Resumo**: [master 6b4dbd0] feat: script para adicionar issues ao board #4
+
+
 ### Commit das alterações da issue #8
 - **Acao**: run_git
 - **Resumo**: [master d466d8f] feat: redesign interaction flow as chat conversation (issue #8)
