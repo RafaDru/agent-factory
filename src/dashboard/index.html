@@ -1661,6 +1661,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function formatTimestamp(isoString) {
+            if (isoString && !isoString.endsWith('Z') && !isoString.includes('+')) {
+                isoString += 'Z';
+            }
             const date = new Date(isoString);
             return date.toLocaleString();
         }
