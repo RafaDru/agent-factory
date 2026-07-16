@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit das alterações da issue #11
+- **Acao**: run_git
+- **Resumo**: [master 7c064dc] fix: remove card borders and add box-shadow (issue #11)
+
+
 ### run_git
 - **Acao**: run_git
 - **Resumo**: e3fd01c feat: Context Tree + hook pre/pos + arquiteto + GitHub Projects
