@@ -1069,6 +1069,14 @@
     .logs-close-btn:hover {
         color: var(--cyan);
     }
+    .log-filter-info {
+        padding: 8px 16px;
+        background: rgba(34, 211, 238, 0.1);
+        border-bottom: 1px solid var(--border-glass);
+        font-size: 0.85rem;
+        color: var(--cyan);
+        font-weight: 500;
+    }
     </style>
 </head>
 <body>
@@ -1945,6 +1953,24 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFilters();
         }
 
+        function updateLogFilterInfo(agentId) {
+            const infoDiv = document.getElementById('log-filter-info');
+            if (!infoDiv) return;
+            const agentState = state.agentsState[agentId];
+            if (!agentState) {
+                infoDiv.style.display = 'none';
+                return;
+            }
+            const lastExec = agentState.lastExecution;
+            let modelText = '—';
+            if (lastExec && lastExec.model) {
+                modelText = lastExec.model;
+            }
+            infoDiv.innerHTML = `Filtrado: ${agentId} | Ultimo modelo: ${modelText}`;
+            infoDiv.style.display = 'block';
+        }
+
+
         // Click on agent card opens logs filtered for that agent
         document.addEventListener('click', function(e) {
             const card = e.target.closest('.agent-card');
@@ -1959,6 +1985,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 filterAgent.value = agentId;
             }
             applyFilters();
+            updateLogFilterInfo(agentId);
         });
 
         if (logsToggle && logsPanel) {
@@ -2011,7 +2038,9 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <button class="logs-close-btn" title="Close logs">✕</button>
     </div>
-    <div id="log-entries" class="log-entries"></div>
+    <div class="log-filter-info" id="log-filter-info" style="display:none;"></div>
+    
+<div id="log-entries" class="log-entries"></div>
     <button id="clear-logs" class="btn">Clear</button>
 </div>
 
