@@ -1081,6 +1081,7 @@
     .team-detail-layout {
         gap: 24px;
     }
+    .timeline-time { font-size:0.75rem; color: var(--text-secondary); margin-top:4px; }
     </style>
 </head>
 <body>
@@ -1117,17 +1118,16 @@
             back: 'Back',
             refresh: 'Refresh',
             logs: 'Logs',
-            ${L.agent}s: 'AGENTS',
+            agents: 'AGENTS',
             active: 'ACTIVE',
-            agentsRunning: 'agents running',
-            agent: L.agent,
-            idle: L.idle,
-            success: L.success,
-            failed: L.failed,
-            running: L.running,
-            noActiveTask: L.noActiveTask,
+            agent: 'Agent',
+            idle: 'IDLE',
+            success: 'SUCCESS',
+            failed: 'FAILED',
+            running: 'RUNNING',
+            noActiveTask: 'No active task',
             llm: 'LLM:',
-            interactionFlow: '${L.interactionFlow}',
+            interactionFlow: 'Interaction Flow',
             noInteractions: 'No interactions yet',
             timeline: 'Timeline',
             eventLogs: 'Event Logs',
@@ -1135,13 +1135,14 @@
             allTypes: 'All Types',
             close: 'Close',
             clear: 'Clear',
-            projects: L.projects,
+            projects: 'Projects',
             lastExecution: 'Last Execution',
             noRecentExecutions: 'No recent executions',
             noExecutionsYet: 'No executions yet',
             last: 'Last:',
             filteredBy: 'Filtered by:',
-            noAgents: 'No agents'
+            noAgents: 'No agents',
+            agentsRunning: 'agents running',
         };
         // ==================== STATE MANAGEMENT ====================
         const state = {
@@ -1682,6 +1683,7 @@
                     <div class="timeline-bubble">
                         <div class="timeline-actor ${actorClass}">${actorLabel}</div>
                         <div class="timeline-message">${event.message || 'Event'}</div>
+                        <div class="timeline-time">${new Date(event.timestamp).toLocaleString()}</div>
                         <div class="timeline-details">
                             <strong>Input/Output:</strong>
                             <pre>${event.payload ? JSON.stringify(event.payload, null, 2) : 'No payload'}</pre>
