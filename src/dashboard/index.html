@@ -984,6 +984,11 @@
                 if (!res.ok) throw new Error('Failed to fetch missions');
                 return res.json();
             },
+            async fetchContext(projectId) {
+                const res = await fetch('/api/context?project=' + encodeURIComponent(projectId));
+                if (!res.ok) throw new Error('Failed to fetch context');
+                return res.json();
+            },
             connectSSE() {
                 if (state.sseConnection) {
                     state.sseConnection.close();
@@ -1332,6 +1337,18 @@
                     })
                     .catch(err => console.error('Error fetching agent config:', err));
             });
+
+            // Fetch context for project
+            API.fetchContext(project.id).then(data => {
+                if (data && typeof data === 'object') {
+                    Object.entries(data).forEach(([agentId, contextValue]) => {
+                        if (state.agentsState[agentId]) {
+                            state.agentsState[agentId].context = contextValue;
+                        }
+                        updateAgentContext(agentId, contextValue);
+                    });
+                }
+            }).catch(err => console.error('Error fetching context:', err));
         }
 
         function renderTimeline(agents) {
@@ -1441,6 +1458,24 @@
                 cardClass = 'ready';
             }
             return { statusClass, dotClass, label, cardClass };
+        }
+
+        function updateAgentContext(agentId, contextValue) {
+            const card = document.getElementById(`agent-${agentId}`);
+            if (!card) return;
+            const contextFill = card.querySelector('.context-fill');
+            const contextText = card.querySelector('.context-text');
+            if (contextFill) {
+                const pct = Math.min(Math.max(contextValue || 0, 0), 100);
+                contextFill.style.width = pct + '%';
+                contextFill.classList.remove('context-low', 'context-medium', 'context-high');
+                if (pct >= 80) contextFill.classList.add('context-high');
+                else if (pct >= 50) contextFill.classList.add('context-medium');
+                else contextFill.classList.add('context-low');
+            }
+            if (contextText) {
+                contextText.textContent = `Context: ${contextValue || 0}%`;
+            }
         }
 
         async function updateAgentConfig(agentId, llmProvider) {
