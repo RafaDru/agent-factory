@@ -35,6 +35,8 @@
             --yellow: #eab308;
             --red: #ef4444;
             --orange: #f97316;
+            --blue: #3b82f6;
+            --blue-rgb: 59, 130, 246;
             --text-primary: #f1f5f9;
             --text-secondary: #94a3b8;
             --text-muted: #64748b;
@@ -63,6 +65,8 @@
             --yellow: #ca8a04;
             --red: #dc2626;
             --orange: #ea580c;
+            --blue: #3b82f6;
+            --blue-rgb: 59, 130, 246;
             --text-primary: #1a1a2e;
             --text-secondary: #4b5563;
             --text-muted: #9ca3af;
@@ -408,8 +412,8 @@
         }
 
         .execution-status.running {
-            background: rgba(234, 179, 8, 0.2);
-            color: var(--yellow);
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--blue);
         }
 
         .no-execution {
@@ -557,7 +561,7 @@
             vertical-align: middle;
         }
         .dot-success { background: var(--green); }
-        .dot-running { background: var(--yellow); }
+        .dot-running { background: var(--blue); }
         .dot-failed { background: var(--red); }
         .dot-idle { background: var(--text-muted); }
 
@@ -567,9 +571,9 @@
         }
 
         .status-running {
-            background: rgba(234, 179, 8, 0.2);
-            color: var(--yellow);
-            border: 1px solid var(--yellow);
+            background: rgba(59, 130, 246, 0.2);
+            color: var(--blue);
+            border: 1px solid var(--blue);
             animation: pulse 2s infinite;
         }
 
@@ -1186,7 +1190,7 @@
         }
         .node-card.status-success { border-left-color: var(--green); background: rgba(34,197,94,0.05); }
         .node-card.status-failed { border-left-color: var(--red); background: rgba(239,68,68,0.05); }
-        .node-card.status-running { border-left-color: var(--yellow); background: rgba(234,179,8,0.05); }
+        .node-card.status-running { border-left-color: var(--blue); background: rgba(59,130,246,0.05); }
         .node-header {
             display: flex;
             align-items: center;
