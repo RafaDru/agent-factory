@@ -1527,117 +1527,119 @@
     </script>
 
 <script>
-(function() {
-    const MAX_ENTRIES = 200;
-    const logEntriesContainer = document.getElementById('log-entries');
-    const logsPanel = document.getElementById('logs-panel');
-    const logsToggle = document.getElementById('logs-toggle');
-    const clearBtn = document.getElementById('clear-logs');
-    const filterAgent = document.getElementById('log-filter-agent');
-    const filterType = document.getElementById('log-filter-type');
+document.addEventListener('DOMContentLoaded', function() {
+    (function() {
+        const MAX_ENTRIES = 200;
+        const logEntriesContainer = document.getElementById('log-entries');
+        const logsPanel = document.getElementById('logs-panel');
+        const logsToggle = document.getElementById('logs-toggle');
+        const clearBtn = document.getElementById('clear-logs');
+        const filterAgent = document.getElementById('log-filter-agent');
+        const filterType = document.getElementById('log-filter-type');
 
-    function updateAgentFilterOptions() {
-        const agents = new Set();
-        if (state.projects) {
-            state.projects.forEach(project => {
-                project.agents?.forEach(agent => agents.add(agent.id));
+        function updateAgentFilterOptions() {
+            const agents = new Set();
+            if (state.projects) {
+                state.projects.forEach(project => {
+                    project.agents?.forEach(agent => agents.add(agent.id));
+                });
+            }
+            Object.keys(state.agentsState).forEach(id => agents.add(id));
+            while (filterAgent.options.length > 1) {
+                filterAgent.remove(1);
+            }
+            agents.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = id;
+                filterAgent.appendChild(option);
             });
         }
-        Object.keys(state.agentsState).forEach(id => agents.add(id));
-        while (filterAgent.options.length > 1) {
-            filterAgent.remove(1);
-        }
-        agents.forEach(id => {
-            const option = document.createElement('option');
-            option.value = id;
-            option.textContent = id;
-            filterAgent.appendChild(option);
-        });
-    }
 
-    function formatTimestamp(isoString) {
-        const date = new Date(isoString);
-        return date.toLocaleString();
-    }
-
-    window.addLogEntry = function(event) {
-        if (!logEntriesContainer) return;
-        const entry = document.createElement('div');
-        entry.className = 'log-entry';
-        entry.dataset.agentId = event.agent_id || '';
-        entry.dataset.status = event.status || '';
-        entry.dataset.taskId = event.task_id || '';
-
-        const timestamp = formatTimestamp(event.timestamp || new Date().toISOString());
-        const agentId = event.agent_id || 'unknown';
-        const status = event.status || 'unknown';
-        const taskId = event.task_id || 'N/A';
-
-        entry.innerHTML = `
-            <span class="timestamp">${timestamp}</span>
-            <span class="agent-id">${agentId}</span>
-            <span class="status">${status}</span>
-            <span class="task-id">${taskId}</span>
-        `;
-
-        logEntriesContainer.insertBefore(entry, logEntriesContainer.firstChild);
-
-        while (logEntriesContainer.children.length > MAX_ENTRIES) {
-            logEntriesContainer.removeChild(logEntriesContainer.lastChild);
+        function formatTimestamp(isoString) {
+            const date = new Date(isoString);
+            return date.toLocaleString();
         }
 
-        applyFilters();
-    };
+        window.addLogEntry = function(event) {
+            if (!logEntriesContainer) return;
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.dataset.agentId = event.agent_id || '';
+            entry.dataset.status = event.status || '';
+            entry.dataset.taskId = event.task_id || '';
 
-    function applyFilters() {
-        const agentFilter = filterAgent.value;
-        const typeFilter = filterType.value;
+            const timestamp = formatTimestamp(event.timestamp || new Date().toISOString());
+            const agentId = event.agent_id || 'unknown';
+            const status = event.status || 'unknown';
+            const taskId = event.task_id || 'N/A';
 
-        const entries = logEntriesContainer.querySelectorAll('.log-entry');
-        entries.forEach(entry => {
-            const agentId = entry.dataset.agentId;
-            const status = entry.dataset.status;
-            let show = true;
-            if (agentFilter !== 'all' && agentId !== agentFilter) {
-                show = false;
+            entry.innerHTML = `
+                <span class="timestamp">${timestamp}</span>
+                <span class="agent-id">${agentId}</span>
+                <span class="status">${status}</span>
+                <span class="task-id">${taskId}</span>
+            `;
+
+            logEntriesContainer.insertBefore(entry, logEntriesContainer.firstChild);
+
+            while (logEntriesContainer.children.length > MAX_ENTRIES) {
+                logEntriesContainer.removeChild(logEntriesContainer.lastChild);
             }
-            if (typeFilter !== 'all' && status !== typeFilter) {
-                show = false;
-            }
-            entry.style.display = show ? '' : 'none';
-        });
-    }
 
-    function clearLogs() {
-        if (logEntriesContainer) {
-            logEntriesContainer.innerHTML = '';
+            applyFilters();
+        };
+
+        function applyFilters() {
+            const agentFilter = filterAgent.value;
+            const typeFilter = filterType.value;
+
+            const entries = logEntriesContainer.querySelectorAll('.log-entry');
+            entries.forEach(entry => {
+                const agentId = entry.dataset.agentId;
+                const status = entry.dataset.status;
+                let show = true;
+                if (agentFilter !== 'all' && agentId !== agentFilter) {
+                    show = false;
+                }
+                if (typeFilter !== 'all' && status !== typeFilter) {
+                    show = false;
+                }
+                entry.style.display = show ? '' : 'none';
+            });
         }
-        filterAgent.value = 'all';
-        filterType.value = 'all';
-        applyFilters();
-    }
 
-    if (logsToggle && logsPanel) {
-        logsToggle.addEventListener('click', () => {
-            const isVisible = logsPanel.style.display !== 'none';
-            logsPanel.style.display = isVisible ? 'none' : 'block';
-            if (!isVisible) {
-                updateAgentFilterOptions();
+        function clearLogs() {
+            if (logEntriesContainer) {
+                logEntriesContainer.innerHTML = '';
             }
-        });
-    }
+            filterAgent.value = 'all';
+            filterType.value = 'all';
+            applyFilters();
+        }
 
-    if (clearBtn) {
-        clearBtn.addEventListener('click', clearLogs);
-    }
+        if (logsToggle && logsPanel) {
+            logsToggle.addEventListener('click', () => {
+                const isVisible = logsPanel.style.display !== 'none';
+                logsPanel.style.display = isVisible ? 'none' : 'block';
+                if (!isVisible) {
+                    updateAgentFilterOptions();
+                }
+            });
+        }
 
-    if (filterAgent) {
-        filterAgent.addEventListener('change', applyFilters);
-    }
-    if (filterType) {
-        filterType.addEventListener('change', applyFilters);
-    }
-})();
+        if (clearBtn) {
+            clearBtn.addEventListener('click', clearLogs);
+        }
+
+        if (filterAgent) {
+            filterAgent.addEventListener('change', applyFilters);
+        }
+        if (filterType) {
+            filterType.addEventListener('change', applyFilters);
+        }
+    })();
+});
 </script>
 
 
