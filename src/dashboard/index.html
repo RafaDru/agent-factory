@@ -1112,6 +1112,37 @@
     </div>
 
     <script>
+
+        const L = {
+            back: 'Back',
+            refresh: 'Refresh',
+            logs: 'Logs',
+            ${L.agent}s: 'AGENTS',
+            active: 'ACTIVE',
+            agentsRunning: 'agents running',
+            agent: L.agent,
+            idle: L.idle,
+            success: L.success,
+            failed: L.failed,
+            running: L.running,
+            noActiveTask: L.noActiveTask,
+            llm: 'LLM:',
+            interactionFlow: '${L.interactionFlow}',
+            noInteractions: 'No interactions yet',
+            timeline: 'Timeline',
+            eventLogs: 'Event Logs',
+            allAgents: 'All Agents',
+            allTypes: 'All Types',
+            close: 'Close',
+            clear: 'Clear',
+            projects: L.projects,
+            lastExecution: 'Last Execution',
+            noRecentExecutions: 'No recent executions',
+            noExecutionsYet: 'No executions yet',
+            last: 'Last:',
+            filteredBy: 'Filtered by:',
+            noAgents: 'No agents'
+        };
         // ==================== STATE MANAGEMENT ====================
         const state = {
             projects: [],
@@ -1390,11 +1421,11 @@
                     <div class="project-name">${project.name}</div>
                     <div class="project-stats">
                         <div class="stat-item">
-                            <span class="stat-label">Agents</span>
+                            <span class="stat-label">${L.agents}</span>
                             <span class="stat-value purple">${agentsCount}</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Active</span>
+                            <span class="stat-label">${L.active}</span>
                             <span class="stat-value purple">${activeCount}</span>
                         </div>
                     </div>
@@ -1410,7 +1441,7 @@
 
         function renderLastExecution(projectId) {
             if (!state.missions || state.missions.length === 0) {
-                return '<div class="last-execution-section"><div class="last-execution-title">Última Execução</div><div class="no-execution">Nenhuma execução recente</div></div>';
+                return '<div class="last-execution-section"><div class="last-execution-title">${L.lastExecution}</div><div class="no-execution">${L.noRecentExecutions}</div></div>';
             }
 
             // Filtrar missoes do projeto (se especificado)
@@ -1431,7 +1462,7 @@
 
             const lastMission = sortedMissions[0];
             if (!lastMission) {
-                return '<div class="last-execution-section"><div class="last-execution-title">Última Execução</div><div class="no-execution">Nenhuma execução recente</div></div>';
+                return '<div class="last-execution-section"><div class="last-execution-title">${L.lastExecution}</div><div class="no-execution">${L.noRecentExecutions}</div></div>';
             }
 
             const missionProjectId = lastMission.project_id || projectId || 'unknown';
@@ -1449,7 +1480,7 @@
 
             return `
                 <div class="last-execution-section">
-                    <div class="last-execution-title">Última Execução</div>
+                    <div class="last-execution-title">${L.lastExecution}</div>
                     <div class="execution-card" onclick="navigateTo('team-detail', { projectId: '${missionProjectId}' })">
                         <div class="execution-info">
                             <span class="execution-project">${projectName}</span>
@@ -1472,7 +1503,7 @@
 
             let agentsHtml = '';
             if (!project.agents || project.agents.length === 0) {
-                agentsHtml = '<div class="empty-state">No agents in this project</div>';
+                agentsHtml = `<div class="empty-state">${L.noAgents}</div>`;
             } else {
                 agentsHtml = '<div class="agents-grid">';
                 project.agents.forEach(agent => {
@@ -1528,7 +1559,7 @@
                         </div>
                         ${timerDisplay}
                         <div class="llm-mode">
-                            <label for="llm-select-${agent.id}" style="font-size:0.8rem; color: var(--text-secondary);">LLM:</label>
+                            <label for="llm-select-${agent.id}" style="font-size:0.8rem; color: var(--text-secondary);">${L.llm}</label>
                             <select id="llm-select-${agent.id}" class="llm-select" onchange="updateAgentConfig('${agent.id}', this.value)">
                                 <option value="AUTO" ${(agent.llm_mode || 'AUTO') === 'AUTO' ? 'selected' : ''}>AUTO</option>
                                 <option value="opencode_zen" ${(agent.llm_mode || 'AUTO') === 'opencode_zen' ? 'selected' : ''}>opencode_zen (deepseek-v4-pro)</option>
@@ -1536,7 +1567,7 @@
                                 <option value="opencode" ${(agent.llm_mode || 'AUTO') === 'opencode' ? 'selected' : ''}>opencode (deepseek-v4-pro)</option>
                             </select>
                         </div>
-                        <div class="last-model">Ultimo: <span>${modelUsed || 'Nenhuma execução ainda'}</span></div>
+                        <div class="last-model">${L.last} <span>${modelUsed || L.noExecutionsYet}</span></div>
                         <div class="context-bar">
                             <div class="context-fill ${contextClass}" style="width: ${Math.min(contextPct, 100)}%"></div>
                         </div>
@@ -1552,7 +1583,7 @@
             container.innerHTML = `
                 <div class="team-detail-layout">
                     <div>
-                        <h2 style="margin-bottom: 20px;">${project.name} — Agents</h2>
+                        <h2 style="margin-bottom: 20px;">${project.name} — ${L.agents}</h2>
                         ${renderLastExecution(project.id)}
                         ${agentsHtml}
                     </div>
@@ -1625,16 +1656,16 @@
             if (allEvents.length === 0) {
                 return `
                     <div class="timeline-header">Interaction Flow</div>
-                    <div class="empty-state">No interactions yet</div>
+                    <div class="empty-state">${L.noInteractions}</div>
                 `;
             }
 
             let html = `
                 <div class="timeline-header">
-                    <span>Interaction Flow</span>
+                    <span>${L.interactionFlow}</span>
                     <div class="timeline-tabs">
-                        <button class="tab-btn active">Timeline</button>
-                        <button class="tab-btn">Logs</button>
+                        <button class="tab-btn active">${L.timeline}</button>
+                        <button class="tab-btn">${L.logs}</button>
                     </div>
                 </div>
                 <div class="timeline-items">
@@ -1984,7 +2015,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (lastExec && lastExec.model) {
                 modelText = lastExec.model;
             }
-            infoDiv.innerHTML = `Filtrado: ${agentId} | Ultimo modelo: ${modelText}`;
+            infoDiv.innerHTML = `${L.filteredBy} ${agentId} | ${L.last} modelo: ${modelText}`;
             infoDiv.style.display = 'block';
         }
 
