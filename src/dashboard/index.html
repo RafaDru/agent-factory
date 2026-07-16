@@ -1320,5 +1320,26 @@
             }
         })();
     </script>
+
+<!-- Logs Panel Overlay -->
+<div id="logs-panel" style="display: none;">
+    <div class="logs-panel-header">
+        <h2>Event Logs</h2>
+        <div class="logs-filters">
+            <select id="log-filter-agent">
+                <option value="all">All Agents</option>
+            </select>
+            <select id="log-filter-type">
+                <option value="all">All Types</option>
+                <option value="status">Status</option>
+                <option value="error">Error</option>
+                <option value="complete">Complete</option>
+            </select>
+        </div>
+    </div>
+    <div id="log-entries" class="log-entries"></div>
+    <button id="clear-logs" class="btn">Clear</button>
+</div>
+
 </body>
 </html>
