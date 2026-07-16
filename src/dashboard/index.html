@@ -1206,6 +1206,16 @@
             font-size: 0.8rem;
             color: var(--text-secondary);
         }
+        .node-card.delegation {
+            background: rgba(99, 102, 241, 0.08);
+            border-left-color: var(--cyan, #6366f1);
+        }
+        .delegation-arrow {
+            font-size: 0.75rem;
+            color: var(--cyan, #6366f1);
+            margin-left: auto;
+            opacity: 0.8;
+        }
         .node-footer {
             margin: 4px 0 0 22px;
             font-size: 0.7rem;
@@ -1479,10 +1489,11 @@
                 message: event.message || event.status,
                 payload: event.payload,
                 timestamp: event.timestamp || new Date().toISOString(),
-                taskId: event.task_id || event.trace_id || null
+                taskId: event.task_id || event.trace_id || null,
+                status: event.status
             });
 
-            if (agentState.events.length > 100) agentState.events.pop();
+            if (agentState.events.length > 250) agentState.events.pop();
 
             if (state.currentView === 'team-detail') {
                 const card = document.getElementById('agent-' + agentId);
@@ -1606,9 +1617,10 @@
                             message: event.message || event.status || 'Event',
                             payload: event.payload,
                             timestamp: event.timestamp || new Date().toISOString(),
-                            taskId: event.task_id || event.trace_id || null
+                            taskId: event.task_id || event.trace_id || null,
+                            status: event.status
                         });
-                        if (agentState.events.length > 100) agentState.events.pop();
+                        if (agentState.events.length > 250) agentState.events.pop();
                     }
                 });
             }
@@ -1911,7 +1923,7 @@
                 }
             });
             allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            allEvents = allEvents.slice(0, 100);
+            allEvents = allEvents.slice(0, 200);
 
             if (allEvents.length === 0) {
                 return `
@@ -1960,24 +1972,48 @@
                     <div class="mission-body">
                 `;
 
-                let lastAgentId = null;
-                events.forEach((event, idx) => {
-                    const agentId = event.agentId || event.actor || '?';
-                    const message = event.message || 'Event';
-                    const timestamp = new Date(event.timestamp).toLocaleTimeString();
-                    const emoji = getAgentEmoji(agentId);
-                    const evtStatus = event.status || 'unknown';
-                    const nodeStatusClass = evtStatus === 'completed' || evtStatus === 'success' ? 'status-success' :
-                                            evtStatus === 'failed' ? 'status-failed' :
-                                            evtStatus === 'running' ? 'status-running' : '';
+                // Build delegation tree from flat events
+                const treeRoot = { children: [] };
+                let scope = null; // { delegator, targetAgent, children: [] }
 
-                    const isNewAgent = lastAgentId !== null && agentId !== lastAgentId;
-                    const level = isNewAgent ? 1 : 0;
-                    lastAgentId = agentId;
+                events.forEach(event => {
+                    const agentId = event.actor || event.agentId || '?';
+                    const msg = event.message || '';
+                    const isCoordinator = agentId.toLowerCase().includes('coorden') || agentId === 'coordenador' || agentId.toLowerCase().includes('coordinator');
 
-                    html += `
-                        <div class="agent-node level-${level}">
-                            <div class="node-card ${nodeStatusClass}">
+                    if (isCoordinator && msg.includes('Delegando')) {
+                        const match = msg.match(/para\s+(\w+)/i);
+                        const target = match ? match[1] : 'worker';
+                        scope = { delegator: agentId, targetAgent: target, children: [event] };
+                        treeRoot.children.push(scope);
+                    } else if (scope && agentId === scope.targetAgent) {
+                        scope.children.push(event);
+                        if (event.status === 'completed' || event.status === 'success' || event.status === 'failed') {
+                            const closeEvent = { ...event, _closeScope: true };
+                            scope.children.push(closeEvent);
+                            scope = null;
+                        }
+                    } else if (scope && isCoordinator && msg.includes('Concluido')) {
+                        scope.children.push(event);
+                        scope = null;
+                    } else {
+                        treeRoot.children.push({ type: 'event', agentId, message: msg, status: event.status, timestamp: event.timestamp });
+                    }
+                });
+
+                // Render the delegation tree
+                function renderNode(node, depth) {
+                    if (node.type === 'event' || node.agentId) {
+                        const agentId = node.agentId || '?';
+                        const message = node.message || 'Event';
+                        const timestamp = node.timestamp ? new Date(node.timestamp).toLocaleTimeString() : '';
+                        const emoji = getAgentEmoji(agentId);
+                        const evtStatus = node.status || 'unknown';
+                        const nsClass = evtStatus === 'completed' || evtStatus === 'success' ? 'status-success' :
+                                        evtStatus === 'failed' ? 'status-failed' :
+                                        evtStatus === 'running' ? 'status-running' : '';
+                        return `<div class="agent-node level-${depth}">
+                            <div class="node-card ${nsClass}">
                                 <div class="node-header">
                                     <span class="node-avatar">${emoji}</span>
                                     <span class="node-name">${agentId}</span>
@@ -1985,8 +2021,42 @@
                                 <div class="node-body">${message}</div>
                                 <div class="node-footer">${evtStatus} • ${timestamp}</div>
                             </div>
-                        </div>
-                    `;
+                        </div>`;
+                    }
+                    if (node.children) {
+                        const delegator = node.delegator || '?';
+                        const target = node.targetAgent || 'worker';
+                        const first = node.children[0] || {};
+                        const emoji = getAgentEmoji(delegator);
+                        const tgtEmoji = getAgentEmoji(target);
+                        const delegMsg = `→ delegou para ${tgtEmoji} ${target}`;
+                        const ts = first.timestamp ? new Date(first.timestamp).toLocaleTimeString() : '';
+                        let html = `<div class="agent-node level-${depth}">
+                            <div class="node-card delegation">
+                                <div class="node-header">
+                                    <span class="node-avatar">${emoji}</span>
+                                    <span class="node-name">${delegator}</span>
+                                    <span class="delegation-arrow">${delegMsg}</span>
+                                </div>
+                                <div class="node-footer">${first.message || ''} • ${ts}</div>
+                            </div>`;
+                        node.children.forEach((child, i) => {
+                            if (i === 0) return;
+                            if (child._closeScope) return;
+                            html += renderNode({ type: 'event', agentId: child.actor || child.agentId || target, message: child.message || 'Event', status: child.status, timestamp: child.timestamp }, depth + 1);
+                        });
+                        html += `</div>`;
+                        return html;
+                    }
+                    return '';
+                }
+
+                treeRoot.children.forEach(child => {
+                    if (child.children) {
+                        html += renderNode(child, 0);
+                    } else {
+                        html += renderNode(child, 0);
+                    }
                 });
 
                 html += `

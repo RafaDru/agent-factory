@@ -697,6 +697,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             return
 
         steps = [
+            # Individual agent tasks (smoke-0 to smoke-5)
             ("dev", AgentStatus.RUNNING, "Executando: list_directory"),
             ("dev", AgentStatus.COMPLETED, "Concluido: list_directory (12 files)"),
             ("qa", AgentStatus.RUNNING, "Executando: validate_python_syntax"),
@@ -704,22 +705,54 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             ("dev", AgentStatus.RUNNING, "Executando: read_file"),
             ("dev", AgentStatus.COMPLETED, "Concluido: read_file (architect.py)"),
         ]
+
+        # DELEGATION CHAIN: coordinator -> dev -> qa (all same task_id)
+        delegation_id = "deleg-chain-1"
+        delegation_steps = [
+            ("coordenador", AgentStatus.RUNNING, "Delegando 'list_directory' para dev"),
+            ("dev", AgentStatus.RUNNING, "Executando: list_directory"),
+            ("dev", AgentStatus.COMPLETED, "Concluido: list_directory (12 files)"),
+            ("coordenador", AgentStatus.RUNNING, "Delegando 'validate python' para qa"),
+            ("qa", AgentStatus.RUNNING, "Executando: validate_python_syntax"),
+            ("qa", AgentStatus.COMPLETED, "Concluido: validate_python_syntax (OK)"),
+            ("coordenador", AgentStatus.COMPLETED, "Missao concluida com sucesso"),
+        ]
+
         results = []
-        for i, (agent_id, status, message) in enumerate(steps):
+        step_idx = 0
+        for agent_id, status, message in steps:
             try:
                 event = AgentEvent(
                     agent_id=agent_id,
                     agent_role="worker",
                     status=status,
-                    task_id=f"smoke-{i}",
+                    task_id=f"smoke-{step_idx}",
                     project_id="AFP-Team",
                     message=message,
                 )
                 notifier.emit(event)
-                results.append({"step": i, "agent": agent_id, "status": status.value, "message": message})
+                results.append({"step": step_idx, "agent": agent_id, "status": status.value, "message": message, "task_id": f"smoke-{step_idx}"})
             except Exception as e:
-                results.append({"step": i, "agent": agent_id, "status": "error", "error": str(e)})
-            time.sleep(1.0)
+                results.append({"step": step_idx, "agent": agent_id, "status": "error", "error": str(e)})
+            step_idx += 1
+            time.sleep(0.5)
+
+        for agent_id, status, message in delegation_steps:
+            try:
+                event = AgentEvent(
+                    agent_id=agent_id,
+                    agent_role="coordinator" if agent_id == "coordenador" else "worker",
+                    status=status,
+                    task_id=delegation_id,
+                    project_id="AFP-Team",
+                    message=message,
+                )
+                notifier.emit(event)
+                results.append({"step": step_idx, "agent": agent_id, "status": status.value, "message": message, "task_id": delegation_id})
+            except Exception as e:
+                results.append({"step": step_idx, "agent": agent_id, "status": "error", "error": str(e)})
+            step_idx += 1
+            time.sleep(0.5)
 
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
