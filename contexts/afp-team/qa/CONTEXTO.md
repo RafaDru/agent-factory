@@ -44,3 +44,14 @@ O QA deve validar que:
 - REST /api/events retorna eventos apos missao
 - SSE entrega eventos em tempo real
 - Painel de logs no frontend exibe eventos corretamente
+
+## Licoes Aprendidas
+
+### Criterios de Revisao
+
+1. **Flexbox scroll**: verificar se elementos com scroll possuem 'min-height:0' e 'overflow-y:auto' quando o pai tem 'overflow:hidden'.
+2. **async/await**: verificar se toda função que usa 'await' é declarada como 'async'.
+3. **Event delegation**: verificar se listeners globais usam 'document.addEventListener' com 'closest()' e não estão aninhados em outras funções.
+4. **Timestamps**: verificar se o backend usa 'datetime.now(timezone.utc)' e se strings ISO sem timezone recebem 'Z' no frontend.
+5. **Interaction Flow**: verificar se 'switchView()' carrega eventos históricos de '/api/events' e popula 'agentState.events'.
+
