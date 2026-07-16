@@ -1359,7 +1359,7 @@
                                 <div class="agent-status ${statusInfo.statusClass}">
                                     <span class="status-dot ${statusInfo.dotClass}"></span>${statusInfo.label}
                                 </div>
-                                <div class="sub-status">${agentState.subStatus || 'idle'}</div>
+                                ${(agentState.status === 'running' || agentState.status === 'completed' || agentState.status === 'success' || agentState.status === 'failed') ? `<div class="sub-status">${agentState.task || agentState.subStatus || 'Executing...'}</div>` : ''}
                             </div>
                         </div>
                         <div class="task-center">
