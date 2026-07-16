@@ -31,6 +31,7 @@ class AgentFactoryDevAgent(StandardBaseAgent):
         "run_script": {"description": "Executa script Python", "params": {"script_path": "str", "args": "list[str] (opcional)"}},
         "run_tests": {"description": "Executa pytest", "params": {"path": "str", "args": "list[str] (opcional)"}},
         "run_git": {"description": "Executa comando git", "params": {"args": "list[str]"}},
+        "run_command": {"description": "Executa comando no shell (whitelist: gh, python, pip, npm, npx, dir, type)", "params": {"command": "str - nome do comando", "args": "list[str]"}},
         "rename_file": {"description": "Renomeia ou move um arquivo", "params": {"src": "str", "dst": "str"}},
         "delete_file": {"description": "Remove um arquivo", "params": {"file_path": "str"}},
         "generate_code": {"description": "Gera codigo via LLM (React, Python, etc)", "params": {"spec": "str - especificacao do que gerar", "language": "str (opcional)", "output_path": "str (opcional)"}},
@@ -75,6 +76,7 @@ class AgentFactoryDevAgent(StandardBaseAgent):
             "run_script": self._run_script,
             "run_tests": self._run_tests,
             "run_git": self._run_git,
+            "run_command": self._run_command,
             "rename_file": self._rename_file,
             "delete_file": self._delete_file,
             "generate_code": self._generate_code_with_llm,
@@ -232,6 +234,33 @@ class AgentFactoryDevAgent(StandardBaseAgent):
             return TaskOutput.failure(rationale="Git excedeu timeout de 60s")
         except Exception as e:
             return TaskOutput.failure(rationale=f"Erro ao executar git: {e}")
+
+    _COMMAND_WHITELIST = {"gh", "python", "python3", "pip", "npm", "npx", "dir", "type", "echo", "where", "which"}
+
+    def _run_command(self, task: dict) -> TaskOutput:
+        cmd_name = task.get("command", "")
+        args = task.get("args", [])
+        if cmd_name not in self._COMMAND_WHITELIST:
+            return TaskOutput.failure(
+                rationale=f"Comando '{cmd_name}' nao permitido. Whitelist: {', '.join(sorted(self._COMMAND_WHITELIST))}"
+            )
+        cmd = [cmd_name] + list(args)
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, cwd=self.working_dir)
+            ok = result.returncode == 0
+            return TaskOutput(
+                status="success" if ok else "failure",
+                summary=f"{cmd_name} {'ok' if ok else 'falhou'} (codigo {result.returncode})",
+                rationale=result.stderr[:1000] if not ok else "",
+                details={"command": cmd_name, "args": args, "returncode": result.returncode,
+                         "stdout": result.stdout[:5000], "stderr": result.stderr[:1000]},
+            )
+        except subprocess.TimeoutExpired:
+            return TaskOutput.failure(rationale=f"Comando '{cmd_name}' excedeu timeout de 120s")
+        except FileNotFoundError:
+            return TaskOutput.failure(rationale=f"Comando '{cmd_name}' nao encontrado no PATH")
+        except Exception as e:
+            return TaskOutput.failure(rationale=f"Erro ao executar {cmd_name}: {e}")
 
     def _rename_file(self, task: dict) -> TaskOutput:
         src = self._resolve(task.get("src", ""))

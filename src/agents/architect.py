@@ -10,6 +10,12 @@ class ArchitectAgent(StandardBaseAgent):
 
     _DEFAULT_LLM = "auto"
 
+    def __init__(self, **kwargs):
+        kwargs["agent_id"] = "arquiteto"
+        kwargs.setdefault("context_file", Path("contexts") / kwargs.get("project_id", "AFP-Team") / "arquiteto" / "CONTEXTO.md")
+        kwargs["role"] = AgentRole.ARCHITECT
+        super().__init__(**kwargs)
+
     ACTIONS = {
         "review_architecture": {
             "description": "Revisa consistencia arquitetural de um arquivo ou diretorio",
@@ -29,12 +35,12 @@ class ArchitectAgent(StandardBaseAgent):
         },
     }
 
-    def __init__(self, agent_id: str, project_id: str, **kwargs):
+    def __init__(self, **kwargs):
+        pid = kwargs.get("project_id", "AFP-Team")
         super().__init__(
-            agent_id=agent_id,
-            project_id=project_id,
+            agent_id="arquiteto",
             role=AgentRole.ARCHITECT,
-            context_file=Path("contexts") / project_id / agent_id / "CONTEXTO.md",
+            context_file=kwargs.pop("context_file", None) or Path("contexts") / pid / "arquiteto" / "CONTEXTO.md",
             **kwargs,
         )
 

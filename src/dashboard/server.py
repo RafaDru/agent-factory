@@ -84,6 +84,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._serve_agent_config()
         elif path == "/api/debug":
             self._serve_debug()
+        elif path == "/api/smoke":
+            self._serve_smoke()
         elif path.startswith("/api/agent/") and path.endswith("/provider"):
             self._serve_agent_provider(path)
         else:
@@ -243,9 +245,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         try:
             # Manter conexão aberta
             while True:
-                time.sleep(1)
-        except (BrokenPipeError, ConnectionResetError):
-            # Cliente desconectou
+                try:
+                    self.wfile.write(b": keepalive\n\n")
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                    break
+                time.sleep(5)
+        except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
             pass
         finally:
             # Desregistrar cliente SSE
@@ -675,6 +681,46 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
+
+    def _serve_smoke(self) -> None:
+        """Smoke test: emite eventos via notifier para testar SSE."""
+        import time
+        from src.protocols.schema import AgentEvent, AgentStatus
+        notifier = self.notifiers.get("AFP-Team")
+        if not notifier:
+            self.send_error(500, "No AFP-Team notifier found")
+            return
+
+        steps = [
+            ("dev", AgentStatus.RUNNING, "Executando: list_directory"),
+            ("dev", AgentStatus.COMPLETED, "Concluido: list_directory (12 files)"),
+            ("qa", AgentStatus.RUNNING, "Executando: validate_python_syntax"),
+            ("qa", AgentStatus.COMPLETED, "Concluido: validate_python_syntax (OK)"),
+            ("dev", AgentStatus.RUNNING, "Executando: read_file"),
+            ("dev", AgentStatus.COMPLETED, "Concluido: read_file (architect.py)"),
+        ]
+        results = []
+        for i, (agent_id, status, message) in enumerate(steps):
+            try:
+                event = AgentEvent(
+                    agent_id=agent_id,
+                    agent_role="worker",
+                    status=status,
+                    task_id=f"smoke-{i}",
+                    project_id="AFP-Team",
+                    message=message,
+                )
+                notifier.emit(event)
+                results.append({"step": i, "agent": agent_id, "status": status.value, "message": message})
+            except Exception as e:
+                results.append({"step": i, "agent": agent_id, "status": "error", "error": str(e)})
+            time.sleep(1.0)
+
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps({"results": results}, default=str).encode("utf-8"))
 
 class DashboardServer:
     """

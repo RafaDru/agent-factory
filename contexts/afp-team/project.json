@@ -43,6 +43,15 @@
       "llm_provider": "auto",
       "emoji": "🎨",
       "description": "Design: pesquisa de design systems, prototipos, UX"
+    },
+    {
+      "agent_id": "arquiteto",
+      "module_path": "src/agents/architect.py",
+      "class_name": "ArchitectAgent",
+      "context_limit_kb": 10.0,
+      "llm_provider": "auto",
+      "emoji": "🏛️",
+      "description": "Arquitetura: revisao arquitetural, padroes, coerencia tecnica"
     }
   ]
 }

@@ -62,7 +62,7 @@ class EventNotifier:
             try:
                 client.wfile.write(message.encode("utf-8"))
                 client.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError):
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
                 EventNotifier.unregister_sse_client(client)
     
     def on_event(self, callback: Callable[[AgentEvent], None]):
