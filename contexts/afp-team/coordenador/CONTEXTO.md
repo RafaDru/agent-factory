@@ -57,3 +57,12 @@ Forneca as tasks explicitamente para execucao direta.
 ## Provedor LLM
 - Usa `get_provider("auto")`: tenta Groq (cloud) -> Ollama (local) -> Mock
 - Para usar local: `ollama` rodando em http://localhost:11434
+
+## Licoes Aprendidas
+
+### Orquestracao e Know-How
+
+- **Event delegation**: Usar `document.addEventListener('click')` com `closest()` para elementos renderizados dinamicamente. Manter o listener no escopo global, nunca aninhado dentro de outra função.
+- **Timestamps**: No backend, usar `datetime.now(timezone.utc)` para gerar timestamps com timezone. No frontend, se receber string naive, anexar 'Z' para forçar interpretação UTC e evitar que o JS interprete como hora local.
+- **Interaction Flow**: Garantir que a função `switchView()` carregue eventos históricos de `/api/events` e popule `agentState.events` para exibir o fluxo de interação completo.
+
