@@ -1156,7 +1156,32 @@
 
             updateBreadcrumb();
             updateBackButton();
-            renderCurrentView();
+            // Carregar eventos históricos para o Interaction Flow
+        try {
+            const eventsRes = await fetch('/api/events');
+            if (eventsRes.ok) {
+                const eventsData = await eventsRes.json();
+                const events = Array.isArray(eventsData) ? eventsData : (eventsData.events || []);
+                events.forEach(event => {
+                    const agentId = event.agent_id;
+                    if (agentId && state.agentsState[agentId]) {
+                        const agentState = state.agentsState[agentId];
+                        agentState.events.unshift({
+                            id: Date.now() + Math.random(),
+                            type: agentId.includes('coordinator') ? 'coordinator' : 'agent',
+                            actor: agentId,
+                            message: event.message || event.status || 'Event',
+                            payload: event.payload,
+                            timestamp: event.timestamp || new Date().toISOString()
+                        });
+                        if (agentState.events.length > 100) agentState.events.pop();
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Error loading historical events:', err);
+        }
+        renderCurrentView();
         }
 
         function updateBreadcrumb() {
