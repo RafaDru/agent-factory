@@ -1113,63 +1113,106 @@
         .mission-card {
             border-radius: var(--radius-md);
             box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            padding: 16px;
-            margin-bottom: 16px;
+            margin-bottom: 8px;
             background: var(--bg-glass);
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
-            transition: var(--transition-smooth);
+            overflow: hidden;
         }
-        .mission-card:hover {
-            border-color: var(--border-neon-cyan);
-            box-shadow: 0 0 15px var(--cyan-glow);
+        .mission-card[open] {
+            padding-bottom: 4px;
         }
         .mission-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-glass);
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            user-select: none;
+        }
+        .mission-header::-webkit-details-marker {
+            display: none;
+        }
+        .mission-header::before {
+            content: '▶';
+            margin-right: 8px;
+            font-size: 0.7rem;
+            transition: transform 0.2s;
+            color: var(--text-secondary);
+        }
+        .mission-card[open] .mission-header::before {
+            transform: rotate(90deg);
         }
         .mission-title {
             font-weight: 600;
             color: var(--text-primary);
+            flex: 1;
         }
         .mission-status {
-            font-size: 0.8rem;
+            font-size: 0.7rem;
             font-weight: 600;
             padding: 2px 8px;
             border-radius: var(--radius-full);
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--green);
+            margin-right: 8px;
         }
+        .mission-status.status-success { background: rgba(34,197,94,0.15); color: var(--green); }
+        .mission-status.status-failed { background: rgba(239,68,68,0.15); color: var(--red); }
         .mission-time {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: var(--text-muted);
         }
-        .mission-steps {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
+        .mission-body {
+            padding: 0 14px 8px 14px;
         }
-        .mission-step {
+        .agent-node {
+            margin-left: 0;
+            border-left: 2px solid var(--border-glass);
+            padding-left: 12px;
+            margin-bottom: 6px;
+            transition: all 0.2s;
+        }
+        .agent-node.level-1 {
+            margin-left: 32px;
+        }
+        .agent-node.level-2 {
+            margin-left: 64px;
+        }
+        .node-card {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 4px solid var(--border-glass);
+            background: var(--bg-glass);
+        }
+        .node-card.status-success { border-left-color: var(--green); background: rgba(34,197,94,0.05); }
+        .node-card.status-failed { border-left-color: var(--red); background: rgba(239,68,68,0.05); }
+        .node-card.status-running { border-left-color: var(--yellow); background: rgba(234,179,8,0.05); }
+        .node-header {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
+            gap: 6px;
+        }
+        .node-avatar {
+            font-size: 1rem;
+            line-height: 1;
+        }
+        .node-name {
+            font-weight: 600;
+            font-size: 0.8rem;
+            color: var(--text-primary);
+        }
+        .node-body {
+            margin: 4px 0 0 22px;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            margin-bottom: 8px;
         }
-        .chat-left {
-            justify-content: flex-start;
+        .node-footer {
+            margin: 4px 0 0 22px;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            opacity: 0.7;
         }
-        .chat-right {
-            justify-content: flex-end;
-        }
-        .chat-avatar {
-            width: 28px;
+        .chat-left, .chat-right, .chat-avatar {
             height: 28px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--cyan), var(--purple));
@@ -1787,7 +1830,6 @@
                 <div class="team-detail-layout">
                     <div>
                         <h2 style="margin-bottom: 20px;">${project.name} — ${L.agents}</h2>
-                        ${renderLastExecution(project.id)}
                         ${agentsHtml}
                     </div>
                     <div class="timeline-panel" id="interaction-flow" style="margin-top: 32px;">
@@ -1854,7 +1896,7 @@
                 }
             });
             allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            allEvents = allEvents.slice(0, 50);
+            allEvents = allEvents.slice(0, 100);
 
             if (allEvents.length === 0) {
                 return `
@@ -1863,17 +1905,13 @@
                 `;
             }
 
-            // Group events by task_id or trace_id
             const groups = {};
             allEvents.forEach(event => {
                 const key = event.task_id || event.trace_id || L.uncategorized;
-                if (!groups[key]) {
-                    groups[key] = [];
-                }
+                if (!groups[key]) groups[key] = [];
                 groups[key].push(event);
             });
 
-            // Sort groups by the timestamp of the first event (most recent first)
             const sortedGroups = Object.entries(groups).sort((a, b) => {
                 const aTime = new Date(a[1][0].timestamp).getTime();
                 const bTime = new Date(b[1][0].timestamp).getTime();
@@ -1883,48 +1921,54 @@
             let html = `
                 <div class="timeline-header">
                     <span>${L.interactionFlow}</span>
-                    <div class="timeline-tabs">
-                        <button class="tab-btn active">${L.timeline}</button>
-                        <button class="tab-btn">${L.logs}</button>
-                    </div>
+                    <span class="mission-count">${sortedGroups.length} missions</span>
                 </div>
                 <div class="timeline-items">
             `;
 
             sortedGroups.forEach(([groupKey, events]) => {
-                // Sort events within group by timestamp ascending (oldest first) for logical flow
                 events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
                 const firstEvent = events[0];
                 const lastEvent = events[events.length - 1];
                 const startTime = new Date(firstEvent.timestamp).toLocaleString();
-                const endTime = new Date(lastEvent.timestamp).toLocaleString();
                 const status = lastEvent.status || 'unknown';
+                const statusClass = status === 'completed' || status === 'success' ? 'status-success' :
+                                    status === 'failed' ? 'status-failed' : '';
 
                 html += `
-                <div class="mission-card">
-                    <div class="mission-header">
-                        <span class="mission-title">Mission: ${groupKey}</span>
-                        <span class="mission-status">${status}</span>
-                        <span class="mission-time">${startTime} — ${endTime}</span>
-                    </div>
-                    <div class="mission-steps">
+                <details class="mission-card">
+                    <summary class="mission-header">
+                        <span class="mission-title">${groupKey}</span>
+                        <span class="mission-status ${statusClass}">${status.toUpperCase()}</span>
+                        <span class="mission-time">${startTime}</span>
+                    </summary>
+                    <div class="mission-body">
                 `;
 
+                let lastAgentId = null;
                 events.forEach((event, idx) => {
-                    const emoji = getAgentEmoji(event.agentId);
-                    const agentId = event.agentId || event.actor;
+                    const agentId = event.agentId || event.actor || '?';
                     const message = event.message || 'Event';
                     const timestamp = new Date(event.timestamp).toLocaleTimeString();
-                    const isCoordinator = agentId.toLowerCase().includes('coordinator');
-                    const alignClass = isCoordinator ? 'chat-left' : 'chat-right';
+                    const emoji = getAgentEmoji(agentId);
+                    const evtStatus = event.status || 'unknown';
+                    const nodeStatusClass = evtStatus === 'completed' || evtStatus === 'success' ? 'status-success' :
+                                            evtStatus === 'failed' ? 'status-failed' :
+                                            evtStatus === 'running' ? 'status-running' : '';
+
+                    const isNewAgent = lastAgentId !== null && agentId !== lastAgentId;
+                    const level = isNewAgent ? 1 : 0;
+                    lastAgentId = agentId;
 
                     html += `
-                        <div class="mission-step ${alignClass}">
-                            <div class="chat-avatar">${emoji}</div>
-                            <div class="chat-bubble">
-                                <div class="chat-message">${message}</div>
-                                <div class="chat-timestamp">${timestamp}</div>
+                        <div class="agent-node level-${level}">
+                            <div class="node-card ${nodeStatusClass}">
+                                <div class="node-header">
+                                    <span class="node-avatar">${emoji}</span>
+                                    <span class="node-name">${agentId}</span>
+                                </div>
+                                <div class="node-body">${message}</div>
+                                <div class="node-footer">${evtStatus} • ${timestamp}</div>
                             </div>
                         </div>
                     `;
@@ -1932,7 +1976,7 @@
 
                 html += `
                     </div>
-                </div>`;
+                </details>`;
             });
 
             html += '</div>';

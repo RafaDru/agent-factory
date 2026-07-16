@@ -145,9 +145,17 @@ class StandardBaseAgent(AgentBase):
 
     def emit(self, status: AgentStatus, message: str, task: dict, payload: Optional[dict] = None):
         payload = payload or {}
+        if self._llm is not None:
+            provider_name = getattr(self._llm, 'provider_name', None) or getattr(self._llm, '_provider_name', None)
+            model_name = getattr(self._llm, 'model_name', None) or getattr(self._llm, '_model_name', None)
+        else:
+            provider_name = None
+            model_name = None
         metrics = {
             "duration_ms": (datetime.utcnow() - self._start_time).total_seconds() * 1000 if self._start_time else 0
         }
+        metrics['provider'] = provider_name or 'unknown'
+        metrics['model'] = model_name or 'unknown'
         event = AgentEvent(
             agent_id=self.agent_id,
             agent_role=self.role,

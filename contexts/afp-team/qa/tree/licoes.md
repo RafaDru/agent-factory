@@ -2,6 +2,11 @@
 
 ## Consolidado
 
+### Revisar layout
+- **Acao**: review_code
+- **Resumo**: Codigo analisado via LLM
+
+
 ### Revisar grid de 3 colunas
 - **Acao**: review_code
 - **Resumo**: Codigo analisado via LLM
