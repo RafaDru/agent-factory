@@ -945,7 +945,18 @@
             color: var(--red);
         }
 
-        @media (max-width: 768px) {
+                .team-section {
+            margin-bottom: 16px;
+        }
+        .team-section h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+@media (max-width: 768px) {
             #app {
                 padding: 16px;
             }
@@ -1787,21 +1798,9 @@
             if (!project.agents || project.agents.length === 0) {
                 agentsHtml = `<div class="empty-state">${L.noAgents}</div>`;
             } else {
-                agentsHtml = '<div class="agents-grid">';
-                project.agents.forEach(agent => {
-                    const agentState = state.agentsState[agent.id] || {
-                        status: 'ready',
-                        subStatus: 'idle',
-                        task: null,
-                        mission: null,
-                        timer: 0,
-                        timerStart: null,
-                        context: 0,
-                        lastExecution: null,
-                        events: []
-                    };
+                // Helper to generate agent card HTML
+                const generateAgentCard = (agent, agentState) => {
                     const statusInfo = getStatusInfo(agentState.status);
-
                     const lastTaskStatus = agentState.lastTaskStatus || 'idle';
                     const lastStatusInfo = getStatusInfo(lastTaskStatus);
                     const lastLabel = lastTaskStatus === 'idle' ? '-' : lastStatusInfo.label;
@@ -1809,12 +1808,10 @@
                     let contextClass = 'context-low';
                     if (contextPct >= 80) contextClass = 'context-high';
                     else if (contextPct >= 50) contextClass = 'context-medium';
-
                     const emoji = getAgentEmoji(agent.role || agent.id);
                     const timerDisplay = agentState.status === 'running' ? `
                         <div class="timer" id="timer-${agent.id}">${formatTime(agentState.timer || 0)}</div>
                     ` : '';
-
                     const modelUsed = agentState.lastExecution?.model || null;
                     const lastExecHtml = agentState.lastExecution ? `
                         <div class="last-execution">
@@ -1825,8 +1822,7 @@
                             <span>• ${formatDuration(agentState.lastExecution.duration)}</span>
                         </div>
                     ` : '';
-
-                    agentsHtml += `
+                    return `
                     <div class="agent-card ${statusInfo.cardClass}" id="agent-${agent.id}" data-agent-id="${agent.id}" data-flash-success="${agentState.flashSuccess ? 'true' : 'false'}">
                         <div class="agent-card-header">
                             <div class="agent-avatar">${emoji}</div>
@@ -1862,8 +1858,56 @@
                         <div class="context-text">Context: ${contextPct}%</div>
                         ${lastExecHtml}
                     </div>`;
+                };
+
+                // Group agents
+                const groups = {
+                    coordenador: [],
+                    upstream: [],
+                    downstream: []
+                };
+                project.agents.forEach(agent => {
+                    const id = (agent.id || '').toLowerCase();
+                    const role = (agent.role || '').toLowerCase();
+                    if (id === 'coordenador' || role === 'coordenador') {
+                        groups.coordenador.push(agent);
+                    } else if (['designer', 'arquiteto', 'negocios'].includes(id) || ['designer', 'arquiteto', 'negocios'].includes(role)) {
+                        groups.upstream.push(agent);
+                    } else if (['dev', 'qa'].includes(id) || ['dev', 'qa'].includes(role)) {
+                        groups.downstream.push(agent);
+                    } else {
+                        // fallback: put unknown in downstream
+                        groups.downstream.push(agent);
+                    }
                 });
-                agentsHtml += '</div>';
+
+                const groupNames = {
+                    coordenador: 'Coordenador',
+                    upstream: 'UPSTREAM',
+                    downstream: 'DOWNSTREAM'
+                };
+
+                agentsHtml = '';
+                ['coordenador', 'upstream', 'downstream'].forEach(groupKey => {
+                    const agentsInGroup = groups[groupKey];
+                    if (agentsInGroup.length === 0) return;
+                    agentsHtml += `<div class="team-section"><h3>${groupNames[groupKey]}</h3><div class="agents-grid">`;
+                    agentsInGroup.forEach(agent => {
+                        const agentState = state.agentsState[agent.id] || {
+                            status: 'ready',
+                            subStatus: 'idle',
+                            task: null,
+                            mission: null,
+                            timer: 0,
+                            timerStart: null,
+                            context: 0,
+                            lastExecution: null,
+                            events: []
+                        };
+                        agentsHtml += generateAgentCard(agent, agentState);
+                    });
+                    agentsHtml += '</div></div>';
+                });
             }
 
             const timelineHtml = renderTimeline(project.agents);

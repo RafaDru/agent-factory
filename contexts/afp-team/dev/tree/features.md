@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Commit log button addition
+- **Acao**: run_git
+- **Resumo**: [master c3a3847] add per-agent log button
+
+
 ### Commit padding increase
 - **Acao**: run_git
 - **Resumo**: [master 8cd69d6] increase card padding and header gap
