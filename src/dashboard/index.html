@@ -1489,6 +1489,19 @@
             } else if (timerEl) {
                 timerEl.remove();
             }
+
+            const lastBadge = card.querySelector('.last-task-badge');
+            if (lastBadge) {
+                const lastStatus = aState.lastTaskStatus || 'idle';
+                const lastInfo = getStatusInfo(lastStatus);
+                lastBadge.className = 'last-task-badge ' + lastInfo.statusClass;
+                lastBadge.textContent = 'Last: ' + (lastStatus === 'idle' ? '-' : lastInfo.label);
+            }
+
+            const modelSpan = card.querySelector('.last-model span');
+            if (modelSpan && aState.lastExecution?.model) {
+                modelSpan.textContent = aState.lastExecution.model;
+            }
         }
 
         // ==================== NAVIGATION ====================
@@ -1739,7 +1752,7 @@
                                 <div class="agent-status ${statusInfo.statusClass}">
                                     <span class="status-dot ${statusInfo.dotClass}"></span>${statusInfo.label}
                                 </div>
-                                <div class="last-task-badge ${lastStatusInfo.statusClass}">Última: ${lastLabel}</div>
+                                <div class="last-task-badge ${lastStatusInfo.statusClass}">${L.last} ${lastLabel}</div>
                                 ${(agentState.status === 'running' || agentState.status === 'completed' || agentState.status === 'success' || agentState.status === 'failed') ? `<div class="sub-status">${agentState.task || agentState.subStatus || L.executing}</div>` : ''}
                             </div>
                         </div>

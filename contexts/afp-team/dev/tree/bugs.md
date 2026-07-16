@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit das alterações da issue #8
+- **Acao**: run_git
+- **Resumo**: [master d466d8f] feat: redesign interaction flow as chat conversation (issue #8)
+
+
 ### Commit das alterações da issue #10
 - **Acao**: run_git
 - **Resumo**: [master 8abc8a8] feat: separate current status and last task status (issue #10)
