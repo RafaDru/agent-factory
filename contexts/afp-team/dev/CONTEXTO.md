@@ -32,3 +32,12 @@ Agente de desenvolvimento da plataforma Agent Factory. Opera arquivos reais no s
 
 ## Working Directory
 `C:\Users\rafae\agent-factory`
+
+## Licoes Aprendidas
+
+1. Flexbox scroll bug: overflow-y:auto sem 'min-height:0' em flex child não scrolla quando o parent tem overflow:hidden.
+2. async/await: função com 'await' precisa ser declarada 'async'.
+3. Event delegation: document.addEventListener('click') com closest() para elementos renderizados dinamicamente. Deve estar no escopo global, não aninhado dentro de outra função.
+4. Timestamps: datetime.utcnow() retorna naive (sem tzinfo). JS interpreta ISO sem timezone como LOCAL. Usar datetime.now(timezone.utc) no backend e anexar 'Z' no frontend se string naive.
+5. Interaction Flow: carregar eventos históricos de /api/events em switchView() para popular agentState.events.
+

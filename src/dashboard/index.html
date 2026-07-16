@@ -1132,7 +1132,7 @@
         }
 
         // ==================== NAVIGATION ====================
-        function navigateTo(view, params = {}) {
+        async function navigateTo(view, params = {}) {
             state.navigationStack.push({
                 view: state.currentView,
                 params: { projectId: state.currentProjectId }
@@ -1146,7 +1146,7 @@
             switchView(prev.view, prev.params);
         }
 
-        function switchView(view, params = {}) {
+        async function switchView(view, params = {}) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             const viewEl = document.getElementById(`view-${view}`);
             if (viewEl) viewEl.classList.add('active');
@@ -1742,24 +1742,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function clearLogs() {
-        // Click on agent card opens logs filtered for that agent
-        document.addEventListener('click', function(e) {
-            const card = e.target.closest('.agent-card');
-            if (!card) return;
-            const agentId = card.dataset.agentId;
-            if (!agentId) return;
-            // Open logs panel
-            if (logsPanel) {
-                logsPanel.style.display = 'block';
-            }
-            // Set filter
-            if (filterAgent) {
-                filterAgent.value = agentId;
-            }
-            // Apply filters
-            applyFilters();
-        });
-
             if (logEntriesContainer) {
                 logEntriesContainer.innerHTML = '';
             }
@@ -1767,6 +1749,22 @@ document.addEventListener('DOMContentLoaded', function() {
             filterType.value = 'all';
             applyFilters();
         }
+
+        // Click on agent card opens logs filtered for that agent
+        document.addEventListener('click', function(e) {
+            const card = e.target.closest('.agent-card');
+            if (!card) return;
+            const agentId = card.dataset.agentId;
+            if (!agentId) return;
+            if (logsPanel) {
+                logsPanel.style.display = 'block';
+            }
+            updateAgentFilterOptions();
+            if (filterAgent) {
+                filterAgent.value = agentId;
+            }
+            applyFilters();
+        });
 
         if (logsToggle && logsPanel) {
             logsToggle.addEventListener('click', () => {
