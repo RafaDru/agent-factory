@@ -1304,6 +1304,9 @@
                 const events = Array.isArray(eventsData) ? eventsData : (eventsData.events || []);
                 events.forEach(event => {
                     const agentId = event.agent_id;
+                    if (agentId && !state.agentsState[agentId]) {
+                        state.agentsState[agentId] = { status:'ready', subStatus:'idle', task:null, mission:null, timer:0, timerStart:null, context:0, lastExecution:null, events: [] };
+                    }
                     if (agentId && state.agentsState[agentId]) {
                         const agentState = state.agentsState[agentId];
                         agentState.events.unshift({
