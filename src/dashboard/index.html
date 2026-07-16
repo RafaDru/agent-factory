@@ -776,6 +776,7 @@
                 <button class="btn" id="btnRefresh" onclick="refreshData()" title="Refresh">
                     ↻
                 </button>
+                <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
             </div>
         </header>
 
@@ -1287,6 +1288,35 @@
         window.navigateBack = navigateBack;
         window.refreshData = refreshData;
         window.toggleTimelineDetails = toggleTimelineDetails;
+
+        // Theme toggle
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const btn = document.getElementById('theme-toggle');
+            if (btn) {
+                btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+            }
+        }
+
+        // Initialize theme from localStorage
+        (function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme) {
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                updateThemeIcon(savedTheme);
+            } else {
+                // default is dark, icon moon
+                updateThemeIcon('dark');
+            }
+        })();
     </script>
 </body>
 </html>

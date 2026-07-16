@@ -6,6 +6,7 @@ Opera arquivos reais: ler, escrever, editar, rodar scripts/testes/git.
 
 import os
 import sys
+import json
 import subprocess
 import traceback
 from pathlib import Path
@@ -403,47 +404,129 @@ Retorne o plano seguido pelos blocos de codigo com ```."""
         context_prefix = self._build_context_prompt(task)
         prompt = f"""{context_prefix}
 
-Analise e refatore o seguinte codigo:
+Analise o seguinte codigo e gere as edicoes necessarias para implementar as instrucoes.
 
-Instrucoes: {instructions}
+INSTRUCOES: {instructions}
 
+ARQUIVO ATUAL ({len(content)} chars):
 ```{path.suffix[1:] if path.suffix else ''}
 {content}
 ```
 
-Retorne APENAS o codigo refatorado completo dentro de um bloco ```."""
-        system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=32000)
+IMPORTANTE: Nao retorne o arquivo completo. Retorne APENAS um JSON com as edicoes a serem aplicadas:
+
+Formatos aceitos (use qualquer um):
+```json
+[
+  {{
+    "action": "insert_after",
+    "anchor": "texto unico que vem ANTES do local",
+    "content": "novo codigo"
+  }},
+  {{
+    "action": "replace",
+    "old": "texto exato a substituir",
+    "new": "novo texto"
+  }}
+]
+```
+
+Ou alternativamente:
+```json
+[
+  {{
+    "action": "insert_after",
+    "find": "texto unico que vem ANTES",
+    "insert": "novo codigo"
+  }},
+  {{
+    "action": "replace",
+    "find": "texto a substituir",
+    "replace": "novo texto"
+  }}
+]
+```
+
+Regras:
+- anchor deve ser um texto unico no arquivo (ex: </style>, </header>, <!-- ALVO -->)
+- Para CSS/JS inline, insira dentro dos blocos <style> e <script> existentes
+- Preserve todo o codigo existente, apenas adicione/modifique secoes
+- Nao duplique tags ou elementos"""
+        system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original. Retorne JSON valido."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=16000)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
             self._save_artifact(task, "original_code.md", content)
-            cleaned = llm_response.strip()
-            if cleaned.startswith("```"):
-                first_nl = cleaned.find("\n")
-                if first_nl != -1:
-                    cleaned = cleaned[first_nl + 1:]
-                if cleaned.endswith("```"):
-                    cleaned = cleaned[:-3].strip()
-            # Validar saida: se for HTML, verificar tags essenciais
-            if path.suffix in (".html", ".htm"):
-                missing = []
-                if "</html>" not in cleaned:
-                    missing.append("</html>")
-                if "<script>" in content and "</script>" not in cleaned:
-                    missing.append("</script>")
-                if missing:
-                    return TaskOutput.failure(
-                        rationale=f"LLM truncou o HTML — tags ausentes: {', '.join(missing)}. "
-                                  f"Resposta: {len(cleaned)} chars (original: {len(content)}). "
-                                  f"Use max_tokens maior ou divida em partes menores.",
-                        available_actions=["edit_file", "write_file"],
-                    )
-            path.write_text(cleaned, encoding="utf-8")
+            text = llm_response.strip()
+            # Debug: save raw response for debugging
+            try:
+                debug_dir = Path(".agent-factory") / "artifacts" / "AFP-Team" / "dev"
+                debug_dir.mkdir(parents=True, exist_ok=True)
+                (debug_dir / "last_refactor_response.txt").write_text(text[:5000], encoding="utf-8")
+            except Exception:
+                pass
+            # Extrair JSON do bloco ```json ... ``` se presente
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].split("```")[0].strip()
+            try:
+                edits = json.loads(text)
+            except json.JSONDecodeError:
+                return TaskOutput.failure(
+                    rationale=f"LLM retornou JSON invalido. Resposta: {text[:500]}",
+                    available_actions=["edit_file", "write_file"],
+                )
+            if not isinstance(edits, list):
+                edits = [edits]
+            new_content = content
+            changes = 0
+            for edit in edits:
+                action = edit.get("action", "replace")
+                # Suporta chaves alternativas (find=old, insert=content/anchor)
+                def _val(key, alt):
+                    return edit.get(key) or edit.get(alt) or ""
+                if action == "insert_after":
+                    anchor = _val("anchor", "find")
+                    insert = _val("content", "insert")
+                    if anchor not in new_content:
+                        return TaskOutput.failure(
+                            rationale=f"Anchor '{anchor[:50]}' nao encontrado no arquivo.",
+                            available_actions=["edit_file", "write_file"],
+                        )
+                    new_content = new_content.replace(anchor, anchor + "\n" + insert, 1)
+                    changes += 1
+                elif action == "insert_before":
+                    anchor = _val("anchor", "find")
+                    insert = _val("content", "insert")
+                    if anchor not in new_content:
+                        return TaskOutput.failure(
+                            rationale=f"Anchor '{anchor[:50]}' nao encontrado.",
+                            available_actions=["edit_file", "write_file"],
+                        )
+                    new_content = new_content.replace(anchor, insert + "\n" + anchor, 1)
+                    changes += 1
+                elif action == "replace":
+                    old = _val("old", "find")
+                    new = _val("new", "replace")
+                    if old not in new_content:
+                        return TaskOutput.failure(
+                            rationale=f"Texto '{old[:50]}' nao encontrado.",
+                            available_actions=["edit_file", "write_file"],
+                        )
+                    new_content = new_content.replace(old, new, 1)
+                    changes += 1
+            if changes == 0:
+                return TaskOutput.failure(
+                    rationale="Nenhuma edicao foi aplicada. Edicoes vazias ou formato invalido.",
+                    available_actions=["edit_file", "write_file"],
+                )
+            path.write_text(new_content, encoding="utf-8")
             return TaskOutput.success(
-                summary=f"Codigo refatorado via LLM e salvo em {path}",
+                summary=f"Refatorado via LLM: {changes} edicao(oes) em {path}",
                 rationale=f"LLM: {self._llm.__class__.__name__ if self._llm else 'N/A'}",
-                file_path=str(path), before_size=len(content), after_size=len(llm_response),
+                file_path=str(path), before_size=len(content), after_size=len(new_content), changes=changes,
             )
         return TaskOutput.failure(
             rationale="LLM nao disponivel para refatoracao.",

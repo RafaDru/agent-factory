@@ -381,6 +381,7 @@ class OpenCodeGoProvider(OpenAICompatibleProvider):
     """
     Provedor OpenCode Go — modelos DeepSeek V4 Pro/Flash.
     OpenAI-compatible API via https://opencode.ai/zen/go/v1.
+    Thinking mode desabilitado para maximizar tokens de conteudo visivel.
 
     API Key: OPENCODEGO_API_KEY ou OPENCODE_API_KEY
     Modelos: deepseek-v4-pro, deepseek-v4-flash, qwen3.5-plus, etc.
@@ -405,6 +406,26 @@ class OpenCodeGoProvider(OpenAICompatibleProvider):
 
     def _get_env_key_name(self) -> str:
         return "OPENCODEGO_API_KEY"
+
+    def chat(
+        self,
+        messages: list[dict[str, str]],
+        model: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        **kwargs
+    ) -> LLMResponse:
+        """Desabilita thinking mode para maximizar tokens de conteudo visivel."""
+        if "extra_body" not in kwargs:
+            kwargs["extra_body"] = {}
+        kwargs["extra_body"]["thinking"] = {"type": "disabled"}
+        return super().chat(
+            messages=messages,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
 
 
 class OpenCodeZenProvider(OpenAICompatibleProvider):
@@ -1062,15 +1083,15 @@ class SmartRouterProvider(LLMProvider):
 
     _PROVIDER_CACHE: dict[str, LLMProvider] = {}
 
-    # Ranking: OpenCode Go primeiro, depois Zen (fallback), Gemini ultimo
+    # Ranking: Free first (Zen, Groq, Cerebras), Go (paid) como fallback final
     RANKINGS: dict[str, list[str]] = {
-        "coder": ["opencode", "opencode_zen", "groq", "deepseek", "cerebras", "mistral", "huggingface", "gemini"],
-        "reasoner": ["opencode", "opencode_zen", "groq", "deepseek", "cerebras", "mistral", "gemini"],
-        "analysis": ["opencode", "opencode_zen", "groq", "deepseek", "openrouter", "mistral", "huggingface", "gemini"],
-        "fast": ["opencode", "opencode_zen", "groq", "cerebras"],
-        "planner": ["opencode", "opencode_zen", "groq", "deepseek", "mistral", "gemini"],
-        "review": ["opencode", "opencode_zen", "groq", "deepseek", "mistral", "huggingface", "gemini"],
-        "default": ["opencode", "opencode_zen", "groq", "deepseek", "openrouter", "cerebras", "mistral", "huggingface", "gemini"],
+        "coder": ["opencode_zen", "groq", "cerebras", "deepseek", "mistral", "huggingface", "openrouter", "opencode", "gemini"],
+        "reasoner": ["opencode_zen", "groq", "deepseek", "cerebras", "mistral", "opencode", "gemini"],
+        "analysis": ["opencode_zen", "groq", "deepseek", "openrouter", "mistral", "huggingface", "opencode", "gemini"],
+        "fast": ["opencode_zen", "groq", "cerebras", "opencode"],
+        "planner": ["opencode_zen", "groq", "deepseek", "mistral", "opencode", "gemini"],
+        "review": ["opencode_zen", "groq", "deepseek", "mistral", "huggingface", "opencode", "gemini"],
+        "default": ["opencode_zen", "groq", "deepseek", "openrouter", "cerebras", "mistral", "huggingface", "opencode", "gemini"],
     }
 
     def __init__(self, verbose: bool = True):
