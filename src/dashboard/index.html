@@ -760,6 +760,132 @@
                 font-size: 1.1rem;
             }
         }
+    /* ========== LOGS PANEL ========== */
+    #logs-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1000;
+        max-width: 800px;
+        width: 90%;
+        height: 70vh;
+        border-radius: var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: var(--transition-smooth);
+    }
+
+    /* Tema escuro: glass morphism */
+    :root[data-theme="dark"] #logs-panel {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Tema claro: sombra suave */
+    :root[data-theme="light"] #logs-panel {
+        background: #ffffff;
+        border: 1px solid var(--border-glass);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .logs-panel-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border-glass);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .logs-panel-header h2 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+
+    .logs-filters {
+        display: flex;
+        gap: 8px;
+    }
+
+    .logs-filters select {
+        padding: 6px 12px;
+        border-radius: var(--radius-xs);
+        border: 1px solid var(--border-glass);
+        background: var(--bg-glass);
+        color: var(--text-primary);
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+    }
+
+    .logs-filters select:hover {
+        border-color: var(--border-neon-cyan);
+    }
+
+    .logs-filters select:focus {
+        outline: none;
+        border-color: var(--cyan);
+        box-shadow: 0 0 0 2px var(--cyan-glow);
+    }
+
+    #log-entries {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .log-entry {
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border-glass);
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        transition: background 0.2s;
+        border-radius: var(--radius-xs);
+    }
+
+    .log-entry:hover {
+        background: var(--bg-glass);
+    }
+
+    .log-entry .timestamp {
+        color: var(--text-muted);
+        margin-right: 8px;
+    }
+
+    .log-entry .agent-id {
+        color: var(--cyan);
+        font-weight: 600;
+        margin-right: 8px;
+    }
+
+    .log-entry .status {
+        font-weight: 600;
+        margin-right: 8px;
+    }
+
+    .log-entry .task-id {
+        color: var(--purple);
+    }
+
+    #clear-logs {
+        margin: 12px 20px;
+        align-self: flex-end;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
     </style>
 </head>
 <body>
