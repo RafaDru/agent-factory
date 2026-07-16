@@ -751,7 +751,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     if not context_dir.exists():
                         continue
                     # Carregar ContextTree
-                    tree = ContextTree(context_dir)
+                    tree = ContextTree(pid, agent_id)
                     stats = tree.stats()
                     # Adicionar project_id e agent_id
                     stats["project_id"] = pid
