@@ -627,6 +627,16 @@
             white-space: nowrap;
         }
 
+        .last-model {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        .last-model span {
+            color: var(--cyan);
+            font-weight: 500;
+        }
+
         .timer {
             font-size: 0.8rem;
             font-weight: 600;
@@ -1126,12 +1136,14 @@
                 }
             }
 
+            const model = event.metrics?.model || (event.metrics?.provider && event.metrics?.model ? `${event.metrics.provider}/${event.metrics.model}` : event.metrics?.provider || null);
             agentState.lastExecution = {
                 timestamp: event.timestamp || new Date().toISOString(),
                 mission: agentState.mission,
                 task: agentState.task,
                 status: agentState.status,
-                duration: event.metrics?.duration_ms || 0
+                duration: event.metrics?.duration_ms || 0,
+                model: model
             };
 
             agentState.events.unshift({
@@ -1339,6 +1351,7 @@
                         <div class="timer" id="timer-${agent.id}">${formatTime(agentState.timer || 0)}</div>
                     ` : '';
 
+                    const modelUsed = agentState.lastExecution?.model || null;
                     const lastExecHtml = agentState.lastExecution ? `
                         <div class="last-execution">
                             <span>${new Date(agentState.lastExecution.timestamp).toLocaleString()}</span>
@@ -1376,6 +1389,7 @@
                                 <option value="opencode" ${(agent.llm_mode || 'AUTO') === 'opencode' ? 'selected' : ''}>opencode (deepseek-v4-pro)</option>
                             </select>
                         </div>
+                        <div class="last-model">Ultimo: <span>${modelUsed || 'Nenhuma execução ainda'}</span></div>
                         <div class="context-bar">
                             <div class="context-fill ${contextClass}" style="width: ${Math.min(contextPct, 100)}%"></div>
                         </div>
