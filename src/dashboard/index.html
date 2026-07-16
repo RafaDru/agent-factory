@@ -1704,6 +1704,10 @@
         }
 
         // ==================== RENDER FUNCTIONS ====================
+function safeDate(iso) { if (!iso) return null; if (!iso.endsWith('Z') && !iso.includes('+')) iso += 'Z'; return new Date(iso); }
+function formatTimestamp(isoString) { const d = safeDate(isoString); return d ? d.toLocaleString() : ''; }
+function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeString() : ''; }
+
         function renderCurrentView() {
             if (state.currentView === 'projects') renderProjects();
             else if (state.currentView === 'team-detail') renderTeamDetail();
@@ -1790,7 +1794,7 @@
             const agentsCount = project ? (project.agents?.length || 0) : '?';
             const status = lastMission.status || 'unknown';
             const timestamp = lastMission.timestamp || lastMission.created_at;
-            const formattedTime = timestamp ? new Date(timestamp).toLocaleString() : 'N/A';
+            const formattedTime = timestamp ? formatTimestamp(timestamp) : 'N/A';
 
             let statusClass = '';
             if (status === 'completed' || status === 'success') statusClass = 'success';
@@ -1841,7 +1845,7 @@
                     const modelUsed = agentState.lastExecution?.model || null;
                     const lastExecHtml = agentState.lastExecution ? `
                         <div class="last-execution">
-                            <span>${new Date(agentState.lastExecution.timestamp).toLocaleString()}</span>
+                            <span>${formatTimestamp(agentState.lastExecution.timestamp)}</span>
                             <span>• ${agentState.lastExecution.mission || 'N/A'}</span>
                             <span>• ${agentState.lastExecution.task || 'N/A'}</span>
                             <span>• ${agentState.lastExecution.status}</span>
@@ -2042,13 +2046,14 @@
                 events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
                 const firstEvent = events[0];
                 const lastEvent = events[events.length - 1];
-                const startTime = new Date(firstEvent.timestamp).toLocaleString();
+                const startTime = formatTimestamp(firstEvent.timestamp);
                 const status = lastEvent.status || 'unknown';
                 const statusClass = status === 'completed' || status === 'success' ? 'status-success' :
                                     status === 'failed' ? 'status-failed' : '';
+                const isRunning = status === 'running';
 
                 html += `
-                <details class="mission-card">
+                <details class="mission-card"${isRunning ? ' open' : ''}>
                     <summary class="mission-header">
                         <span class="mission-title">${groupKey}</span>
                         <span class="mission-status ${statusClass}">${status.toUpperCase()}</span>
@@ -2091,7 +2096,7 @@
                     if (node.type === 'event' || node.agentId) {
                         const agentId = node.agentId || '?';
                         const message = node.message || 'Event';
-                        const timestamp = node.timestamp ? new Date(node.timestamp).toLocaleTimeString() : '';
+                        const timestamp = safeTime(node.timestamp);
                         const emoji = getAgentEmoji(agentId);
                         const evtStatus = node.status || 'unknown';
                         const nsClass = evtStatus === 'completed' || evtStatus === 'success' ? 'status-success' :
@@ -2115,7 +2120,7 @@
                         const emoji = getAgentEmoji(delegator);
                         const tgtEmoji = getAgentEmoji(target);
                         const delegMsg = `→ delegou para ${tgtEmoji} ${target}`;
-                        const ts = first.timestamp ? new Date(first.timestamp).toLocaleTimeString() : '';
+                        const ts = safeTime(first.timestamp);
                         let html = `<div class="agent-node level-${depth}">
                             <div class="node-card delegation">
                                 <div class="node-header">
@@ -2406,14 +2411,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.textContent = id;
                 filterAgent.appendChild(option);
             });
-        }
-
-        function formatTimestamp(isoString) {
-            if (isoString && !isoString.endsWith('Z') && !isoString.includes('+')) {
-                isoString += 'Z';
-            }
-            const date = new Date(isoString);
-            return date.toLocaleString();
         }
 
         window.addLogEntry = function(event) {
