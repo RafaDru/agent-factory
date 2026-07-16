@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit da redução dos cards
+- **Acao**: run_git
+- **Resumo**: [master 9986c44] Step 1: Reduce agent cards by 30%
+
+
 ### Commit (segunda parte) do script de adição de issues
 - **Acao**: run_git
 - **Resumo**: [master 6b4dbd0] feat: script para adicionar issues ao board #4

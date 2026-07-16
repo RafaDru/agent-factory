@@ -2,6 +2,11 @@
 
 ## Consolidado
 
+### Revisar redução dos cards
+- **Acao**: review_code
+- **Resumo**: Codigo analisado via LLM
+
+
 ### Revisar atualização do CONTEXTO.md
 - **Acao**: review_code
 - **Resumo**: Codigo analisado via LLM
