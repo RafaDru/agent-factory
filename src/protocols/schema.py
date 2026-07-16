@@ -5,7 +5,7 @@ Formato de saída padronizado para comunicação entre agentes.
 Inspirado em LangGraph + OpenTelemetry + CloudEvents.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 from pydantic import BaseModel, Field
@@ -55,7 +55,7 @@ class AgentEvent(BaseModel):
     agent_id: str  # Identificador único do agente
     agent_role: AgentRole
     status: AgentStatus
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Contexto da tarefa
     task_id: str  # ID da tarefa sendo executada
