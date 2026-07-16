@@ -517,6 +517,29 @@
             margin: 12px 0;
         }
 
+        .llm-select {
+            background: var(--bg-glass);
+            color: var(--text-primary);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-xs);
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            flex: 1;
+            margin-left: 8px;
+        }
+        .llm-select:hover {
+            border-color: var(--border-neon-cyan);
+        }
+        .llm-select:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 2px var(--cyan-glow);
+        }
+
         .llm-badge {
             background: rgba(34, 211, 238, 0.15);
             color: var(--cyan);
@@ -1235,8 +1258,13 @@
                         </div>
                         ${timerDisplay}
                         <div class="llm-mode">
-                            <span>Mode: <span class="llm-badge">${agent.llm_mode || 'AUTO'}</span></span>
-                            <span>${agent.llm_model || 'groq/llama-3.3-70b'}</span>
+                            <label for="llm-select-${agent.id}" style="font-size:0.8rem; color: var(--text-secondary);">LLM:</label>
+                            <select id="llm-select-${agent.id}" class="llm-select" onchange="updateAgentConfig('${agent.id}', this.value)">
+                                <option value="AUTO" ${(agent.llm_mode || 'AUTO') === 'AUTO' ? 'selected' : ''}>AUTO</option>
+                                <option value="opencode_zen" ${(agent.llm_mode || 'AUTO') === 'opencode_zen' ? 'selected' : ''}>opencode_zen (deepseek-v4-pro)</option>
+                                <option value="groq" ${(agent.llm_mode || 'AUTO') === 'groq' ? 'selected' : ''}>groq (llama-3.3-70b)</option>
+                                <option value="opencode" ${(agent.llm_mode || 'AUTO') === 'opencode' ? 'selected' : ''}>opencode (deepseek-v4-pro)</option>
+                            </select>
                         </div>
                         <div class="context-bar">
                             <div class="context-fill ${contextClass}" style="width: ${Math.min(contextPct, 100)}%"></div>
@@ -1352,6 +1380,21 @@
             const mins = Math.floor(secs / 60);
             const remainingSecs = secs % 60;
             return `${mins}m ${remainingSecs}s`;
+        }
+
+        async function updateAgentConfig(agentId, llmProvider) {
+            try {
+                const response = await fetch('/api/agent-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId, llm_provider: llmProvider })
+                });
+                if (!response.ok) {
+                    console.error('Failed to update agent config:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error updating agent config:', error);
+            }
         }
 
         // ==================== INITIALIZATION ====================

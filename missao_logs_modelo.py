@@ -49,14 +49,15 @@ def main():
         )),
         ("Seletor de Modelo LLM", (
             "Adicionar seletor de modelo LLM nos cards de agente do dashboard:\n"
-            "1. No renderTeamDetail(), substituir 'Mode: AUTO / groq/llama-3.3-70b' "
+            "1. No renderTeamDetail() em src/dashboard/index.html, substituir 'Mode: AUTO / groq/llama-3.3-70b' "
             "por um dropdown com: AUTO, opencode_zen (deepseek-v4-pro), "
             "groq (llama-3.3-70b), opencode (deepseek-v4-pro)\n"
             "2. Ao selecionar, enviar POST /api/agent-config com agent_id e llm_provider\n"
-            "3. Adicionar endpoint /api/agent-config em server.py (GET + POST)\n"
+            "3. Adicionar endpoint /api/agent-config em src/dashboard/server.py (GET + POST)\n"
             "4. Salvar config em .agent-factory/agent_config.json\n"
             "5. Carregar config salva ao iniciar\n"
-            "Use refactor_code para index.html e refactor_code para server.py."
+            "Use refactor_code com file_path='src/dashboard/index.html' e "
+            "refactor_code com file_path='src/dashboard/server.py'."
         )),
     ]
 
