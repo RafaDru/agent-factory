@@ -446,29 +446,47 @@
             margin-top: 6px;
         }
 
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        .dot-success { background: var(--green); }
+        .dot-running { background: var(--yellow); }
+        .dot-failed { background: var(--red); }
+        .dot-idle { background: var(--text-muted); }
+
+        .agent-card.success {
+            border-color: var(--green);
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.1);
+        }
+
         .status-running {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--green);
-            border: 1px solid var(--green);
-            animation: pulse 2s infinite;
-        }
-
-        .status-ready {
-            background: rgba(34, 211, 238, 0.2);
-            color: var(--cyan);
-            border: 1px solid var(--cyan);
-        }
-
-        .status-stopped {
             background: rgba(234, 179, 8, 0.2);
             color: var(--yellow);
             border: 1px solid var(--yellow);
+            animation: pulse 2s infinite;
+        }
+
+        .status-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
         }
 
         .status-failed {
             background: rgba(239, 68, 68, 0.2);
             color: var(--red);
             border: 1px solid var(--red);
+        }
+
+        .status-idle {
+            background: rgba(100, 116, 139, 0.2);
+            color: var(--text-muted);
+            border: 1px solid var(--text-muted);
         }
 
         .sub-status {
@@ -1221,7 +1239,7 @@
                         lastExecution: null,
                         events: []
                     };
-                    const statusClass = agentState.status;
+                    const statusInfo = getStatusInfo(agentState.status);
                     const contextPct = agentState.context || 0;
                     let contextClass = 'context-low';
                     if (contextPct >= 80) contextClass = 'context-high';
@@ -1243,13 +1261,15 @@
                     ` : '';
 
                     agentsHtml += `
-                    <div class="agent-card ${statusClass}" id="agent-${agent.id}">
+                    <div class="agent-card ${statusInfo.cardClass}" id="agent-${agent.id}">
                         <div class="agent-card-header">
                             <div class="agent-avatar">${emoji}</div>
                             <div class="agent-info">
                                 <div class="agent-name">${agent.name || agent.id}</div>
                                 <div class="agent-role">${agent.role || 'Agent'}</div>
-                                <div class="agent-status status-${statusClass}">${agentState.status.toUpperCase()}</div>
+                                <div class="agent-status ${statusInfo.statusClass}">
+                                    <span class="status-dot ${statusInfo.dotClass}"></span>${statusInfo.label}
+                                </div>
                                 <div class="sub-status">${agentState.subStatus || 'idle'}</div>
                             </div>
                         </div>
@@ -1394,6 +1414,33 @@
             const mins = Math.floor(secs / 60);
             const remainingSecs = secs % 60;
             return `${mins}m ${remainingSecs}s`;
+        }
+
+        function getStatusInfo(status) {
+            const s = (status || 'idle').toLowerCase();
+            let statusClass, dotClass, label, cardClass;
+            if (s === 'running') {
+                statusClass = 'status-running';
+                dotClass = 'dot-running';
+                label = 'RUNNING';
+                cardClass = 'running';
+            } else if (s === 'completed' || s === 'success') {
+                statusClass = 'status-success';
+                dotClass = 'dot-success';
+                label = 'SUCCESS';
+                cardClass = 'success';
+            } else if (s === 'failed') {
+                statusClass = 'status-failed';
+                dotClass = 'dot-failed';
+                label = 'FAILED';
+                cardClass = 'failed';
+            } else {
+                statusClass = 'status-idle';
+                dotClass = 'dot-idle';
+                label = 'IDLE';
+                cardClass = 'ready';
+            }
+            return { statusClass, dotClass, label, cardClass };
         }
 
         async function updateAgentConfig(agentId, llmProvider) {
