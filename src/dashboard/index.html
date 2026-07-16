@@ -1283,7 +1283,7 @@
                     ` : '';
 
                     agentsHtml += `
-                    <div class="agent-card ${statusInfo.cardClass}" id="agent-${agent.id}">
+                    <div class="agent-card ${statusInfo.cardClass}" id="agent-${agent.id}" data-agent-id="${agent.id}">
                         <div class="agent-card-header">
                             <div class="agent-avatar">${emoji}</div>
                             <div class="agent-info">
@@ -1714,6 +1714,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function clearLogs() {
+        // Click on agent card opens logs filtered for that agent
+        document.addEventListener('click', function(e) {
+            const card = e.target.closest('.agent-card');
+            if (!card) return;
+            const agentId = card.dataset.agentId;
+            if (!agentId) return;
+            // Open logs panel
+            if (logsPanel) {
+                logsPanel.style.display = 'block';
+            }
+            // Set filter
+            if (filterAgent) {
+                filterAgent.value = agentId;
+            }
+            // Apply filters
+            applyFilters();
+        });
+
             if (logEntriesContainer) {
                 logEntriesContainer.innerHTML = '';
             }
