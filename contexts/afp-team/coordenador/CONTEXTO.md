@@ -59,3 +59,5 @@ Usar `stats()` para monitorar eficiencia:
 - **NUNCA incluir designer em plano de codigo**: designer so faz pesquisa/prototipo. Codigo sempre com dev.
 - **CSS duplicado**: Verificar se regra CSS ja existe antes de adicionar nova. Manter consistencia com variaveis do tema.
 - **Context Tree**: Atualizar arvore apos cada missao com aprendizado relevante.
+
+- **run_command com whitelist**: run_command com whitelist permite interagir com GitHub CLI (gh). Usar para ler issues, atualizar board, e gerenciar backlog.
