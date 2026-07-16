@@ -8,7 +8,7 @@ Suporta SSE (Server-Sent Events) e arquivos JSON.
 import json
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Callable
 from .schema import AgentEvent, AgentStatus, TaskResult
@@ -141,7 +141,7 @@ class EventNotifier:
             "project_id": self.project_id,
             "phase": phase,
             "progress": progress,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         with open(self._status_file, "w", encoding="utf-8") as f:
             json.dump(status, f, indent=2)
