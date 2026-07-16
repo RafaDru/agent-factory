@@ -1,1 +1,0 @@
-AFP-Team agents: ['coordenador', 'dev', 'qa', 'designer']

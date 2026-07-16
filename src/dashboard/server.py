@@ -79,12 +79,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._serve_projects()
         elif path == "/api/missions":
             self._serve_missions()
-        elif path.startswith("/api/agent/") and path.endswith("/provider"):
-            self._serve_agent_provider(path)
-        elif path == "/api/debug":
         elif path == "/api/agent-config":
             self._serve_agent_config()
+        elif path == "/api/debug":
             self._serve_debug()
+        elif path.startswith("/api/agent/") and path.endswith("/provider"):
+            self._serve_agent_provider(path)
         else:
             self.send_error(404, "Endpoint não encontrado")
 
@@ -93,9 +93,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
-        if path.startswith("/api/agent/") and path.endswith("/provider"):
-        elif path == "/api/agent-config":
+        if path == "/api/agent-config":
             self._post_agent_config()
+        elif path.startswith("/api/agent/") and path.endswith("/provider"):
             self._post_agent_provider(path)
         else:
             self.send_error(404, "Endpoint POST não encontrado")
