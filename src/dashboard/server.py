@@ -288,22 +288,33 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             """Helper para obter dados de contexto de um agente específico."""
             entry = {}
 
-            # Dados do ContextStore
+            # File-based context from CONTEXTO.md
+            if project_id:
+                context_file = Path("contexts") / project_id / agent_id / "CONTEXTO.md"
+                if context_file.exists():
+                    size = context_file.stat().st_size
+                    entry["has_context"] = True
+                    entry["context_size_bytes"] = size
+                    entry["context_pct"] = min(100.0, round((size / 10240) * 100, 1))
+                else:
+                    entry["has_context"] = False
+                    entry["context_size_bytes"] = 0
+                    entry["context_pct"] = 0.0
+            else:
+                entry["has_context"] = False
+                entry["context_size_bytes"] = 0
+                entry["context_pct"] = 0.0
+
+            # Additional data from store if available
             if store:
                 try:
                     agent_events_store = store.get_agent_history(agent_id, limit=10000)
-                    context_data = store.get_agent_context(agent_id)
-
-                    entry = {
-                        "events": len(agent_events_store),
-                        "context_size_bytes": len(json.dumps(context_data)) if context_data else 0,
-                        "has_context": bool(context_data),
-                        "last_event": agent_events_store[0]["timestamp"] if agent_events_store else None,
-                    }
+                    entry["events"] = len(agent_events_store)
+                    entry["last_event"] = agent_events_store[0]["timestamp"] if agent_events_store else None
                 except Exception:
                     pass
 
-            # Dados de tracking de contexto dos eventos
+            # Context tracking from events
             if notifier:
                 for event in reversed(notifier.get_events()):
                     if event.agent_id == agent_id and event.metrics.get("context"):
