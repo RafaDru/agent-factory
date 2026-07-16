@@ -591,6 +591,30 @@
             border: 1px solid var(--text-muted);
         }
 
+        .last-task-badge {
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: var(--radius-xs);
+            opacity: 0.8;
+            display: inline-block;
+            margin-top: 4px;
+        }
+        .last-task-badge.status-success {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--green);
+            border: 1px solid var(--green);
+        }
+        .last-task-badge.status-failed {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--red);
+            border: 1px solid var(--red);
+        }
+        .last-task-badge.status-idle {
+            background: rgba(100, 116, 139, 0.2);
+            color: var(--text-muted);
+            border: 1px solid var(--text-muted);
+        }
+
         .sub-status {
             font-size: 0.8rem;
             color: var(--text-secondary);
@@ -1285,6 +1309,7 @@
                     timerStart: null,
                     context: 0,
                     lastExecution: null,
+                    lastTaskStatus: null,
                     events: []
                 };
             }
@@ -1310,6 +1335,12 @@
                     agentState.flashSuccess = true;
                 } else {
                     agentState.flashSuccess = false;
+                }
+
+                if (agentState.status === 'completed' || agentState.status === 'success') {
+                    agentState.lastTaskStatus = 'success';
+                } else if (agentState.status === 'failed') {
+                    agentState.lastTaskStatus = 'failed';
                 }
             }
 
@@ -1630,6 +1661,10 @@
                         events: []
                     };
                     const statusInfo = getStatusInfo(agentState.status);
+
+                    const lastTaskStatus = agentState.lastTaskStatus || 'idle';
+                    const lastStatusInfo = getStatusInfo(lastTaskStatus);
+                    const lastLabel = lastTaskStatus === 'idle' ? '-' : lastStatusInfo.label;
                     const contextPct = agentState.context || 0;
                     let contextClass = 'context-low';
                     if (contextPct >= 80) contextClass = 'context-high';
@@ -1661,6 +1696,7 @@
                                 <div class="agent-status ${statusInfo.statusClass}">
                                     <span class="status-dot ${statusInfo.dotClass}"></span>${statusInfo.label}
                                 </div>
+                                <div class="last-task-badge ${lastStatusInfo.statusClass}">Última: ${lastLabel}</div>
                                 ${(agentState.status === 'running' || agentState.status === 'completed' || agentState.status === 'success' || agentState.status === 'failed') ? `<div class="sub-status">${agentState.task || agentState.subStatus || L.executing}</div>` : ''}
                             </div>
                         </div>
@@ -1969,6 +2005,7 @@
                                 timerStart: null,
                                 context: 0,
                                 lastExecution: null,
+                                lastTaskStatus: null,
                                 events: []
                             };
                         }

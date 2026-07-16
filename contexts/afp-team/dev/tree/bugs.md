@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit das alterações da issue #9
+- **Acao**: run_git
+- **Resumo**: [master c76febe] fix: improve model extraction fallback (issue #9)
+
+
 ### Commit das alterações da issue #7
 - **Acao**: run_git
 - **Resumo**: [master 1c7d349] fix: adjust spacing between sections (issue #7)
