@@ -452,20 +452,13 @@ Regras:
 - Para CSS/JS inline, insira dentro dos blocos <style> e <script> existentes
 - Preserve todo o codigo existente, apenas adicione/modifique secoes
 - Nao duplique tags ou elementos"""
-        system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original. Retorne JSON valido."
-        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=16000)
+        system_prompt = "Voce e um engenheiro de software sênior especializado em refatoracao. Preserve a funcionalidade original. IMPORTANTE: responda APENAS com JSON valido (formato descrito abaixo). NUNCA retorne codigo HTML/JS/CSS diretamente — sempre use o formato JSON de edicoes."
+        llm_response = self._llm_think(prompt, system_prompt=system_prompt, max_tokens=32000)
 
         if llm_response:
             self._save_artifact(task, "llm_raw_response.md", llm_response)
             self._save_artifact(task, "original_code.md", content)
             text = llm_response.strip()
-            # Debug: save raw response for debugging
-            try:
-                debug_dir = Path(".agent-factory") / "artifacts" / "AFP-Team" / "dev"
-                debug_dir.mkdir(parents=True, exist_ok=True)
-                (debug_dir / "last_refactor_response.txt").write_text(text[:5000], encoding="utf-8")
-            except Exception:
-                pass
             # Extrair JSON do bloco ```json ... ``` se presente
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()

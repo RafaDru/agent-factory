@@ -1298,6 +1298,19 @@
                     state.eventTimers[agent.id] = setInterval(() => updateTimer(agent.id), 1000);
                 }
             });
+
+            // Fetch and set LLM config for each agent
+            project.agents.forEach(agent => {
+                fetch(`/api/agent-config?agent_id=${encodeURIComponent(agent.id)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const selectEl = document.getElementById(`llm-select-${agent.id}`);
+                        if (selectEl && data.llm_provider) {
+                            selectEl.value = data.llm_provider;
+                        }
+                    })
+                    .catch(err => console.error('Error fetching agent config:', err));
+            });
         }
 
         function renderTimeline(agents) {

@@ -1,0 +1,3 @@
+Script started
+Registry loaded
+Loading dev...
