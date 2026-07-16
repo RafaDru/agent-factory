@@ -189,7 +189,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 print(f"[Dashboard] Erro ao ler eventos de {n.project_id}: {e}")
 
         # Ordenar por timestamp (mais recente primeiro)
-        all_events.sort(key=lambda e: e.timestamp, reverse=True)
+        # Normalizar: strip tzinfo de todos para evitar erro naive vs aware
+        all_events.sort(key=lambda e: e.timestamp.replace(tzinfo=None), reverse=True)
 
         # Extrair modelo do LLM de cada agente
         agent_models: Dict[str, str] = {}
@@ -206,11 +207,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     if m:
                         agent_models[aid] = m
 
+        # Limitar a 500 eventos para nao sobrecarregar a resposta
+        limited = all_events[:500]
+
         # Construir resposta
         result = {
-            "events": [e.model_dump(mode="json") for e in all_events],
+            "events": [e.model_dump(mode="json") for e in limited],
             "providers": dict(self.agent_providers),
             "agent_models": agent_models,
+            "total": len(all_events),
         }
 
         self.send_response(200)

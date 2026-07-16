@@ -1077,6 +1077,10 @@
         color: var(--cyan);
         font-weight: 500;
     }
+
+    .team-detail-layout {
+        gap: 24px;
+    }
     </style>
 </head>
 <body>
@@ -1401,17 +1405,25 @@
                 </div>`;
             });
             html += '</div>';
-            html += renderLastExecution();
             container.innerHTML = html;
         }
 
-        function renderLastExecution() {
+        function renderLastExecution(projectId) {
             if (!state.missions || state.missions.length === 0) {
                 return '<div class="last-execution-section"><div class="last-execution-title">Última Execução</div><div class="no-execution">Nenhuma execução recente</div></div>';
             }
 
+            // Filtrar missoes do projeto (se especificado)
+            let missions = state.missions;
+            if (projectId) {
+                missions = missions.filter(m => m.project_id === projectId || (m.objective || '').includes(projectId));
+            }
+            if (missions.length === 0) {
+                return '';
+            }
+
             // Ordena missões por timestamp decrescente (mais recente primeiro)
-            const sortedMissions = [...state.missions].sort((a, b) => {
+            const sortedMissions = [...missions].sort((a, b) => {
                 const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
                 const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
                 return timeB - timeA;
@@ -1422,9 +1434,9 @@
                 return '<div class="last-execution-section"><div class="last-execution-title">Última Execução</div><div class="no-execution">Nenhuma execução recente</div></div>';
             }
 
-            const projectId = lastMission.project_id || 'unknown';
-            const project = state.projects.find(p => p.id === projectId);
-            const projectName = project ? project.name : projectId;
+            const missionProjectId = lastMission.project_id || projectId || 'unknown';
+            const project = state.projects.find(p => p.id === missionProjectId);
+            const projectName = project ? project.name : missionProjectId;
             const agentsCount = project ? (project.agents?.length || 0) : '?';
             const status = lastMission.status || 'unknown';
             const timestamp = lastMission.timestamp || lastMission.created_at;
@@ -1438,7 +1450,7 @@
             return `
                 <div class="last-execution-section">
                     <div class="last-execution-title">Última Execução</div>
-                    <div class="execution-card" onclick="navigateTo('team-detail', { projectId: '${projectId}' })">
+                    <div class="execution-card" onclick="navigateTo('team-detail', { projectId: '${missionProjectId}' })">
                         <div class="execution-info">
                             <span class="execution-project">${projectName}</span>
                             <span class="execution-details">${agentsCount} agentes • ${formattedTime}</span>
@@ -1541,6 +1553,7 @@
                 <div class="team-detail-layout">
                     <div>
                         <h2 style="margin-bottom: 20px;">${project.name} — Agents</h2>
+                        ${renderLastExecution(project.id)}
                         ${agentsHtml}
                     </div>
                     <div class="timeline-panel" id="interaction-flow">
