@@ -1206,6 +1206,9 @@
             filteredBy: 'Filtered by:',
             noAgents: 'No agents',
             agentsRunning: 'agents running',
+        executing: L.executing,
+        mission: '${L.mission}',
+        uncategorized: L.uncategorized,
         };
         // ==================== STATE MANAGEMENT ====================
         const state = {
@@ -1584,7 +1587,7 @@
                     <div class="execution-card" onclick="navigateTo('team-detail', { projectId: '${missionProjectId}' })">
                         <div class="execution-info">
                             <span class="execution-project">${projectName}</span>
-                            <span class="execution-details">${agentsCount} agentes • ${formattedTime}</span>
+                            <span class="execution-details">${agentsCount} ${L.agents} • ${formattedTime}</span>
                         </div>
                         <span class="execution-status ${statusClass}">${status.toUpperCase()}</span>
                     </div>
