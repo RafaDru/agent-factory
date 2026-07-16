@@ -414,6 +414,13 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         for event in notifier.get_events():
             seen.add(event.agent_id)
 
+        # Fallback: ler diretórios do filesystem para agentes com CONTEXTO.md
+        contexts_dir = Path('contexts') / project_id
+        if contexts_dir.exists():
+            for d in contexts_dir.iterdir():
+                if d.is_dir() and (d / 'CONTEXTO.md').exists():
+                    seen.add(d.name)
+
         return sorted(seen)
 
     def _serve_agent_provider(self, path: str) -> None:

@@ -1765,7 +1765,7 @@
                 }));
                 // ----------------------------------------
 
-                state.missions = missions;
+                state.missions = Array.isArray(missions) ? missions : (missions.missions || []);
 
                 // Inicializa estado dos agentes
                 state.projects.forEach(project => {
