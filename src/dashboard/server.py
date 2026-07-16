@@ -670,6 +670,7 @@ class DashboardServer:
 
     def __init__(
         self,
+        notifier: Optional[EventNotifier] = None,
         port: int = 8080,
         host: str = "localhost",
         context_store: Optional[Any] = None,
@@ -677,6 +678,7 @@ class DashboardServer:
         """Inicializa o servidor do dashboard.
 
         Args:
+            notifier: (deprecated — ignorado, usa registry)
             port: Porta para o servidor HTTP
             host: Host para o servidor HTTP
             context_store: Instância de ContextStore opcional
@@ -685,10 +687,12 @@ class DashboardServer:
         self.host = host
         self._server: Optional[HTTPServer] = None
 
-        # Obter notifiers do registry
+        # Obter notifiers do registry (compartilhado com missoes)
         registry = get_registry()
-        for notifier in registry.get_notifiers():
-            DashboardHandler.notifiers[notifier.project_id] = notifier
+        for pid in registry.list_project_ids():
+            n = registry.get_notifier(pid)
+            if n:
+                DashboardHandler.notifiers[n.project_id] = n
 
         # Registrar context store se fornecida
         if context_store:

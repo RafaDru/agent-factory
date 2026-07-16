@@ -16,6 +16,8 @@ Agente de qualidade do Agent Factory. Valida codigo, executa testes e linters.
 | analyze_project | Usa LLM para analisar saude geral do projeto |
 | get_capabilities | Retorna acoes disponiveis |
 
+| test_event_pipeline | Executa pytest tests/test_event_pipeline.py -v e valida o pipeline de eventos |
+
 ## Exemplos
 
 ```json
@@ -25,8 +27,20 @@ Agente de qualidade do Agent Factory. Valida codigo, executa testes e linters.
 {"action": "review_code", "file_path": "src/agents/factory_dev.py"}
 {"action": "suggest_fixes", "error": "pytest failed with AssertionError", "file_path": "tests/test_all.py"}
 {"action": "analyze_project", "path": "src/"}
+
+{"action": "run_tests", "path": "tests/test_event_pipeline.py", "args": ["-v"]}
 ```
 
 ## Notas
 - pyright precisa estar instalado globalmente (npm install -g pyright)
 - pytest e ruff sao dependencias do projeto
+
+
+## Testes de Pipeline de Eventos
+
+O QA deve validar que:
+- Eventos sao emitidos durante execucao de missoes
+- Eventos persistem em .agent-events/<project>/events.jsonl
+- REST /api/events retorna eventos apos missao
+- SSE entrega eventos em tempo real
+- Painel de logs no frontend exibe eventos corretamente
