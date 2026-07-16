@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit das alterações da issue #10
+- **Acao**: run_git
+- **Resumo**: [master 8abc8a8] feat: separate current status and last task status (issue #10)
+
+
 ### Commit das alterações da issue #9
 - **Acao**: run_git
 - **Resumo**: [master c76febe] fix: improve model extraction fallback (issue #9)
