@@ -1450,12 +1450,14 @@
 
             // Fetch context for project
             API.fetchContext(project.id).then(data => {
-                if (data && typeof data === 'object') {
-                    Object.entries(data).forEach(([agentId, contextValue]) => {
+                if (data && data.agents) {
+                    Object.entries(data.agents).forEach(([agentId, agentContext]) => {
+                        const contextPct = agentContext.context_pct || 0;
+                        const sizeBytes = agentContext.context_size_bytes || 0;
                         if (state.agentsState[agentId]) {
-                            state.agentsState[agentId].context = contextValue;
+                            state.agentsState[agentId].context = contextPct;
                         }
-                        updateAgentContext(agentId, contextValue);
+                        updateAgentContext(agentId, contextPct, sizeBytes);
                     });
                 }
             }).catch(err => console.error('Error fetching context:', err));
@@ -1573,13 +1575,13 @@
             return { statusClass, dotClass, label, cardClass };
         }
 
-        function updateAgentContext(agentId, contextValue) {
+        function updateAgentContext(agentId, contextPct, sizeBytes) {
             const card = document.getElementById(`agent-${agentId}`);
             if (!card) return;
             const contextFill = card.querySelector('.context-fill');
             const contextText = card.querySelector('.context-text');
             if (contextFill) {
-                const pct = Math.min(Math.max(contextValue || 0, 0), 100);
+                const pct = Math.min(Math.max(contextPct || 0, 0), 100);
                 contextFill.style.width = pct + '%';
                 contextFill.classList.remove('context-low', 'context-medium', 'context-high');
                 if (pct >= 80) contextFill.classList.add('context-high');
@@ -1587,7 +1589,8 @@
                 else contextFill.classList.add('context-low');
             }
             if (contextText) {
-                contextText.textContent = `Context: ${contextValue || 0}%`;
+                const kb = sizeBytes ? (sizeBytes / 1024).toFixed(1) : '0.0';
+                contextText.textContent = `Context: ${contextPct || 0}% (${kb} KB)`;
             }
         }
 
