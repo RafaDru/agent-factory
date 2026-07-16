@@ -1802,7 +1802,9 @@
 
         async function loadPastEvents() {
             try {
-                const res = await fetch('/api/events');
+                const controller = new AbortController();
+                setTimeout(() => controller.abort(), 5000);
+                const res = await fetch('/api/events', { signal: controller.signal });
                 if (!res.ok) throw new Error('Failed to fetch events');
                 const data = await res.json();
                 const events = (data.events || data).reverse();
@@ -1814,7 +1816,7 @@
                     });
                 }
             } catch (err) {
-                console.error('Error loading past events:', err);
+                console.warn('Error loading past events:', err);
             }
         }
 
