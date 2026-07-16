@@ -1327,7 +1327,12 @@
                 }
             }
 
-            const model = event.metrics?.model || (event.metrics?.provider && event.metrics?.model ? `${event.metrics.provider}/${event.metrics.model}` : event.metrics?.provider || null);
+            const model = event.metrics?.model 
+                || (event.metrics?.provider ? `${event.metrics.provider}/${event.metrics.model || ''}` : null)
+                || (event.payload?.model)
+                || (agentState.llmConfig?.provider)
+                || null;
+            agentState.llmConfig = { provider: event.metrics?.provider || null };
             agentState.lastExecution = {
                 timestamp: event.timestamp || new Date().toISOString(),
                 mission: agentState.mission,

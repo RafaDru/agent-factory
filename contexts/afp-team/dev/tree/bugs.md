@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit das alterações da issue #7
+- **Acao**: run_git
+- **Resumo**: [master 1c7d349] fix: adjust spacing between sections (issue #7)
+
+
 ### Commit das alterações da issue #11
 - **Acao**: run_git
 - **Resumo**: [master 7c064dc] fix: remove card borders and add box-shadow (issue #11)
