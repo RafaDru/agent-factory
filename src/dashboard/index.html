@@ -1293,6 +1293,22 @@
 
 
 
+        .running-badge {
+            background: rgba(255, 193, 7, 0.15);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+            padding: 12px 20px;
+            border-radius: var(--radius-md);
+            margin-bottom: 24px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
     </style>
 </head>
 <body>
@@ -1700,7 +1716,17 @@
                 return;
             }
 
-            let html = '<div class="projects-grid">';
+            // Count total running agents across all agents
+            let totalRunning = 0;
+            Object.values(state.agentsState).forEach(aState => {
+                if (aState.status === 'running') totalRunning++;
+            });
+
+            let html = '';
+            if (totalRunning > 0) {
+                html += `<div class="running-badge">⚠️ ${totalRunning} agent${totalRunning !== 1 ? 's' : ''} running</div>`;
+            }
+            html += '<div class="projects-grid">';
             state.projects.forEach(project => {
                 const agentsCount = project.agents?.length || 0;
                 let activeCount = 0;
