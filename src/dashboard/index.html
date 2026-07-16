@@ -1428,6 +1428,19 @@
                 } else if (agentState.status === 'failed') {
                     agentState.lastTaskStatus = 'failed';
                 }
+
+                // Reset to idle after 5 seconds on completion
+                if (event.status === 'completed' || event.status === 'success') {
+                    if (state._idleTimers && state._idleTimers[agentId]) clearTimeout(state._idleTimers[agentId]);
+                    if (!state._idleTimers) state._idleTimers = {};
+                    state._idleTimers[agentId] = setTimeout(() => {
+                        if (state.agentsState[agentId]) {
+                            state.agentsState[agentId].status = 'ready';
+                            const card = document.getElementById('agent-' + agentId);
+                            if (card) updateAgentCardUI(agentId);
+                        }
+                    }, 5000);
+                }
             }
 
             if (event.sub_status || event.message) {

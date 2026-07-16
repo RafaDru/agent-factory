@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Commit das correções do Interaction Flow
+- **Acao**: run_git
+- **Resumo**: [master 4adbb5b] fix: add taskId to events and fix timeline grouping
+
+
 ### Commit da redução dos cards
 - **Acao**: run_git
 - **Resumo**: [master 9986c44] Step 1: Reduce agent cards by 30%
