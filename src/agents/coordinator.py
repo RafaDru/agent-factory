@@ -15,6 +15,7 @@ from src.protocols.events import EventNotifier
 from src.protocols.schema import AgentEvent, AgentStatus, AgentRole, TaskOutput, OutputStatus, Decision
 from src.sdk.base import StandardBaseAgent
 from src.sdk.decision import DecisionEngine, RuleBasedEngine
+from src.sdk.context_tree import ContextTree
 from src.llm import get_provider, LLMProvider
 
 
@@ -41,6 +42,14 @@ class AgentFactoryCoordinator(StandardBaseAgent):
                 "goal": "str (obrigatorio) - descricao do objetivo em linguagem natural",
                 "context": "str (opcional) - contexto adicional ou restricoes",
                 "tasks": "list[dict] (opcional) - se fornecido, pula o LLM e executa diretamente",
+            },
+        },
+        "reflect_on_mission": {
+            "description": "Apos uma missao, reflete sobre o que aprendeu e persiste na arvore de contexto",
+            "params": {
+                "mission_id": "str (obrigatorio) - ID da missao concluida",
+                "goal": "str (obrigatorio) - objetivo original da missao",
+                "steps": "list[dict] (obrigatorio) - steps retornados por plan_and_execute",
             },
         },
         "get_capabilities": {
@@ -215,6 +224,8 @@ Regras:
             return self._delegate(task)
         elif action == "plan_and_execute":
             return self._plan_and_execute(task)
+        elif action == "reflect_on_mission":
+            return self._reflect_on_mission(task)
         elif action == "get_capabilities":
             return self._get_capabilities()
         else:
@@ -614,6 +625,22 @@ Regras:
         accepted = sum(1 for r in results if r.get("decision") in ("accept", "skip"))
         failed = sum(1 for r in results if r["status"] in ("failure", "rejected"))
 
+        # Auto-reflexao ao final da missao
+        try:
+            self._reflect_on_mission({
+                "mission_id": mission_id,
+                "goal": goal,
+                "steps": results,
+            })
+        except Exception as e:
+            self.notifier.emit(AgentEvent(
+                agent_id=self.agent_id, agent_role=self.role,
+                status=AgentStatus.COMPLETED,
+                task_id="reflect",
+                project_id=self.project_id,
+                message=f"Reflexao falhou (nao critico): {e}",
+            ))
+
         return {
             "status": "ok" if failed == 0 and accepted > 0 else ("partial" if failed > 0 else "error"),
             "mission_id": mission_id,
@@ -624,6 +651,131 @@ Regras:
             "failed": failed,
             "skipped": total - accepted - failed,
             "steps": results,
+        }
+
+    def _reflect_on_mission(self, task: dict) -> dict:
+        mission_id = task.get("mission_id", "")
+        goal = task.get("goal", "")
+        steps = task.get("steps", [])
+
+        if not mission_id or not steps:
+            raise StructuredError(
+                message="Forneca 'mission_id' e 'steps' (lista de resultados)",
+                error_type="missing_params",
+                action_requested="reflect_on_mission",
+                available_actions=["get_capabilities"],
+                doc_path=self.get_doc_path(),
+                hint="Use o output de plan_and_execute como entrada.",
+            )
+
+        # Montar sumario dos resultados
+        summary_lines = [f"# Retrospectiva da Missao: {mission_id}", "", f"**Objetivo:** {goal}", ""]
+        accepted = []
+        failed = []
+        for s in steps:
+            status = s.get("status", "?")
+            agent = s.get("agent_id", "?")
+            step_name = s.get("step", "?")
+            decision = s.get("decision", "?")
+            justification = s.get("justification", "")
+            summary_lines.append(f"- **{step_name}** ({agent}): {status} / {decision}")
+            if justification:
+                summary_lines.append(f"  - Justificativa: {justification}")
+            if status == "success" and decision == "accept":
+                accepted.append(step_name)
+            elif status in ("failure", "rejected"):
+                failed.append(step_name)
+
+        # Ler resultados detalhados do disco
+        details = ""
+        for s in steps:
+            step_name = s.get("step", "")
+            agent_id = s.get("agent_id", "")
+            out_dir = self.get_task_output_dir(mission_id, step_name, agent_id)
+            result_file = out_dir / "result.md"
+            if result_file.exists():
+                details += f"\n\n## Resultado: {step_name} ({agent_id})\n\n"
+                details += result_file.read_text(encoding="utf-8")[:2000]
+
+        summary = "\n".join(summary_lines)
+
+        # Gerar reflexao via LLM
+        reflection = ""
+        if self._llm:
+            try:
+                sys_prompt = (
+                    "Voce e o coordenador refletindo sobre uma missao concluida. "
+                    "Analise os resultados e extraia aprendizado relevante para FUTURAS missoes. "
+                    "Foque em: planejamento (o DAG estava correto?), delegacao (os agentes certos?), "
+                    "priorizacao (a missao certa no momento certo?), e licoes gerais. "
+                    "Seja conciso (max 3 paragrafos)."
+                )
+                user_prompt = f"## Missao\n{summary}\n\n## Detalhes\n{details[:3000]}"
+                resp = self._llm.chat(
+                    messages=[
+                        {"role": "system", "content": sys_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.3,
+                    max_tokens=2048,
+                )
+                reflection = resp.content.strip()
+            except Exception as e:
+                reflection = f"(LLM reflection failed: {e})"
+
+        if not reflection:
+            reflection = f"Missao {mission_id}: {len(accepted)} aceitas, {len(failed)} falhas. {summary[:500]}"
+
+        # Persistir na arvore de contexto
+        tree = ContextTree(self.project_id, self.agent_id)
+        tree.ensure_initialized()
+
+        # Persistir como licoes
+        fake_output = TaskOutput.success(summary=reflection[:200])
+        tree.persist_learning(
+            {"action": "reflect_on_mission", "title": f"missao-{mission_id}"},
+            fake_output,
+            reflection,
+        )
+
+        # Tentar classificar em dominios especificos
+        for domain in ("planejamento", "delegacao", "priorizacao"):
+            if domain in reflection.lower():
+                tree.persist_learning(
+                    {"action": "reflect_on_mission", "title": f"missao-{mission_id}-{domain}"},
+                    fake_output,
+                    reflection,
+                )
+
+        # Atualizar CONTEXTO.md com resumo
+        ctx_path = self.get_doc_path()
+        if Path(ctx_path).exists():
+            current = Path(ctx_path).read_text(encoding="utf-8")
+            marker = "## Retrospectiva de Missoes"
+            entry = (
+                f"\n### {mission_id}\n"
+                f"- **Objetivo**: {goal[:100]}\n"
+                f"- **Resultado**: {len(accepted)}/{len(steps)} tarefas aceitas\n"
+            )
+            if failed:
+                entry += f"- **Falhas**: {', '.join(failed)}\n"
+            entry += f"- **Reflexao**: {reflection[:300]}\n"
+
+            if marker in current:
+                head, _, tail = current.partition(marker + "\n")
+                updated = head + marker + "\n" + entry + "\n" + tail
+            else:
+                updated = current + "\n\n---\n\n" + marker + "\n" + entry
+
+            Path(ctx_path).write_text(updated, encoding="utf-8")
+
+        return {
+            "status": "ok",
+            "mission_id": mission_id,
+            "accepted": len(accepted),
+            "failed": len(failed),
+            "total": len(steps),
+            "reflection": reflection[:500],
         }
 
     def _get_capabilities(self) -> dict:

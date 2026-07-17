@@ -1,4 +1,4 @@
-# Bugs — design — AFP-Team
+# Bugs — negocios — AFP-Team
 
 ## Conhecidos
 

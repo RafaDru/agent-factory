@@ -1,4 +1,4 @@
-# Features — design — AFP-Team
+# Features — negocios — AFP-Team
 
 ## Implementadas
 

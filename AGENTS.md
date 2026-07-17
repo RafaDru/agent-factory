@@ -171,16 +171,80 @@ Coordinator ──► LLM API (Groq/Ollama) ──► sub-session
 
 ---
 
-## MCP Server Interface (Planned)
+## Hybrid Communication: MCP + Event Bus (RabbitMQ)
 
-The MCP server will expose:
+The Agent Factory uses a **hybrid communication model**:
+
+```
+Chat IDE (OpenCode, Claude, Cursor)
+  │
+  ▼ MCP (sincrono, request-response)
+AFP MCP Gateway (src/server/)
+  │
+  ├──► Session Manager
+  │      │
+  │      ▼ RabbitMQ (exchange: afp, topic)
+  │
+  ├──► Agent Runtimes (src/agents/runtime.py)
+  │      │
+  │      ├── dev-runtime  ── escuta: task.run.dev
+  │      ├── qa-runtime   ── escuta: task.run.qa
+  │      ├── designer-runtime ── escuta: task.run.designer
+  │      ├── arquiteto-runtime ── escuta: task.run.arquiteto
+  │      └── negocios-runtime ── escuta: task.run.negocios
+  │
+  └──► Dashboard (SSE + REST)
+```
+
+### Routing Keys
+
+| Routing Key | Direction | Description |
+|-------------|-----------|-------------|
+| `task.run.{agent_id}` | Coordinator → Worker | Delegar tarefa para execucao |
+| `task.result.{agent_id}` | Worker → Coordinator | Resultado da execucao |
+| `agent.ask.{agent_id}` | Any → Agent | Pergunta/dialogo |
+| `agent.answer.{agent_id}` | Agent → Any | Resposta |
+| `agent.reply.{corr_id}` | Any → Any | Reply RPC (fila exclusiva) |
+
+### Vantagens do Modelo Hibrido
+
+| Camada | Protocolo | Quando usar |
+|--------|-----------|-------------|
+| **Externa** (IDE ↔ AFP) | MCP | Chamadas sincronas de ferramentas |
+| **Interna** (Agente ↔ Agente) | RabbitMQ | Delegacao, dialogo, progresso parcial |
+| **Monitoramento** (Dashboard) | SSE + REST | Eventos em tempo real, historico |
+
+### Como Executar
+
+```bash
+# 1. Iniciar RabbitMQ
+docker compose up -d rabbitmq
+
+# 2. Iniciar servidores (MCP + Dashboard)
+python -m src.server.main     # MCP em background
+python -m src.dashboard.server  # Dashboard em background
+
+# 3. Iniciar runtimes dos agentes
+python -m src.agents.runtime src.agents.factory_dev.AgentFactoryDevAgent dev AFP-Team
+python -m src.agents.runtime src.agents.qa.QAAgent qa AFP-Team
+python -m src.agents.runtime src.agents.design_factory.DesignAgent designer AFP-Team
+
+# Ou usar o script completo:
+.\start_all.ps1
+```
+
+---
+
+## MCP Server Interface
+
+The MCP server exposes:
 
 ### Tools
 
 | Tool | Description |
 |------|-------------|
 | `list_projects` | List registered projects and their agents |
-| `get_objective` | Submit high-level objective to a project's coordinator |
+| `run_objective` | Submit high-level objective to a project's coordinator |
 | `run_agent` | Execute a specific agent with a task |
 | `read_events` | Read recent events for monitoring |
 

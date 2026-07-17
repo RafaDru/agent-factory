@@ -44,6 +44,14 @@ class ContextTree:
         "run_git": [],
         "validate_python_syntax": ["bugs"],
         "analyze_project": ["arquitetura", "licoes"],
+        "reflect_on_mission": ["licoes", "planejamento", "delegacao"],
+    }
+
+    # Domínios extras para orquestração
+    ORCHESTRATION_KEYWORDS = {
+        "delegacao": ["delegac", "subordin", "subordinate", "alocac"],
+        "planejamento": ["planejament", "plan", "dag", "dependenc", "sequenci"],
+        "priorizacao": ["priorizac", "priority", "backlog", "epico", "historia"],
     }
 
     def __init__(self, project_id: str, agent_id: str):
@@ -59,26 +67,36 @@ class ContextTree:
         """Cria estrutura inicial se não existir."""
         self.tree_dir.mkdir(parents=True, exist_ok=True)
 
+        idx_domains = {
+            "bugs": "Bugs conhecidos, correcoes, padroes de erro",
+            "features": "Funcionalidades implementadas, decisoes tecnicas",
+            "arquitetura": "Decisoes arquiteturais, padroes de codigo",
+            "licoes": "Aprendizados consolidados",
+            "planejamento": "Estrategias de planejamento, DAG, dependencias",
+            "delegacao": "Padroes de delegacao, alocacao de agentes",
+            "priorizacao": "Criterios de priorizacao, backlog, epicos/historias",
+        }
         if not self.index_path.exists():
-            self.index_path.write_text(
-                f"# Context Tree — {self.agent_id} — {self.project_id}\n"
-                "\n"
-                "## Dominios Disponiveis\n"
-                "\n"
-                "| Dominio | Descricao | Arquivo |\n"
-                "|---------|-----------|---------|\n"
-                "| bugs | Bugs conhecidos, correcoes, padroes de erro | tree/bugs.md |\n"
-                "| features | Funcionalidades implementadas, decisoes tecnicas | tree/features.md |\n"
-                "| arquitetura | Decisoes arquiteturais, padroes de codigo | tree/arquitetura.md |\n"
-                "| licoes | Aprendizados consolidados | tree/licoes.md |\n",
-                encoding="utf-8",
-            )
+            idx_lines = [
+                f"# Context Tree — {self.agent_id} — {self.project_id}",
+                "",
+                "## Dominios Disponiveis",
+                "",
+                "| Dominio | Descricao | Arquivo |",
+                "|---------|-----------|---------|",
+            ]
+            for dom, desc in idx_domains.items():
+                idx_lines.append(f"| {dom} | {desc} | tree/{dom}.md |")
+            self.index_path.write_text("\n".join(idx_lines), encoding="utf-8")
 
         default_domains = {
             "bugs.md": "# Bugs — {} — {}\n\n## Conhecidos\n\n(Nenhum registro ainda)\n",
             "features.md": "# Features — {} — {}\n\n## Implementadas\n\n(Nenhum registro ainda)\n",
             "arquitetura.md": "# Arquitetura — {} — {}\n\n## Decisoes\n\n(Nenhum registro ainda)\n",
             "licoes.md": "# Licoes — {} — {}\n\n## Consolidado\n\n(Nenhum registro ainda)\n",
+            "planejamento.md": "# Planejamento — {} — {}\n\n## Estrategias\n\n(Nenhum registro ainda)\n",
+            "delegacao.md": "# Delegacao — {} — {}\n\n## Padroes\n\n(Nenhum registro ainda)\n",
+            "priorizacao.md": "# Priorizacao — {} — {}\n\n## Criterios\n\n(Nenhum registro ainda)\n",
         }
         for fname, template in default_domains.items():
             fpath = self.tree_dir / fname
@@ -106,7 +124,8 @@ class ContextTree:
 
         # Se LLM hint foi fornecido, também carrega
         if llm_hint:
-            for dom_name in re.findall(r'\b(bugs|features|arquitetura|licoes)\b', llm_hint.lower()):
+            all_domains = r'\b(' + '|'.join(list(self.ACTION_DOMAIN_MAP.get('reflect_on_mission', [])) + list(self.ORCHESTRATION_KEYWORDS.keys())) + r'|bugs|features|arquitetura|licoes)\b'
+            for dom_name in re.findall(all_domains, llm_hint.lower()):
                 fpath = self.tree_dir / f"{dom_name}.md"
                 if fpath.exists() and dom_name not in domains:
                     contents.append(f"--- {dom_name} ---\n{fpath.read_text(encoding='utf-8')}")
@@ -143,9 +162,12 @@ class ContextTree:
         if fpath.exists():
             current = fpath.read_text(encoding="utf-8")
             marker = "## Conhecidos" if domain == "bugs" else \
-                     "## Implementadas" if domain == "features" else \
-                     "## Decisoes" if domain == "arquitetura" else \
-                     "## Consolidado"
+                 "## Implementadas" if domain == "features" else \
+                 "## Decisoes" if domain == "arquitetura" else \
+                 "## Consolidado" if domain == "licoes" else \
+                 "## Estrategias" if domain == "planejamento" else \
+                 "## Padroes" if domain == "delegacao" else \
+                 "## Criterios"
             if marker in current:
                 # Inserir após o marcador
                 head, sep, tail = current.partition(marker)
@@ -163,6 +185,12 @@ class ContextTree:
             return None
 
         text_lower = text.lower()
+        # Orquestração (prioridade para coordinator)
+        if action == "reflect_on_mission":
+            for domain, keywords in self.ORCHESTRATION_KEYWORDS.items():
+                if any(w in text_lower for w in keywords):
+                    return domain
+            return "licoes"
         # Bugs
         if any(w in text_lower for w in ["bug", "fix", "corrig", "error", "fail", "crash",
                                           "scroll", "overflow", "broken", "issue"]):
@@ -175,6 +203,9 @@ class ContextTree:
         if any(w in text_lower for w in ["arquitetur", "padrao", "pattern", "design",
                                            "decisao", "decid"]):
             return "arquitetura"
+        # Orquestração (fallback para coordinator)
+        if action in ("reflect_on_mission",):
+            return "licoes"
         # Lições (fallback para ações de revisão)
         if action in ("review_code", "analyze_project", "suggest_fixes"):
             return "licoes"
