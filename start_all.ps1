@@ -15,7 +15,7 @@ if (-not $NoRabbitMQ) {
 
 # 2. MCP Server + Dashboard
 Write-Host "=== Iniciando servidores ===" -ForegroundColor Cyan
-$afp = Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "-m", "src.server.main" -PassThru
+$afp = Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "-m", "src.mcp.server", "--sse", "--port", "8081" -PassThru
 Start-Sleep -Seconds 2
 $dash = Start-Process -WindowStyle Hidden -FilePath python -ArgumentList "-m", "src.dashboard.server" -PassThru
 Start-Sleep -Seconds 2
@@ -35,7 +35,7 @@ if (-not $NoRuntimes) {
         @{id="qa"; class="src.agents.qa.QAAgent"}
         @{id="designer"; class="src.agents.design_factory.DesignAgent"}
         @{id="arquiteto"; class="src.agents.architect.ArchitectAgent"}
-        @{id="negocios"; class="src.agents.design_factory.DesignAgent"}
+        @{id="negocios"; class="src.agents.business.BusinessAgent"}
     )
     
     $runtimePids = @()
