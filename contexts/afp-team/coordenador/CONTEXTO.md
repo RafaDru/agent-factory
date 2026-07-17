@@ -94,6 +94,12 @@ Ao final de cada `plan_and_execute`, o coordenador automaticamente:
 
 ## Retrospectiva de Missoes
 
+### missao-modificar-metodo-_delegate-src-agents-coordinator
+- **Objetivo**: Modificar o metodo _delegate() em src/agents/coordinator.py para usar RabbitMQ quando disponivel
+- **Resultado**: 6/6 tarefas aceitas
+- **Reflexao**: O planejamento da missão seguiu um DAG linear simples: leitura do arquivo, implementação, commit (em dois passos), validação de sintaxe e revisão de código. Essa sequência foi adequada para uma alteração pontual e sem dependências complexas, garantindo que cada etapa fosse concluída antes da próxima
+
+
 ### missao-adicionar-docstring-google-style-todas-funcoes
 - **Objetivo**: Adicionar docstring Google-style em todas as funcoes de src/eventbus/amqp.py
 - **Resultado**: 6/6 tarefas aceitas

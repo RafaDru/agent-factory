@@ -248,19 +248,27 @@ Regras:
         try:
             conn = AMQPConnection("amqp://afp:afp123@localhost:5672/")
             conn.connect()
-            rpc = RPCClient(conn)
-            response = rpc.call(f"task.run.{agent_id}", subtask, timeout=30)
+            rpc = RPCClient(conn, timeout=30.0)
+            response = rpc.call(f"task.run.{agent_id}", subtask)
             conn.close()
+
+            # O runtime retorna: {status, agent_id, result: {output, summary, rationale, ...}}
+            rb = response.get("result", {}) if response else {}
+            rb_status = "success" if response and response.get("status") == "ok" else "failure"
+            agent_status = rb.get("status", rb_status)
+            if agent_status in ("completed", "success"):
+                agent_status = "success"
             return {
-                "status": response.get("status", "success"),
+                "status": agent_status,
                 "agent_id": agent_id,
                 "action": subtask.get("action"),
-                "result": response.get("result"),
-                "rationale": response.get("rationale"),
-                "summary": response.get("summary"),
+                "result": rb.get("output", rb.get("details", rb)),
+                "rationale": rb.get("rationale", rb.get("summary", "")),
+                "summary": rb.get("summary", rb.get("rationale", "")),
             }
-        except Exception:
-            # Fallback para delegacao in-process
+        except Exception as e:
+            logger = __import__("logging").getLogger(__name__)
+            logger.debug("Event Bus delegation falhou para %s: %s. Usando in-process.", agent_id, e)
             output = self.delegate(agent_id, subtask)
             return {
                 "status": output.status.value,
