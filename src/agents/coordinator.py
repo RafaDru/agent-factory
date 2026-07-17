@@ -17,6 +17,7 @@ from src.sdk.base import StandardBaseAgent
 from src.sdk.decision import DecisionEngine, RuleBasedEngine
 from src.sdk.context_tree import ContextTree
 from src.llm import get_provider, LLMProvider
+from src.eventbus.amqp import AMQPConnection, RPCClient
 
 
 class AgentFactoryCoordinator(StandardBaseAgent):
@@ -242,15 +243,33 @@ Regras:
     def _delegate(self, task: dict) -> dict:
         agent_id = task.get("agent_id", "")
         subtask = task.get("task", {})
-        output = self.delegate(agent_id, subtask)
-        return {
-            "status": output.status.value,
-            "agent_id": agent_id,
-            "action": subtask.get("action"),
-            "result": output.details,
-            "rationale": output.rationale,
-            "summary": output.summary,
-        }
+
+        # Tentar usar RabbitMQ se disponivel
+        try:
+            conn = AMQPConnection("amqp://afp:afp123@localhost:5672/")
+            conn.connect()
+            rpc = RPCClient(conn)
+            response = rpc.call(f"task.run.{agent_id}", subtask, timeout=30)
+            conn.close()
+            return {
+                "status": response.get("status", "success"),
+                "agent_id": agent_id,
+                "action": subtask.get("action"),
+                "result": response.get("result"),
+                "rationale": response.get("rationale"),
+                "summary": response.get("summary"),
+            }
+        except Exception:
+            # Fallback para delegacao in-process
+            output = self.delegate(agent_id, subtask)
+            return {
+                "status": output.status.value,
+                "agent_id": agent_id,
+                "action": subtask.get("action"),
+                "result": output.details,
+                "rationale": output.rationale,
+                "summary": output.summary,
+            }
 
     def _plan_with_llm(self, goal: str, context: str = "") -> list[dict]:
         """Gera plano de tarefas chamando o LLM."""
