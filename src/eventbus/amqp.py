@@ -24,12 +24,25 @@ class AMQPConnection:
     RETRY_DELAY = 3
 
     def __init__(self, url: str = DEFAULT_URL):
+        """Inicializa o gerenciador de conexão.
+
+        Args:
+            url: URL de conexão AMQP. Padrão: DEFAULT_URL.
+        """
         self.url = url
         self._connection: Optional[pika.BlockingConnection] = None
         self._channel: Optional[pika.channel.Channel] = None
         self._lock = threading.Lock()
 
     def connect(self) -> pika.channel.Channel:
+        """Estabelece conexão com o RabbitMQ e declara o exchange 'afp'.
+
+        Returns:
+            Canal RabbitMQ conectado.
+
+        Raises:
+            Exception: Se a conexão falhar.
+        """
         with self._lock:
             if self._connection and self._connection.is_open:
                 return self._channel
@@ -47,11 +60,17 @@ class AMQPConnection:
                 raise
 
     def reconnect(self):
+        """Reconecta ao RabbitMQ após fechar a conexão existente.
+
+        Returns:
+            Canal RabbitMQ após reconexão.
+        """
         self.close()
         time.sleep(self.RETRY_DELAY)
         return self.connect()
 
     def close(self):
+        """Fecha o canal e a conexão com o RabbitMQ."""
         with self._lock:
             if self._channel and self._channel.is_open:
                 self._channel.close()
@@ -62,10 +81,20 @@ class AMQPConnection:
 
     @property
     def channel(self) -> Optional[pika.channel.Channel]:
+        """Propriedade que retorna o canal atual.
+
+        Returns:
+            Canal RabbitMQ ou None se não conectado.
+        """
         return self._channel
 
     @property
     def is_connected(self) -> bool:
+        """Propriedade que indica se a conexão está ativa.
+
+        Returns:
+            True se conectado, False caso contrário.
+        """
         return self._connection is not None and self._connection.is_open
 
 
@@ -73,14 +102,29 @@ class Publisher:
     """Publica mensagens no exchange 'afp'."""
 
     def __init__(self, connection: AMQPConnection):
+        """Inicializa o publicador.
+
+        Args:
+            connection: Conexão AMQP a ser utilizada.
+        """
         self._conn = connection
         self._ensure_connected()
 
     def _ensure_connected(self):
+        """Garante que a conexão esteja ativa, conectando se necessário."""
         if not self._conn.is_connected:
             self._conn.connect()
 
     def publish(self, routing_key: str, message: dict) -> bool:
+        """Publica uma mensagem no exchange 'afp'.
+
+        Args:
+            routing_key: Chave de roteamento da mensagem.
+            message: Dicionário com o conteúdo da mensagem.
+
+        Returns:
+            True se a publicação foi bem-sucedida, False caso contrário.
+        """
         try:
             self._ensure_connected()
             body = json.dumps(message, ensure_ascii=False, default=str)
@@ -111,6 +155,15 @@ class Consumer:
         handler: Callable[[dict], Optional[dict]],
         prefetch_count: int = 1,
     ):
+        """Inicializa o consumidor.
+
+        Args:
+            connection: Conexão AMQP.
+            queue_name: Nome da fila a ser consumida.
+            routing_keys: Lista de chaves de roteamento para binding.
+            handler: Função que processa cada mensagem recebida.
+            prefetch_count: Número de mensagens pré-buscadas. Padrão 1.
+        """
         self._conn = connection
         self._queue_name = queue_name
         self._routing_keys = routing_keys
@@ -120,6 +173,7 @@ class Consumer:
         self._running = False
 
     def start(self):
+        """Inicia o consumo de mensagens da fila."""
         ch = self._conn.connect()
         ch.basic_qos(prefetch_count=self._prefetch_count)
 
@@ -170,6 +224,7 @@ class Consumer:
             self.stop()
 
     def stop(self):
+        """Para o consumo de mensagens e cancela a assinatura."""
         self._running = False
         if self._conn.is_connected and self._tag:
             self._conn.channel.basic_cancel(self._tag)
@@ -180,6 +235,12 @@ class RPCClient:
     """Cliente RPC: publica e aguarda resposta em fila exclusiva."""
 
     def __init__(self, connection: AMQPConnection, timeout: float = 30.0):
+        """Inicializa o cliente RPC.
+
+        Args:
+            connection: Conexão AMQP.
+            timeout: Tempo máximo de espera por resposta, em segundos. Padrão 30.0.
+        """
         self._conn = connection
         self._timeout = timeout
         self._response: Optional[dict] = None
@@ -189,6 +250,15 @@ class RPCClient:
         self._correlation_id = str(uuid.uuid4())
 
     def call(self, routing_key: str, message: dict) -> Optional[dict]:
+        """Envia uma requisição RPC e aguarda a resposta.
+
+        Args:
+            routing_key: Chave de roteamento para envio.
+            message: Mensagem a ser enviada.
+
+        Returns:
+            Resposta recebida ou None se ocorrer timeout.
+        """
         ch = self._conn.connect()
         result = ch.queue_declare(queue="", exclusive=True)
         self._queue = result.method.queue
@@ -222,6 +292,14 @@ class RPCClient:
         return self._response
 
     def _on_response(self, ch, method, properties, body):
+        """Callback interno para processar a resposta RPC.
+
+        Args:
+            ch: Canal AMQP.
+            method: Método de entrega.
+            properties: Propriedades da mensagem.
+            body: Corpo da mensagem.
+        """
         try:
             msg = json.loads(body.decode("utf-8"))
             if msg.get("correlation_id") == self._correlation_id:
