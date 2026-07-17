@@ -7,6 +7,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 from src.registry import get_registry
 from src.protocols.schema import AgentStatus
+from src.mcp.event_bus import call_agent_via_event_bus, event_bus_available
 
 CONTEXT_TEMPLATE_COORD = """# {agent_id} — {project_name}
 
@@ -181,9 +182,8 @@ def run_agent(
 ) -> dict[str, Any]:
     """Executa uma tarefa em um agente especifico.
 
-    O agente e carregado sob demanda, executa a tarefa e retorna o resultado.
-    Em caso de erro, retorna um StructuredError com `error_type`, 
-    `available_actions`, `doc_path` e `hint` para correcao.
+    Tenta via Event Bus (RabbitMQ) primeiro. Se o runtime do agente
+    nao estiver disponivel, carrega e executa in-process (fallback).
 
     Args:
         project_id: ID do projeto (ex: "afp", "pta")
@@ -194,6 +194,15 @@ def run_agent(
     Returns:
         Resultado da execucao com status, output e metricas.
     """
+    # Tentar via Event Bus (RabbitMQ)
+    if event_bus_available():
+        event_bus_task = dict(task)
+        event_bus_task["_project_id"] = project_id
+        result = call_agent_via_event_bus(agent_id, event_bus_task, timeout=120.0)
+        if result:
+            return _format_event_bus_result(result)
+
+    # Fallback: in-process
     registry = _get_registry()
     try:
         agent = registry.load_agent(project_id, agent_id)
@@ -205,7 +214,6 @@ def run_agent(
             "agent_id": agent_id,
         }
 
-    # Auto-wire subordinates if this is a coordinator
     if agent_id == "coordenador" and hasattr(agent, "set_subordinates"):
         _wire_subordinates(registry, project_id, agent)
 
@@ -230,6 +238,24 @@ def run_agent(
         }
 
 
+def _format_event_bus_result(result: dict) -> dict:
+    """Formata resultado do Event Bus para o padrao MCP."""
+    output = result.get("result", {})
+    if isinstance(output, dict):
+        return {
+            "status": result.get("status", "ok"),
+            "output": output.get("output", output),
+            "summary": output.get("summary", output.get("rationale", "")),
+            "transport": "event_bus",
+        }
+    return {
+        "status": result.get("status", "ok"),
+        "output": output,
+        "summary": str(output)[:200],
+        "transport": "event_bus",
+    }
+
+
 @mcp.tool()
 def run_objective(
     project_id: str,
@@ -238,8 +264,8 @@ def run_objective(
 ) -> dict[str, Any]:
     """Envia um objetivo de alto nivel para o coordenador do projeto.
 
-    O coordenador carrega seu contexto, planeja a execucao (DAG de tarefas)
-    e delega para os workers apropriados. O resultado agrega todas as saidas.
+    Tenta via Event Bus (RabbitMQ) primeiro. Se o runtime do coordenador
+    nao estiver disponivel, carrega e executa in-process (fallback).
 
     Args:
         project_id: ID do projeto (ex: "afp")
@@ -249,8 +275,23 @@ def run_objective(
     Returns:
         Resultado consolidado com plano, execucoes individuais e status final.
     """
-    registry = _get_registry()
+    task = {
+        "task_id": f"obj-{abs(hash(objective)) % 10000:04d}",
+        "action": "plan_and_execute",
+        "goal": objective,
+        "context": context,
+    }
 
+    # Tentar via Event Bus (RabbitMQ)
+    if event_bus_available():
+        event_bus_task = dict(task)
+        event_bus_task["_project_id"] = project_id
+        result = call_agent_via_event_bus("coordenador", event_bus_task, timeout=300.0)
+        if result:
+            return _format_event_bus_result(result)
+
+    # Fallback: in-process
+    registry = _get_registry()
     try:
         agent = registry.load_agent(project_id, "coordenador")
     except ValueError as e:
@@ -261,13 +302,6 @@ def run_objective(
         }
 
     _wire_subordinates(registry, project_id, agent)
-
-    task = {
-        "task_id": f"obj-{abs(hash(objective)) % 10000:04d}",
-        "action": "plan_and_execute",
-        "goal": objective,
-        "context": context,
-    }
 
     try:
         result = agent.run(task)

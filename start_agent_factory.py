@@ -358,6 +358,17 @@ def _start_mcp_server(port: int = 8081):
 
     print(f"\n[MCP] 🚀 Iniciando servidor MCP na porta {port}")
 
+    # Tentar conectar Event Bus (RabbitMQ)
+    try:
+        from src.eventbus.amqp import AMQPConnection
+        conn = AMQPConnection()
+        conn.connect()
+        if conn.is_connected:
+            print(f"[MCP] ✅ Event Bus (RabbitMQ) conectado")
+        conn.close()
+    except Exception as e:
+        print(f"[MCP] ⚠️  Event Bus indisponivel: {e}")
+
     t = threading.Thread(target=run_sse, args=("127.0.0.1", port), daemon=True)
     t.start()
     time.sleep(2)
