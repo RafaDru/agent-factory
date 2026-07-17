@@ -94,6 +94,12 @@ Ao final de cada `plan_and_execute`, o coordenador automaticamente:
 
 ## Retrospectiva de Missoes
 
+### missao-adicionar-docstring-google-style-todas-funcoes
+- **Objetivo**: Adicionar docstring Google-style em todas as funcoes de src/eventbus/amqp.py
+- **Resultado**: 6/6 tarefas aceitas
+- **Reflexao**: A missão foi bem-sucedida, mas o DAG poderia ser otimizado: a etapa de revisão (`revisar-docstrings`) foi executada após o commit, o que é menos eficiente. Idealmente, a revisão de qualidade deve ocorrer antes do `git-add` e `git-commit` para evitar que código com problemas entre no histórico. Apesa
+
+
 ### missao-listar-arquivos-projeto-seguida-fazer-uma
 - **Objetivo**: Listar os arquivos do projeto e em seguida fazer uma pesquisa de design systems para dashboards
 - **Resultado**: 2/2 tarefas aceitas

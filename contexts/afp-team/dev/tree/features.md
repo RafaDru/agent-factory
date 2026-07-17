@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Commit das docstrings adicionadas
+- **Acao**: run_git
+- **Resumo**: [master b5ccab3] docs: adicionar docstrings Google-style em amqp.py
+
+
 ### Commit negocios context
 - **Acao**: run_git
 - **Resumo**: [master c2e7ac9] add negocios agent context

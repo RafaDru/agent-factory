@@ -2,6 +2,11 @@
 
 ## Consolidado
 
+### Revisar qualidade das docstrings adicionadas
+- **Acao**: review_code
+- **Resumo**: Codigo analisado via LLM
+
+
 ### Revisar layout
 - **Acao**: review_code
 - **Resumo**: Codigo analisado via LLM
