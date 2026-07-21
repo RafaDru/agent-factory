@@ -1291,7 +1291,65 @@
             flex-shrink: 0;
         }
 
-
+        .mission-card-v2 {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: var(--transition-smooth);
+        }
+        .mc-header {
+            padding: 16px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            user-select: none;
+        }
+        .mc-header-left { flex: 1; min-width: 0; }
+        .mc-objective { font-size:1rem; font-weight:600; color:var(--text-primary); margin-bottom:4px; line-height:1.4; }
+        .mc-meta { font-size:0.75rem; color:var(--text-muted); display:flex; gap:12px; flex-wrap:wrap; }
+        .mc-status-badge { font-size:0.7rem; font-weight:700; padding:3px 10px; border-radius:var(--radius-full); white-space:nowrap; flex-shrink:0; margin-top:2px; }
+        .mc-status-badge.running { background:rgba(59,130,246,0.15); color:var(--blue); }
+        .mc-status-badge.completed { background:rgba(34,197,94,0.15); color:var(--green); }
+        .mc-status-badge.failed { background:rgba(239,68,68,0.15); color:var(--red); }
+        .mc-body { padding:0 20px 16px 20px; border-top:1px solid var(--border-glass); }
+        .mc-tasks-label { font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; padding:10px 0 6px 0; }
+        .mc-task-card {
+            background:var(--bg-glass); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:6px;
+            border-left:3px solid var(--border-glass); transition:var(--transition-smooth);
+        }
+        .mc-task-card.status-running { border-left-color:var(--blue); background:rgba(59,130,246,0.05); }
+        .mc-task-card.status-completed { border-left-color:var(--green); background:rgba(34,197,94,0.03); }
+        .mc-task-card.status-failed { border-left-color:var(--red); background:rgba(239,68,68,0.03); }
+        .mc-task-card.status-pending { border-left-color:var(--text-muted); background:rgba(100,116,139,0.03); }
+        .mc-task-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+        .mc-task-name { font-size:0.85rem; font-weight:600; color:var(--text-primary); flex:1; min-width:0; }
+        .mc-task-status { font-size:0.65rem; font-weight:700; padding:2px 8px; border-radius:var(--radius-full); white-space:nowrap; flex-shrink:0; }
+        .mc-task-status.running { background:rgba(59,130,246,0.15); color:var(--blue); }
+        .mc-task-status.completed { background:rgba(34,197,94,0.15); color:var(--green); }
+        .mc-task-status.failed { background:rgba(239,68,68,0.15); color:var(--red); }
+        .mc-task-status.pending { background:rgba(100,116,139,0.15); color:var(--text-muted); }
+        .mc-task-agent { font-size:0.75rem; color:var(--text-secondary); margin-top:4px; }
+        .mc-task-agent span { font-weight:500; }
+        .mc-task-expand { margin-top:6px; font-size:0.7rem; color:var(--cyan); cursor:pointer; opacity:0.7; }
+        .mc-task-expand:hover { opacity:1; }
+        .mc-task-interactions { margin-top:8px; padding:8px; background:rgba(0,0,0,0.15); border-radius:var(--radius-xs); display:none; }
+        .mc-task-interactions.open { display:block; }
+        .mc-interaction { font-size:0.75rem; color:var(--text-secondary); padding:2px 0; display:flex; gap:6px; align-items:center; }
+        .mc-interaction .interact-agent { font-weight:600; color:var(--text-primary); white-space:nowrap; }
+        .mc-interaction .interact-msg { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .mc-interaction .interact-status { font-size:0.6rem; font-weight:600; flex-shrink:0; }
+        .mc-empty { text-align:center; padding:60px 40px; color:var(--text-muted); font-size:0.9rem; }
+        .mc-header-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
+        .mc-header-bar h2 { margin:0; font-size:1.4rem; display:flex; align-items:center; gap:8px; }
+        .mc-count { font-size:0.8rem; color:var(--text-muted); background:var(--bg-glass); padding:4px 12px; border-radius:var(--radius-full); }
+        .mc-nav { display:flex; gap:4px; margin-bottom:24px; }
+        .mc-nav-btn { padding:8px 16px; border-radius:var(--radius-sm); border:1px solid var(--border-glass); background:var(--bg-glass); color:var(--text-secondary); cursor:pointer; font-size:0.85rem; transition:var(--transition-smooth); }
+        .mc-nav-btn.active { background:rgba(34,211,238,0.1); border-color:var(--border-neon-cyan); color:var(--cyan); }
+        .mc-nav-btn:hover { border-color:var(--border-neon-cyan); }
 
         .running-badge {
             background: rgba(255, 193, 7, 0.15);
@@ -1437,9 +1495,9 @@
                 <button class="btn" id="btnRefresh" onclick="refreshData()" title="Refresh">
                     ↻
                 </button>
+                <button class="btn" id="btn-mc" onclick="navigateTo('live')" title="Mission Control">🚀</button>
                 <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
-
-                <button class="btn" id="logs-toggle" title="Logs">Logs</button>
+                <button class="btn" id="logs-toggle" title="Logs">📋</button>
             </div>
         </header>
 
@@ -1449,9 +1507,11 @@
         <!-- Views -->
         <div id="view-projects" class="view active"></div>
         <div id="view-team-detail" class="view"></div>
+        <div id="view-live" class="view"></div>
+        <div id="view-config" class="view"></div>
     </div>
 
-    
+    <script>
         const AVAILABLE_PROVIDERS = [
             { id: 'auto', label: 'Auto (Smart Router)' },
             { id: 'smart', label: 'Smart Router (auto)' },
@@ -1476,6 +1536,7 @@
             { id: 'cloudflare', label: 'Cloudflare' },
             { id: 'mock', label: 'Mock (teste)' },
         ];
+    </script>
 <script>
 
         const L = {
@@ -1515,9 +1576,11 @@
         const state = {
             projects: [],
             missions: [],
+            missionsData: {},
             agentsState: {}, // agentId -> { status, subStatus, task, mission, timer, context, lastExecution, events }
             currentView: 'projects',
             currentProjectId: null,
+            projectTab: 'agents',
             navigationStack: [],
             sseConnection: null,
             connectionStatus: 'connecting',
@@ -1687,6 +1750,179 @@
             if (typeof addLogEntry === 'function') {
                 addLogEntry(event);
             }
+
+            // Rebuild mission data from events
+            updateMissionsData();
+
+            // Re-render mission control if we're on that view
+            if (state.currentView === 'live') {
+                renderGlobalMissionControl();
+            } else if (state.currentView === 'team-detail' && state.projectTab === 'mission-control') {
+                renderProjectMissionControl(state.currentProjectId);
+            }
+        }
+
+        function updateMissionsData() {
+            const allEvents = [];
+            Object.values(state.agentsState).forEach(aState => {
+                if (aState.events) {
+                    aState.events.forEach(evt => allEvents.push(evt));
+                }
+            });
+            allEvents.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            const missionsData = {};
+            let currentMissionId = null;
+            let currentMissionObj = null;
+
+            // Pre-seed from API missions data for objectives
+            const apiMissions = {};
+            if (Array.isArray(state.missions)) {
+                state.missions.forEach(m => {
+                    apiMissions[m.id || m.mission_id || ''] = {
+                        objective: m.objective || m.objetivo || '',
+                        status: m.status || 'unknown'
+                    };
+                });
+            }
+
+            allEvents.forEach(event => {
+                const msg = event.message || '';
+                const agentId = event.actor || event.agentId || '?';
+                const isCoordinator = agentId.toLowerCase().includes('coorden');
+
+                // Detect mission scope from "Missao 'xxx':" or explicit missionId
+                let missionId = event.missionId;
+
+                if (!missionId && isCoordinator) {
+                    const mm = msg.match(/Missao\s+'([^']+)'/i);
+                    if (mm) {
+                        missionId = mm[1];
+                        currentMissionId = missionId;
+                        currentMissionObj = missionId;
+                    }
+                }
+
+                // If event has no missionId but we're in a mission scope, use current
+                if (!missionId && currentMissionId) {
+                    missionId = currentMissionId;
+                }
+
+                // If still no missionId, try to infer from message
+                if (!missionId && isCoordinator && msg.toLowerCase().includes('missao')) {
+                    const m2 = msg.match(/'([^']+)'/);
+                    if (m2) {
+                        missionId = m2[1];
+                        currentMissionId = missionId;
+                        currentMissionObj = missionId;
+                    }
+                }
+
+                if (!missionId) return;
+
+                if (!missionsData[missionId]) {
+                    const apiObj = apiMissions[missionId] || {};
+                    missionsData[missionId] = {
+                        id: missionId,
+                        projectId: event.payload?.project_id || state.currentProjectId || 'unknown',
+                        objective: apiObj.objective || '',
+                        status: apiObj.status === 'completed' ? 'completed' : 'running',
+                        timestamp: event.timestamp,
+                        tasks: {}
+                    };
+                }
+                const mission = missionsData[missionId];
+
+                // Extract objective from coordinator messages
+                if (isCoordinator) {
+                    const objMatch = msg.match(/Missao\s+'[^']+':\s*([^\.]+)/i);
+                    if (objMatch) {
+                        mission.objective = objMatch[1].trim();
+                    }
+                    if (event.payload?.objective) {
+                        mission.objective = event.payload.objective;
+                    }
+                }
+
+                // Detect delegation: Passo 'desc' -> agent  OR  Delegando 'action' para agent
+                if (isCoordinator) {
+                    let match = msg.match(/Passo\s+'(.+?)'\s*->\s*(\w+)/i);
+                    if (!match) match = msg.match(/Delegando\s+'([^']+)'\s+para\s+(\w+)/i);
+                    if (!match) match = msg.match(/Delegando\s+para\s+(\w+):?\s*(.*)/i);
+
+                    if (match) {
+                        let taskName, targetAgent;
+                        if (match[2] && (match[1] || match[2])) {
+                            // First pattern: Passo 'desc' -> agent
+                            taskName = match[1]?.trim() || match[2]?.trim() || msg;
+                            targetAgent = match[2]?.trim() || '?';
+                        } else {
+                            // Legacy: Delegando para agent: desc
+                            targetAgent = match[1];
+                            taskName = match[2]?.trim() || event.payload?.task || msg;
+                        }
+                        // Sanitize: if taskName ends up being the agent name, use full msg
+                        if (taskName === targetAgent) taskName = msg;
+                        const taskKey = taskName.substring(0, 60);
+
+                        if (!mission.tasks[taskKey]) {
+                            mission.tasks[taskKey] = {
+                                id: taskKey,
+                                name: taskName,
+                                agent: targetAgent,
+                                requestedBy: agentId,
+                                status: 'running',
+                                events: []
+                            };
+                        }
+                        mission.tasks[taskKey].events.push(event);
+                        mission.tasks[taskKey].status = 'running';
+                        mission.tasks[taskKey].agent = targetAgent;
+                        currentMissionId = missionId;
+                    }
+                }
+
+                // Assign event to current task within mission scope
+                if (missionId === currentMissionId) {
+                    const taskKeys = Object.keys(mission.tasks);
+                    if (taskKeys.length > 0) {
+                        const lastTaskKey = taskKeys[taskKeys.length - 1];
+                        const task = mission.tasks[lastTaskKey];
+                        if (task.events[task.events.length - 1] !== event) {
+                            task.events.push(event);
+                        }
+                        const st = (event.status || '').toLowerCase();
+                        if (st === 'completed' || st === 'success') {
+                            if (task.status !== 'failed') task.status = 'completed';
+                        } else if (st === 'failed') {
+                            task.status = 'failed';
+                            if (!task.name || task.name === task.id) {
+                                task.name = msg;
+                            }
+                        } else if (st === 'running') {
+                            if (task.status !== 'completed' && task.status !== 'failed') task.status = 'running';
+                        }
+                        if (agentId !== '?' && task.agent !== agentId && !isCoordinator) {
+                            task.agent = agentId;
+                        }
+                        if (isCoordinator && msg.toLowerCase().includes('concluido')) {
+                            task.status = 'completed';
+                        }
+                    }
+                }
+
+                // Update mission aggregate status
+                const tasks = Object.values(mission.tasks);
+                if (tasks.some(t => t.status === 'running')) {
+                    mission.status = 'running';
+                } else if (tasks.some(t => t.status === 'failed')) {
+                    mission.status = 'failed';
+                } else if (tasks.length > 0 && tasks.every(t => t.status === 'completed' || t.status === 'success')) {
+                    mission.status = 'completed';
+                }
+            });
+
+            state.missionsData = missionsData;
         }
 
         function updateTimer(agentId) {
@@ -1766,6 +2002,13 @@
             switchView(prev.view, prev.params);
         }
 
+        function switchProjectTab(tab) {
+            state.projectTab = tab;
+            const hash = '#/project/' + state.currentProjectId + '/' + tab;
+            history.replaceState(null, '', hash);
+            renderTeamDetail();
+        }
+
         async function switchView(view, params = {}) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             const viewEl = document.getElementById(`view-${view}`);
@@ -1773,6 +2016,14 @@
 
             state.currentView = view;
             state.currentProjectId = params.projectId || null;
+
+            const hash = view === 'projects' ? '#/projects' :
+                view === 'team-detail' ? '#/project/' + (params.projectId || '') + '/' + (state.projectTab || 'agents') :
+                view === 'live' ? '#/mission-control' :
+                view === 'config' ? '#/config' : '#/projects';
+            if (window.location.hash !== hash) {
+                history.replaceState(null, '', hash);
+            }
 
             updateBreadcrumb();
             updateBackButton();
@@ -1797,6 +2048,7 @@
                             payload: event.payload,
                             timestamp: event.timestamp || new Date().toISOString(),
                             taskId: event.task_id || event.trace_id || null,
+                            missionId: event.mission_id || null,
                             status: event.status
                         });
                         if (agentState.events.length > 250) agentState.events.pop();
@@ -1814,7 +2066,11 @@
             bc.innerHTML = '';
             const items = [{ label: 'Projects', action: () => switchView('projects') }];
 
-            if (state.currentProjectId) {
+            if (state.currentView === 'live') {
+                items.push({ label: '🚀 Mission Control', action: () => {} });
+            } else if (state.currentView === 'config') {
+                items.push({ label: '⚙️ Config', action: () => {} });
+            } else if (state.currentProjectId) {
                 const project = state.projects.find(p => p.id === state.currentProjectId);
                 items.push({
                     label: project?.name || state.currentProjectId,
@@ -1849,6 +2105,13 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
         function renderCurrentView() {
             if (state.currentView === 'projects') renderProjects();
             else if (state.currentView === 'team-detail') renderTeamDetail();
+            else if (state.currentView === 'live') renderGlobalMissionControl();
+            else if (state.currentView === 'config') renderConfig();
+        }
+
+        function renderConfig() {
+            const container = document.getElementById('view-config');
+            container.innerHTML = '<div class="mc-empty">⚙️ Configurações (em breve)</div>';
         }
 
         function renderProjects() {
@@ -1898,6 +2161,158 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
             });
             html += '</div>';
             container.innerHTML = html;
+        }
+
+        // ==================== MISSION CONTROL ====================
+
+        function renderGlobalMissionControl() {
+            const container = document.getElementById('view-live');
+            if (!container) return;
+
+            updateMissionsData();
+            const missions = Object.values(state.missionsData)
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (missions.length === 0) {
+                container.innerHTML = '<div class="mc-empty">Nenhuma missão encontrada.<br>Execute uma missão para vê-la aqui em tempo real.</div>';
+                return;
+            }
+
+            const totalMissions = missions.length;
+            const runningCount = missions.filter(m => m.status === 'running').length;
+            const doneCount = missions.filter(m => m.status === 'completed').length;
+            const failedCount = missions.filter(m => m.status === 'failed').length;
+
+            container.innerHTML = `
+                <div class="mc-header-bar">
+                    <h2>🚀 Mission Control</h2>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        ${runningCount > 0 ? `<span class="mc-status-badge running">${runningCount} em execução</span>` : ''}
+                        <span class="mc-count">${totalMissions} missões</span>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:20px;font-size:0.8rem;color:var(--text-muted);">
+                    <span>✅ ${doneCount} concluídas</span>
+                    <span>❌ ${failedCount} falhas</span>
+                    <span>🔄 ${runningCount} executando</span>
+                </div>
+                ${missions.map(m => renderMissionCardV2(m)).join('')}
+            `;
+        }
+
+        function renderProjectMissionControl(projectId) {
+            updateMissionsData();
+            const missions = Object.values(state.missionsData)
+                .filter(m => m.projectId === projectId || m.projectId === 'unknown')
+                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (missions.length === 0) {
+                return '<div class="mc-empty">Nenhuma missão deste projeto ainda.</div>';
+            }
+            return `
+                <div class="mc-header-bar" style="margin-top:24px;">
+                    <h3 style="margin:0;">🚀 Mission Control</h3>
+                    <span class="mc-count">${missions.length} missões</span>
+                </div>
+                ${missions.map(m => renderMissionCardV2(m)).join('')}
+            `;
+        }
+
+        function renderMissionCardV2(mission) {
+            const taskList = Object.values(mission.tasks);
+            const statusClass = mission.status || 'running';
+            const time = formatTimestamp(mission.timestamp);
+            const totalTasks = taskList.length;
+            const doneTasks = taskList.filter(t => t.status === 'completed' || t.status === 'success').length;
+            const failedTasks = taskList.filter(t => t.status === 'failed').length;
+
+            const tasksHtml = taskList.map(task => {
+                const tStatusClass = task.status || 'pending';
+                const agentEmoji = getAgentEmoji(task.agent);
+                const requesterEmoji = getAgentEmoji(task.requestedBy);
+                const interactionCount = task.events.length;
+
+                const interactionsHtml = interactionCount > 0 ? `
+                    <div class="mc-task-expand" onclick="toggleMcTaskInteractions(this)">
+                        ▶ ${interactionCount} interações
+                    </div>
+                    <div class="mc-task-interactions">
+                        ${task.events.slice(0, 15).map(evt => {
+                            const eAgent = evt.actor || evt.agentId || '?';
+                            const eMsg = evt.message || '';
+                            const eStatus = evt.status || '';
+                            const ts = safeTime(evt.timestamp);
+                            const eEmoji = getAgentEmoji(eAgent);
+                            return `<div class="mc-interaction">
+                                <span class="interact-agent">${eEmoji} ${eAgent}</span>
+                                <span class="interact-msg">${escapeHtml(eMsg)}</span>
+                                <span class="interact-status" style="color:${eStatus === 'completed' || eStatus === 'success' ? 'var(--green)' : eStatus === 'failed' ? 'var(--red)' : 'var(--blue)'}">${eStatus}</span>
+                                <span style="font-size:0.6rem;color:var(--text-muted);flex-shrink:0;">${ts}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                ` : '';
+
+                return `
+                    <div class="mc-task-card status-${tStatusClass}">
+                        <div class="mc-task-top">
+                            <span class="mc-task-name">${agentEmoji} ${escapeHtml(task.name || task.id)}</span>
+                            <span class="mc-task-status ${tStatusClass}">${tStatusClass.toUpperCase()}</span>
+                        </div>
+                        <div class="mc-task-agent">
+                            Solicitado por: ${requesterEmoji} <span>${escapeHtml(task.requestedBy)}</span>
+                        </div>
+                        ${interactionsHtml}
+                    </div>
+                `;
+            }).join('');
+
+            const statusIcon = statusClass === 'completed' ? '✅' : statusClass === 'failed' ? '❌' : '🔄';
+
+            return `
+                <div class="mission-card-v2">
+                    <div class="mc-header" onclick="toggleMcBody(this)">
+                        <div class="mc-header-left">
+                            <div class="mc-objective">${escapeHtml(mission.objective || mission.id)}</div>
+                            <div class="mc-meta">
+                                <span>${time}</span>
+                                <span>•</span>
+                                <span>${doneTasks}/${totalTasks} tarefas</span>
+                                ${failedTasks > 0 ? `<span>• ${failedTasks} falhas</span>` : ''}
+                            </div>
+                        </div>
+                        <span class="mc-status-badge ${statusClass}">${statusIcon} ${statusClass.toUpperCase()}</span>
+                    </div>
+                    <div class="mc-body" style="display:block">
+                        <div class="mc-tasks-label">📋 Tarefas (${doneTasks}/${totalTasks})</div>
+                        ${tasksHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleMcBody(el) {
+            const body = el.nextElementSibling;
+            if (body) {
+                body.style.display = body.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        function toggleMcTaskInteractions(el) {
+            const interactions = el.nextElementSibling;
+            if (interactions) {
+                interactions.classList.toggle('open');
+                el.textContent = interactions.classList.contains('open')
+                    ? `▼ ${interactions.querySelectorAll('.mc-interaction').length} interações`
+                    : `▶ ${interactions.querySelectorAll('.mc-interaction').length} interações`;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
         }
 
         function renderLastExecution(projectId) {
@@ -2078,17 +2493,23 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                 });
             }
 
+            if (!state.projectTab) state.projectTab = 'agents';
+            const showAgents = state.projectTab === 'agents';
+
             const timelineHtml = renderTimeline(project.agents);
+            const mcHtml = renderProjectMissionControl(project.id);
 
             container.innerHTML = `
                 <div class="team-detail-layout">
                     <div>
-                        <h2 style="margin-bottom: 20px;">${project.name} — ${L.agents}</h2>
-                        ${agentsHtml}
+                        <h2 style="margin-bottom: 8px;">${project.name}</h2>
+                        <div class="mc-nav">
+                            <button class="mc-nav-btn ${showAgents ? 'active' : ''}" onclick="switchProjectTab('agents')">👥 ${L.agents}</button>
+                            <button class="mc-nav-btn ${!showAgents ? 'active' : ''}" onclick="switchProjectTab('mission-control')">🚀 Mission Control</button>
+                        </div>
+                        ${showAgents ? agentsHtml : mcHtml}
                     </div>
-                    <div class="timeline-panel" id="interaction-flow" style="margin-top: 32px;">
-                        ${timelineHtml}
-                    </div>
+                    ${showAgents ? `<div class="timeline-panel" id="interaction-flow" style="margin-top: 32px;">${timelineHtml}</div>` : ''}
                 </div>
             `;
 
@@ -2476,6 +2897,9 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
         window.navigateBack = navigateBack;
         window.refreshData = refreshData;
         window.toggleTimelineDetails = toggleTimelineDetails;
+        window.switchProjectTab = switchProjectTab;
+        window.toggleMcBody = toggleMcBody;
+        window.toggleMcTaskInteractions = toggleMcTaskInteractions;
 
         function openAgentLog(agentId) {
             const logsPanel = document.getElementById('logs-panel');
@@ -2754,6 +3178,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 logsPanel.style.display = 'none';
             });
         }
+
+        // Hash navigation
+        window.addEventListener('hashchange', onHashChange);
+        onHashChange();
     })();
 });
 </script>
