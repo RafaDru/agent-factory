@@ -1,0 +1,48 @@
+{
+  "id": "firmware",
+  "role": "worker",
+  "description": "Firmware e hardware CR-10 SE: SSH, Klipper, logs, comandos GCode, bed mesh",
+  "llm_provider": "auto",
+  "actions": {
+    "ssh_command": {
+      "description": "Executa comando SSH na impressora (192.168.18.200) via paramiko",
+      "params": {"command": "str (obrigatorio) - comando shell", "timeout": "int (opcional) - timeout em segundos"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "gcode_command": {
+      "description": "Envia comando GCode para o Klipper via /tmp/printer FIFO",
+      "params": {"gcode": "str (obrigatorio) - comando GCode (ex: G28, M105, BED_MESH_CALIBRATE)", "wait_seconds": "int (opcional) - tempo de espera"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "read_klippy_log": {
+      "description": "Lê as últimas N linhas do log do Klipper",
+      "params": {"lines": "int (opcional) - número de linhas (default 50)"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "run_bed_mesh": {
+      "description": "Executa calibração completa de bed mesh (G28 + BED_MESH_CALIBRATE) e retorna dados",
+      "params": {},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "get_printer_status": {
+      "description": "Obtém status completo da impressora via WebSocket (temperatura, estado, progresso)",
+      "params": {},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "upload_gcode": {
+      "description": "Faz upload de arquivo GCode para a impressora via SSH base64 pipe",
+      "params": {"local_path": "str (obrigatorio) - caminho local do .gcode", "remote_name": "str (opcional) - nome remoto"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "start_print": {
+      "description": "Inicia impressão de arquivo GCode na impressora (M23+M24)",
+      "params": {"filename": "str (obrigatorio) - nome do arquivo na impressora"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "stop_print": {
+      "description": "Para impressão atual (M25)",
+      "params": {},
+      "handler": "src.agents.handlers.run_script"
+    }
+  }
+}

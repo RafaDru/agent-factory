@@ -1,0 +1,33 @@
+{
+  "id": "visao-llm",
+  "role": "worker",
+  "description": "Análise visual de impressão 3D: snapshots da câmera, detecção de falhas, monitoramento óptico",
+  "llm_provider": "auto",
+  "actions": {
+    "capture_snapshot": {
+      "description": "Captura snapshot da câmera MJPG (porta 8080) e salva localmente",
+      "params": {"output_path": "str (opcional) - caminho para salvar"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "analyze_print": {
+      "description": "Analisa frame atual em busca de falhas (spaghetti, descolamento, warp)",
+      "params": {"frame_path": "str (opcional) - caminho do frame para analisar"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "start_monitoring": {
+      "description": "Inicia monitoramento contínuo (loop a cada 15s com análise visual)",
+      "params": {"interval_seconds": "int (opcional) - intervalo entre frames"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "stop_monitoring": {
+      "description": "Para o monitoramento contínuo",
+      "params": {},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "get_mjpeg_stream_url": {
+      "description": "Retorna URL do stream MJPEG da câmera para embed no dashboard",
+      "params": {},
+      "handler": "src.agents.handlers.run_script"
+    }
+  }
+}

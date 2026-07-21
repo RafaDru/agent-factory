@@ -7,6 +7,7 @@ Gerencia múltiplos projetos, agentes e eventos em tempo real.
 
 import json
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Optional, Any, Dict, List
@@ -16,6 +17,7 @@ from urllib.parse import urlparse, parse_qs
 
 from ..protocols.events import EventNotifier
 from ..registry import get_registry
+from ..llm import PROVIDER_MAP
 
 from ..sdk.context_tree import ContextTree
 
@@ -86,6 +88,8 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._serve_agent_config()
         elif path == "/api/debug":
             self._serve_debug()
+        elif path == "/api/providers":
+            self._serve_providers()
         elif path == "/api/smoke":
             self._serve_smoke()
 
@@ -311,7 +315,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     size = context_file.stat().st_size
                     entry["has_context"] = True
                     entry["context_size_bytes"] = size
-                    entry["context_pct"] = min(100.0, round((size / 10240) * 100, 1))
+                    entry["context_pct"] = min(100.0, round((size / 15360) * 100, 1))
                 else:
                     entry["has_context"] = False
                     entry["context_size_bytes"] = 0
@@ -393,13 +397,17 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
         agent_id = body.get("agent_id")
         llm_provider = body.get("llm_provider")
+        llm_model = body.get("llm_model")
 
         if not agent_id or not llm_provider:
             self.send_error(400, "Campos agent_id e llm_provider são obrigatórios")
             return
 
         global agent_config
-        agent_config[agent_id] = {"llm_provider": llm_provider}
+        entry = {"llm_provider": llm_provider}
+        if llm_model:
+            entry["llm_model"] = llm_model
+        agent_config[agent_id] = entry
         save_config()
 
         self.send_response(200)
@@ -653,6 +661,21 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data, ensure_ascii=False, default=str).encode("utf-8"))
 
+    def _serve_providers(self) -> None:
+        """Retorna a lista de provedores LLM disponíveis e suas configurações."""
+        providers = {}
+        for name, (cls, params) in PROVIDER_MAP.items():
+            providers[name] = {
+                "class": cls.__name__,
+                "params": params,
+                "label": name.replace("_", " ").title()
+            }
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(providers, default=str).encode("utf-8"))
+
     def _serve_debug(self) -> None:
         """Endpoint de debug para informações internas do servidor.
 
@@ -870,6 +893,58 @@ class DashboardServer:
         """
         DashboardHandler.context_stores[project_id] = context_store
 
+    def _start_rabbitmq_bridge(self) -> None:
+        """Consome eventos do RabbitMQ e repassa aos notifiers locais."""
+        try:
+            from src.eventbus.amqp import AMQPConnection
+            import pika
+
+            conn = AMQPConnection()
+            conn.connect()
+            ch = conn.channel
+            if not ch or not ch.is_open:
+                return
+
+            # Consumir de todos os projetos registrados
+            project_ids = list(DashboardHandler.notifiers.keys())
+            queues = []
+            for pid in project_ids:
+                q = f"dashboard-events-{pid}"
+                ch.queue_declare(queue=q, durable=False, auto_delete=True)
+                ch.queue_bind(queue=q, exchange="afp", routing_key=f"event.broadcast.{pid}")
+                queues.append((q, pid))
+
+            if not queues:
+                conn.close()
+                return
+
+            print(f"  RabbitMQ bridge: escutando eventos de {project_ids}")
+
+            def _on_message(_ch, method, _props, body):
+                pid = None
+                for q_name, q_pid in queues:
+                    if method.routing_key == f"event.broadcast.{q_pid}":
+                        pid = q_pid
+                        break
+                if pid and pid in DashboardHandler.notifiers:
+                    try:
+                        from ..protocols.schema import AgentEvent
+                        event = AgentEvent.model_validate_json(body)
+                        DashboardHandler.notifiers[pid].emit(event, _from_rabbitmq=True)
+                    except Exception:
+                        pass
+                _ch.basic_ack(delivery_tag=method.delivery_tag)
+
+            for q_name, _ in queues:
+                ch.basic_consume(queue=q_name, on_message_callback=_on_message, auto_ack=False)
+
+            thread = threading.Thread(target=ch.start_consuming, daemon=True)
+            thread.start()
+            self._rabbitmq_thread = thread
+            self._rabbitmq_conn = conn
+        except Exception:
+            pass  # RabbitMQ indisponivel
+
     def start(self) -> None:
         """Inicia o servidor HTTP.
 
@@ -882,6 +957,9 @@ class DashboardServer:
 
         if DashboardHandler.context_stores:
             print(f"ContextStores ativos: {list(DashboardHandler.context_stores.keys())}")
+
+        # Iniciar bridge RabbitMQ em background
+        self._start_rabbitmq_bridge()
 
         try:
             self._server.serve_forever()

@@ -1,0 +1,116 @@
+# Backlog — Agent Factory Platform
+
+## Prioridades (definidas pelo time de negocios)
+
+| Prioridade | Epic | Justificativa |
+|------------|------|---------------|
+| 1 | E-002 | Fundacional: sem configuracao, nada funciona |
+| 2 | E-001 | Diferencial principal, maior valor percebido |
+| 3 | E-003 | Experiencia integrada, depende de E-002 e E-001 |
+| 4 | E-004 | Diagnostico, secundario ao monitoramento |
+| 5 | E-005 | Suporte, ja em andamento |
+| 6 | E-006 | Baixo valor no momento, postergavel |
+
+## Infra-Estrutura
+
+### Modelos LLM Locais (Ollama)
+Cinco modelos rodando localmente via Ollama (GPU 6GB VRAM | RAM 40 GB):
+
+| Modelo | Tamanho | VRAM | Tempo | Uso | Agentes |
+|--------|---------|------|-------|-----|---------|
+| `deepseek-r1:8b` ⭐ | 5.2 GB | 4.7 GB ✅ | ~84s | Geral, código, reasoning | Coordenador, Dev, QA |
+| `dolphin3` ⚡ | 4.9 GB | 4.8 GB ✅ | ~20s | Tarefas rápidas, protótipos | — |
+| `phi4` ⭐ | 9.1 GB | 4.9 GB ⚠️ | ~116s | Complexo, arquitetura, math | Arquiteto, Negócios |
+| `qwen3-vl:8b` 🏆 | 6.1 GB | 5.6 GB ⚠️ | ~107s | Visão, OCR, imagens | — |
+| `gemma4` | 9.6 GB | 5.0 GB ⚠️ | ~48s | Tool calling, multimodal | Designer |
+
+**Configuração por agente:**
+| Agente | Modelo | Provider |
+|--------|--------|----------|
+| Coordenador | DeepSeek R1 (8B) | `ollama:deepseek-r1:8b` |
+| Arquiteto | Phi-4 | `ollama:phi4` |
+| Designer | Gemma 4 | `ollama:gemma4` |
+| Dev | DeepSeek R1 (8B) | `ollama:deepseek-r1:8b` |
+| QA | DeepSeek R1 (8B) | `ollama:deepseek-r1:8b` |
+| Negócios | Phi-4 | `ollama:phi4` |
+
+> **Nota:** Modelos `deepseek-coder-v2` (8.9 GB) e `gemma3:4b` (3.3 GB) foram removidos por desempenho inferior. Ver `docs/modelos-locais-benchmark.md`. |
+
+### E-007: Gestão de Modelos e API Keys
+**Prioridade:** Pós E-003
+
+Permitir que o usuário gerencie modelos LLM diretamente pela interface:
+- **Auto-discovery Ollama**: ao iniciar o servidor, escanear modelos disponíveis no Ollama local (`ollama list`) e expor via API
+- **API Keys UI**: formulário para adicionar/remover chaves de API de provedores cloud (Groq, OpenRouter, Gemini, etc.)
+- **Teste de conectividade**: botão "Testar" que valida se a chave/endpoint está funcional
+- **Seletor de modelo melhorado**: modal com informações detalhadas (tarefas indicadas, consumo estimado, local vs cloud)
+- **Fallback automático**: configurar ordem de fallback entre provedores
+
+## Epicos
+
+### E-001: Console AFP — Live Stream (Monitoramento em Tempo Real)
+**Prioridade:** 2
+**Status:** Design
+
+Implementar o Live Stream no Console AFP com:
+- Agentes com "ar humanoide" e indicadores graficos de interacao
+- 1 card por agente, 1 estado por vez (running/completed/failed/idle)
+- Cadeia de delegacao visual (quem acionou quem)
+- Missoes em andamento em destaque
+- Missoes concluidas descem para Historico (compacto, expansivel)
+- Detalhes sob demanda (modal/expansivel)
+- Correcao do bug de cards duplicados (Live vs Log)
+
+### E-002: Console AFP — Configuracao de Projetos, Times e Agentes
+**Prioridade:** 1
+**Status:** Implementado ✅
+
+Tela de configuracao no Console AFP com:
+- Aba "Projetos": lista projetos, edita metadados (project_id, name, team, working_dir, description) ✅
+- Aba "Agentes": seleciona projeto + agente, visualiza metadados, configura LLM provider/model ✅
+- Aba "LLM Providers": configuracao rapida de provider por agente com dropdown (auto/local_multi/cloud/groq/ollama/opencode_zen) ✅
+- Preview de agentes com emoji, role e metadados ✅
+- Integrado ao sistema de navegacao existente (botao ⚙️ no header) ✅
+- Usa endpoints REST existentes (/api/agent-config POST, /api/projects GET) ✅
+- Consistencia visual com o dashboard (glass morphism, neon accents, dark theme) ✅
+
+### E-003: Console AFP — Home e Navegacao
+**Prioridade:** 3
+**Status:** Design
+
+- Home com visao geral do AFP
+- Mini sumarios dos projetos (clicaveis → pagina de detalhe)
+- Navegacao entre telas (Home, Projetos, Configuracao, Live Stream, Log)
+- Consistencia visual entre todas as telas
+
+### E-004: Console AFP — Log e Debug
+**Prioridade:** 4
+**Status:** Design
+
+Tela de Log separada do Live Stream com:
+- Tabela: Timestamp | Agente | Status | Tarefa | Mensagem
+- Filtros por agente, tipo, periodo
+- Busca textual
+- Exportacao (opcional)
+
+### E-005: Documentacao e Schema Canonico
+**Prioridade:** Medium
+**Status:** Em Andamento
+
+- `docs/console-afp-schema.md` — Schema canonico dos conceitos ✅
+- `docs/console-afp-requisitos.md` — Requisitos detalhados ✅
+- Contextos de negocios e designer atualizados ✅
+- AGENTS.md atualizado com novos conceitos ✅
+
+### E-006: CLI Tooling
+**Prioridade:** Low
+**Status:** Backlog
+
+Interface de linha de comando para gerenciar projetos, iniciar
+runtimes, e enviar objetivos sem depender do MCP ou Console AFP.
+
+---
+
+## Issues Abertas no GitHub
+
+- (todas fechadas — proximas issues serao criadas a partir dos epicos acima)

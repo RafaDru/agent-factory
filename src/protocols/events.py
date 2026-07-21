@@ -14,6 +14,28 @@ from typing import Optional, Callable
 from .schema import AgentEvent, AgentStatus, TaskResult
 
 
+def _maybe_publish_to_rabbitmq(event: AgentEvent):
+    """Publica evento no RabbitMQ se o modulo estiver disponivel."""
+    try:
+        import pika
+        from src.eventbus.amqp import AMQPConnection
+        conn = AMQPConnection()
+        conn.connect()
+        ch = conn.channel
+        if ch and ch.is_open:
+            ch.basic_publish(
+                exchange="afp",
+                routing_key=f"event.broadcast.{event.project_id}",
+                body=event.model_dump_json().encode("utf-8"),
+                properties=pika.BasicProperties(
+                    delivery_mode=2, content_type="application/json"
+                ),
+            )
+        conn.close()
+    except Exception:
+        pass  # RabbitMQ indisponivel, evento apenas local
+
+
 class EventNotifier:
     """
     Notificador de eventos para múltiplos canais.
@@ -69,7 +91,7 @@ class EventNotifier:
         """Registra callback para eventos."""
         self._callbacks.append(callback)
     
-    def emit(self, event: AgentEvent):
+    def emit(self, event: AgentEvent, _from_rabbitmq: bool = False):
         """Emite evento para todos os canais."""
         # 1. Salvar em arquivo JSONL
         with open(self._events_file, "a", encoding="utf-8") as f:
@@ -87,6 +109,10 @@ class EventNotifier:
         
         # 4. Notificar clientes SSE
         self._notify_sse_clients(event)
+
+        # 5. Publicar no RabbitMQ (se disponivel e nao for evento reentrante)
+        if not _from_rabbitmq:
+            _maybe_publish_to_rabbitmq(event)
     
     def emit_task_result(self, result: TaskResult):
         """Emite resultado final de tarefa."""

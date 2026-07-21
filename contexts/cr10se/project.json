@@ -2,47 +2,55 @@
   "project_id": "cr10se",
   "project_name": "Impressao 3D",
   "team_id": "3D-Team",
-  "team_name": "3D Team",
-  "description": "Time especializado em impressao 3D na Creality CR-10 SE com Klipper. Firmware, monitoramento visual LLM e otimizacao de GCode.",
+  "team_name": "CR-10 SE Agent Team",
+  "description": "Time agêntico para impressão 3D na Creality CR-10 SE com Klipper. Gerencia firmware, slicer, monitoramento visual, otimização GCode e dashboard de controle.",
   "icon": "🖨️",
   "working_dir": "C:/Users/rafae/Documents/Impressão 3D",
   "agents_source": "src/agents/",
   "agents": [
     {
       "agent_id": "coordenador",
+      "agent_name": "Coordenador",
+      "role": "coordenador",
+      "emoji": "🎯",
       "module_path": "src/agents/cr10se_coordinator.py",
       "class_name": "CR10SECoordinator",
       "context_limit_kb": 15.0,
       "llm_provider": "auto",
-      "emoji": "🎯",
-      "description": "Coordenador do time 3D"
+      "description": "Orquestrador: planeja via LLM, delega para os agentes do time, reflete e aprende"
     },
     {
       "agent_id": "firmware",
-      "module_path": "src/agents/cr10se_firmware.py",
-      "class_name": "FirmwareAgent",
+      "agent_name": "Firmware",
+      "role": "firmware",
+      "emoji": "🔧",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 20.0,
       "llm_provider": "auto",
-      "emoji": "🔧",
-      "description": "Especialista em hardware e firmware CR-10 SE"
+      "description": "Firmware e hardware CR-10 SE: SSH, Klipper, logs, comandos GCode"
     },
     {
       "agent_id": "visao-llm",
-      "module_path": "src/agents/cr10se_visao_llm.py",
-      "class_name": "VisaoLLMAgent",
+      "agent_name": "Visao LLM",
+      "role": "visao-llm",
+      "emoji": "👁️",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 15.0,
       "llm_provider": "auto",
-      "emoji": "👁️",
-      "description": "Analise visual de impressao via LLM"
+      "description": "Análise visual de impressão: snapshots câmera, detecção de falhas, monitoramento"
     },
     {
       "agent_id": "gcode-opt",
-      "module_path": "src/agents/cr10se_gcode_opt.py",
-      "class_name": "GCodeOptimizerAgent",
+      "agent_name": "GCode Optimizer",
+      "role": "gcode-opt",
+      "emoji": "⚡",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 15.0,
       "llm_provider": "auto",
-      "emoji": "⚡",
-      "description": "Otimizacao extrema de GCode e fatiamento"
+      "description": "Otimização de GCode e fatiamento: BED_MESH, PA, temperatura, pipeline"
     }
   ]
 }

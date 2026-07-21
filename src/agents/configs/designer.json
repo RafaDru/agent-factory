@@ -1,0 +1,33 @@
+{
+  "id": "designer",
+  "role": "worker",
+  "description": "Design: pesquisa de design systems, prototipos, UX",
+  "actions": {
+    "read_file": {
+      "description": "Le conteudo de um arquivo para referencia",
+      "params": {"file_path": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.read_file"
+    },
+    "list_directory": {
+      "description": "Lista arquivos em um diretorio",
+      "params": {"path": "str (obrigatorio)", "pattern": "str (opcional)"},
+      "handler": "src.agents.handlers.list_directory"
+    },
+    "research_design_systems": {
+      "description": "Pesquisa design systems do mercado focados em dashboards operacionais",
+      "params": {"query": "str (obrigatorio)"}
+    },
+    "analyze_ux": {
+      "description": "Analisa tendencias e propoe melhorias",
+      "params": {"prompt": "str (obrigatorio)"}
+    },
+    "design_ui": {
+      "description": "Cria esboco de componentes",
+      "params": {"prompt": "str (obrigatorio)"}
+    },
+    "prototype": {
+      "description": "Gera HTML/CSS (Tailwind/Lucide) para componentes",
+      "params": {"prompt": "str (obrigatorio)"}
+    }
+  }
+}

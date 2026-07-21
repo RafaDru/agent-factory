@@ -5,7 +5,7 @@ param(
     [string]$Port = "22",
     [string]$ProjectId = "AFP-Team",
     [string]$AgentId = "dev",
-    [string]$AgentClass = "src.agents.factory_dev.AgentFactoryDevAgent",
+    [string]$AgentClass = "src.agents.worker.DeclarativeWorker",
     [string]$AmqpUrl = "amqp://afp:afp123@localhost:5672/",
     [switch]$UseKeyAuth
 )

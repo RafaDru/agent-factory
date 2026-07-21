@@ -29,168 +29,131 @@ class AgentFactoryCoordinator(StandardBaseAgent):
 
     _DEFAULT_LLM = "auto"
 
-    ACTIONS = {
-        "delegate": {
-            "description": "Delega tarefa para dev, qa ou designer e retorna resultado",
-            "params": {
-                "agent_id": "str (obrigatorio) - dev | qa | designer",
-                "task": "dict (obrigatorio) - {action, ...}",
-            },
-        },
-        "plan_and_execute": {
-            "description": "Recebe objetivo, gera plano via LLM e executa DAG de tarefas",
-            "params": {
-                "goal": "str (obrigatorio) - descricao do objetivo em linguagem natural",
-                "context": "str (opcional) - contexto adicional ou restricoes",
-                "tasks": "list[dict] (opcional) - se fornecido, pula o LLM e executa diretamente",
-            },
-        },
-        "reflect_on_mission": {
-            "description": "Apos uma missao, reflete sobre o que aprendeu e persiste na arvore de contexto",
-            "params": {
-                "mission_id": "str (obrigatorio) - ID da missao concluida",
-                "goal": "str (obrigatorio) - objetivo original da missao",
-                "steps": "list[dict] (obrigatorio) - steps retornados por plan_and_execute",
-            },
-        },
-        "get_capabilities": {
-            "description": "Retorna as acoes disponiveis neste agente",
-            "params": {},
-        },
-    }
+    ACTIONS: dict = {}
 
-    PLAN_SYSTEM_PROMPT = """Voce e o coordenador do projeto Agent Factory Platform Team (AFP-Team).
+    def get_actions(self) -> dict:
+        """Retorna ACTIONS com agent_id dinâmico baseado nos subordinados reais."""
+        subs = sorted(self._subordinates.keys())
+        subs_str = " | ".join(subs) if subs else "dev | qa | designer | negocios | arquiteto"
+        return {
+            "delegate": {
+                "description": f"Delega tarefa para um subordinado ({subs_str}) e retorna resultado",
+                "params": {
+                    "agent_id": f"str (obrigatorio) - {subs_str}",
+                    "task": "dict (obrigatorio) - {action, ...}",
+                },
+            },
+            "plan_and_execute": {
+                "description": "Recebe objetivo, gera plano via LLM e executa DAG de tarefas",
+                "params": {
+                    "goal": "str (obrigatorio) - descricao do objetivo em linguagem natural",
+                    "context": "str (opcional) - contexto adicional ou restricoes",
+                    "tasks": "list[dict] (opcional) - se fornecido, pula o LLM e executa diretamente",
+                },
+            },
+            "reflect_on_mission": {
+                "description": "Apos uma missao, reflete sobre o que aprendeu e persiste na arvore de contexto",
+                "params": {
+                    "mission_id": "str (obrigatorio) - ID da missao concluida",
+                    "goal": "str (obrigatorio) - objetivo original da missao",
+                    "steps": "list[dict] (obrigatorio) - steps retornados por plan_and_execute",
+                },
+            },
+            "get_capabilities": {
+                "description": "Retorna as acoes disponiveis neste agente",
+                "params": {},
+            },
+        }
+
+    def _build_system_prompt(self) -> str:
+        """Gera dinamicamente o PLAN_SYSTEM_PROMPT com base nos subordinados reais."""
+        subs = self._subordinates
+        subs_list = "\n".join(
+            f"- {aid}: {self._describe_agent(subs[aid])}"
+            for aid in sorted(subs.keys())
+        ) if subs else (
+            "- dev: Implementacao de codigo, scripts, edicao\n"
+            "- qa: Testes, revisao de codigo, qualidade\n"
+            "- designer: Pesquisa UX, prototipos, analise visual\n"
+            "- negocios: Backlog, priorizacao, validacao de requisitos\n"
+            "- arquiteto: Revisao arquitetural, padroes, coerencia tecnica"
+        )
+
+        actions_desc = ""
+        for aid in sorted(subs.keys()):
+            agent = subs[aid]
+            acoes = getattr(agent, "ACTIONS", {})
+            # DeclarativeWorker: ler de _config.actions
+            if not acoes:
+                cfg = getattr(agent, "_config", {})
+                acoes = cfg.get("actions", {})
+            if acoes:
+                actions_desc += f"\n### {aid}\n"
+                for act_name in sorted(acoes.keys()):
+                    actions_desc += f"- `{act_name}`\n"
+
+        agent_ids = " | ".join(sorted(subs.keys())) if subs else "dev | qa | designer | negocios | arquiteto"
+
+        return f"""Voce e o coordenador do projeto Agent Factory Platform Team (AFP-Team).
 Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 
-## Regra de Ouro da Orquestração
-1. Delegue ao `dev` para implementar incrementalmente:
-   - PRIMEIRA task no arquivo: use `write_file` ou `generate_code` para CRIAR o arquivo
-   - Tasks SEGUINTES no MESMO arquivo: use `refactor_code` para MODIFICAR o arquivo existente (ele le o codigo atual e aplica as mudancas)
-   - NUNCA use `generate_code` duas vezes no mesmo arquivo — ele sobrescreve, nao edita
-   - Apos cada bloco de alteracoes, adicione uma task `run_git` para commitar
-2. Delegue ao `qa` para validar o codigo gerado (review_code, suggest_fixes, analyze_project).
-3. So marque como completo apos QA validar. Se falhar, aborte.
+## Subordinados Disponiveis
+{subs_list}
 
-## REGRA DE IMPLEMENTACAO INCREMENTAL (OBRIGATORIO)
-- 1 arquivo = 1 task de CRIACAO (write_file/generate_code) + N tasks de EDICAO (refactor_code/edit_file)
-- refactor_code LE o arquivo atual do disco e aplica melhorias — ideal para workflow incremental
-- SEMPRE adicione task de `run_git` com args=["add","-A"] e depois `run_git` com args=["commit","-m","..."] apos cada task de edicao
-- Isso garante que alteracoes de cada task sejam preservadas e rastreaveis
+## Acoes dos Subordinados{actions_desc}
 
-## IMPORTANTE: Outputs fluem entre tarefas
-O output de cada tarefa (analysis, html, codigo, review) e AUTOMATICAMENTE passado como contexto para tarefas que dependem dela. Use isso para criar pipelines ricos:
-- Dev implementa → output vira contexto para QA revisar
-- QA revisa → output mostra o que precisa ser corrigido
-
-## REGRA CRITICA: review_code exige arquivo especifico
-- `review_code` aceita APENAS caminho de arquivo (.jsx, .py, .ts, etc). NUNCA diretorio.
-- Para revisar um projeto inteiro, use `analyze_project`.
-
-## Subordinados
-- dev: Implementacao de codigo, scripts, edicao. USE generate_code/implement_feature para acoes LLM.
-- qa: Testes, revisao de codigo, qualidade.
+## Regras de Orquestracao
+1. Delegue ao `dev` para implementar incrementalmente (write_file/refactor_code)
+2. Delegue ao `qa` para validar (review_code, analyze_project)
+3. Delegue ao `designer` para pesquisa UX e prototipos
+4. Delegue ao `negocios` para analise de prioridades e requisitos
+5. Delegue ao `arquiteto` para revisao arquitetural
+6. NUNCA implemente codigo diretamente — delegue ao dev
+7. Outputs de tarefas anteriores sao automaticamente passados como contexto para dependentes
 
 ## Diretorio de trabalho
 C:/Users/rafae/agent-factory
 
-## Acoes disponiveis
-
-### dev — acoes OPERACIONAIS (arquivos, scripts)
-- `read_file` params: file_path
-- `write_file` params: file_path, content
-- `edit_file` params: file_path, old_string, new_string
-- `list_directory` params: path, pattern
-- `run_script` params: script_path, args (opcional)
-- `run_git` params: args
-- `rename_file` params: src, dst
-- `delete_file` params: file_path
-
-### dev — acoes LLM (geracao de codigo com IA)
-- `generate_code` params: spec (descricao do que gerar), language (react/python/etc), output_path
-- `implement_feature` params: spec (descricao da feature), output_path
-- `refactor_code` params: file_path, instructions (o que refatorar)
-
-### qa — acoes OPERACIONAIS
-- `run_tests` params: path, args (opcional)
-- `validate_python_syntax` params: file_path
-- `analyze_artifact` params: file_path, checks (opcional)
-- `lint` params: path
-- `file_exists` params: file_path
-
-### qa — acoes LLM (revisao inteligente)
-- `review_code` params: file_path
-- `suggest_fixes` params: error, file_path
-- `analyze_project` params: path
-
-### designer — acoes LLM (pesquisa e criacao)
-- `research_design_systems` params: query
-- `analyze_ux` params: prompt
-- `design_ui` params: prompt
-- `prototype` params: prompt
-
-## Formato de resposta
+## Formato de Resposta
 Responda com JSON contendo "plan" (lista de tarefas):
 
 ```json
-{
+{{
   "plan": [
-    {
-      "name": "pesquisar-design-systems",
-      "agent_id": "designer",
-      "task": {
-        "task_id": "pesquisa-design-systems",
-        "title": "Pesquisar design systems modernos para analytics dashboard",
-        "action": "research_design_systems",
-        "query": "Elastic UI, Grafana, dashboards operacionais"
-      },
-      "depends_on": []
-    },
-    {
-      "name": "analisar-dashboard-atual",
-      "agent_id": "dev",
-      "task": {
-        "task_id": "analisar-dashboard",
-        "title": "Analisar estrutura do dashboard React atual",
+    {{
+      "name": "exemplo-analise",
+      "agent_id": "{next(iter(subs.keys())) if subs else 'dev'}",
+      "task": {{
+        "task_id": "exemplo-analise",
+        "title": "Exemplo de task",
         "action": "read_file",
-        "file_path": "src/components/Dashboard.jsx"
-      },
+        "file_path": "src/exemplo.py"
+      }},
       "depends_on": []
-    },
-    {
-      "name": "criar-novo-dashboard",
-      "agent_id": "dev",
-      "task": {
-        "task_id": "criar-dashboard",
-        "title": "Implementar novo dashboard com base na analise UX",
-        "action": "generate_code",
-        "language": "react",
-        "output_path": "src/components/NewDashboard.jsx",
-        "spec": "Criar dashboard React com cards responsivos e graficos"
-      },
-      "depends_on": ["pesquisar-design-systems", "analisar-dashboard-atual"]
-    },
-    {
-      "name": "revisar-codigo-dashboard",
-      "agent_id": "qa",
-      "task": {
-        "task_id": "revisar-dashboard",
-        "title": "Revisar codigo do novo dashboard",
-        "action": "review_code",
-        "file_path": "src/components/NewDashboard.jsx"
-      },
-      "depends_on": ["criar-novo-dashboard"]
-    }
+    }}
   ]
-}
+}}
 ```
 
 Regras:
-- "name" deve ser unico em kebab-case
-- "agent_id": "dev" | "qa" | "designer"
-- "depends_on" lista "name"s de tarefas anteriores — o output delas vira contexto
-- Para tarefas de geracao, use generate_code/implement_feature/refactor_code (nao read_file)
+- "name" unico em kebab-case
+- "agent_id": "{agent_ids}"
+- "depends_on" lista "name"s de tarefas anteriores
 - Ordene por dependencias. Paralelize tarefas independentes.
 - Caminhos relativos ao diretorio de trabalho"""
+
+    @staticmethod
+    def _describe_agent(agent: Any) -> str:
+        """Descreve um agente baseado em suas acoes."""
+        acoes = getattr(agent, "ACTIONS", {})
+        if not acoes:
+            return "Agente sem acoes registradas"
+        descs = []
+        for name, info in sorted(acoes.items()):
+            if name == "get_capabilities":
+                continue
+            descs.append(info.get("description", name))
+        return "; ".join(descs[:3])
 
     def __init__(
         self,
@@ -230,7 +193,7 @@ Regras:
         elif action == "get_capabilities":
             return self._get_capabilities()
         else:
-            available = sorted(self.ACTIONS.keys())
+            available = sorted(self.get_actions().keys())
             raise StructuredError(
                 message=f"Acao desconhecida: '{action}'. Acoes disponiveis: {', '.join(available)}",
                 error_type="unknown_action",
@@ -295,7 +258,7 @@ Regras:
             message=f"Gerando plano via LLM para: {goal[:100]}",
         ))
 
-        system_prompt = self.PLAN_SYSTEM_PROMPT
+        system_prompt = self._build_system_prompt()
 
         try:
             if not self._llm:
@@ -510,6 +473,7 @@ Regras:
             status=AgentStatus.RUNNING,
             task_id="exec-plan",
             project_id=self.project_id,
+            mission_id=mission_id,
             message=f"Missao '{mission_id}': {len(tasks)} tarefas. Contexto salvo em {ctx_path}",
         ))
 
@@ -566,6 +530,7 @@ Regras:
                 status=AgentStatus.RUNNING,
                 task_id=task_id,
                 project_id=self.project_id,
+                mission_id=mission_id,
                 message=f"Passo '{subtask['title']}' -> {agent_id}. Task_Context: {tc_path}",
             ))
 
@@ -594,6 +559,7 @@ Regras:
                             status=AgentStatus.RUNNING,
                             task_id=task_id,
                             project_id=self.project_id,
+                            mission_id=mission_id,
                             message=f"Retry {attempt}/{max_attempts} para '{subtask['title']}'",
                         ))
                     continue
@@ -665,6 +631,7 @@ Regras:
                 status=AgentStatus.COMPLETED,
                 task_id="reflect",
                 project_id=self.project_id,
+                mission_id=mission_id,
                 message=f"Reflexao falhou (nao critico): {e}",
             ))
 
@@ -811,5 +778,5 @@ Regras:
             "role": self.role.value,
             "subordinates": list(self._subordinates.keys()),
             "llm_provider": type(self._llm).__name__ if self._llm else "None",
-            "actions": self.ACTIONS,
+            "actions": self.get_actions(),
         }

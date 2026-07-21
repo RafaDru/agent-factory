@@ -1,13 +1,518 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>dashboard-react</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+## Plano de Implementação
+
+1. **Substituir o arquivo `dashboard-react/index.html`** por uma nova página de configuração que atenda aos requisitos.
+2. **Incluir CDNs**: Tailwind CSS, Alpine.js, Lucide Icons e `marked.js` (para renderização Markdown).
+3. **Criar componente Alpine.js** (`configScreen`) com:
+   - Estado: lista de projetos, projeto selecionado, árvore de arquivos, arquivo selecionado, conteúdo, modais.
+   - Métodos: CRUD de projetos, navegação na árvore, carregamento de conteúdo, exportação JSON.
+4. **Mockar dados** de projetos e arquivos (`CONTEXTO.md`) para demonstração funcional.
+5. **Implementar layout** conforme protótipo do designer:
+   - Sidebar com lista de projetos e botão "Novo Projeto".
+   - Painel principal dividido em File Explorer (esquerda) e Preview (direita).
+   - Modais para adicionar/editar projeto.
+6. **Adicionar funcionalidades**:
+   - Adicionar/remover/editar projetos (com validação simples).
+   - File explorer com ícones de pasta/arquivo, expansão/colapso.
+   - Ao selecionar um arquivo `.md`, exibir preview humanizado (Markdown → HTML).
+   - Botão "Exportar project.json" que gera e baixa o JSON do projeto selecionado.
+7. **Integrar com o dashboard existente**: adicionar um cabeçalho mínimo com o nome da plataforma e navegação simulada (opcional, mas mantendo o foco na tela de configuração).
+
+## Arquivos Modificados
+
+- `dashboard-react/index.html` — substituição completa.
+
+## Código
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFP — Configuração de Projetos & Agentes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1117;
+            color: #e1e4e8;
+        }
+        .glass-panel {
+            background: rgba(22, 24, 31, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .sidebar-item {
+            transition: all 0.15s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+        .sidebar-item.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-left: 3px solid #818cf8;
+        }
+        .file-row {
+            transition: background 0.1s ease;
+        }
+        .file-row:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        .file-row.selected {
+            background: rgba(99, 102, 241, 0.12);
+            border-radius: 6px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #818cf8, #6366f1);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.35);
+        }
+        .btn-ghost {
+            transition: all 0.15s ease;
+        }
+        .btn-ghost:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+        }
+        .markdown-preview h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            color: #f0f0f0;
+        }
+        .markdown-preview h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-top: 0.8rem;
+            margin-bottom: 0.4rem;
+            color: #e2e2e2;
+        }
+        .markdown-preview h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-top: 0.6rem;
+            margin-bottom: 0.3rem;
+            color: #d4d4d4;
+        }
+        .markdown-preview p {
+            margin-bottom: 0.6rem;
+            line-height: 1.6;
+        }
+        .markdown-preview code {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        .markdown-preview pre {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 12px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 0.8rem 0;
+        }
+        .markdown-preview ul,
+        .markdown-preview ol {
+            margin-left: 1.5rem;
+            margin-bottom: 0.6rem;
+        }
+        .markdown-preview li {
+            margin-bottom: 0.25rem;
+        }
+        .markdown-preview table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 0.8rem 0;
+        }
+        .markdown-preview th,
+        .markdown-preview td {
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .markdown-preview th {
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 600;
+        }
+        .markdown-preview blockquote {
+            border-left: 3px solid #6366f1;
+            padding-left: 1rem;
+            margin: 0.8rem 0;
+            color: #b0b0b0;
+            font-style: italic;
+        }
+        .tree-indent {
+            margin-left: 1.25rem;
+        }
+        .folder-icon, .file-icon {
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col" x-data="configScreen()" x-init="init()">
+    <!-- Header simples para integração com dashboard -->
+    <header class="glass-panel px-6 py-3 flex items-center justify-between border-b border-white/5">
+        <div class="flex items-center gap-3">
+            <i data-lucide="bot" class="w-6 h-6 text-indigo-400"></i>
+            <h1 class="text-lg font-semibold">Agent Factory Platform</h1>
+        </div>
+        <nav class="flex gap-4 text-sm text-gray-400">
+            <a href="#" class="hover:text-white transition">Dashboard</a>
+            <a href="#" class="text-white font-medium">Configuração</a>
+            <a href="#" class="hover:text-white transition">Missões</a>
+        </nav>
+    </header>
+
+    <!-- Conteúdo principal -->
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar de projetos -->
+        <aside class="w-72 glass-panel border-r border-white/5 flex flex-col">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-gray-400">Projetos</h2>
+                <button @click="openAddProjectModal()" class="btn-ghost p-1 rounded-md" title="Novo Projeto">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 space-y-1">
+                <template x-for="project in projects" :key="project.id">
+                    <div @click="selectProject(project.id)"
+                         :class="{'active': selectedProjectId === project.id}"
+                         class="sidebar-item px-3 py-2 rounded-md cursor-pointer flex items-center justify-between group">
+                        <div class="flex items-center gap-2 truncate">
+                            <i data-lucide="folder" class="w-4 h-4 text-indigo-400 flex-shrink-0"></i>
+                            <span class="text-sm truncate" x-text="project.name"></span>
+                        </div>
+                        <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                            <button @click.stop="openEditProjectModal(project)" class="btn-ghost p-1 rounded" title="Editar">
+                                <i data-lucide="pencil" class="w-3 h-3"></i>
+                            </button>
+                            <button @click.stop="deleteProject(project.id)" class="btn-ghost p-1 rounded text-red-400 hover:text-red-300" title="Remover">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="projects.length === 0" class="text-center text-gray-500 text-sm py-8">
+                    Nenhum projeto ainda.<br>Crie o primeiro clicando no +.
+                </div>
+            </div>
+        </aside>
+
+        <!-- Painel principal -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- Toolbar -->
+            <div class="glass-panel px-4 py-2 border-b border-white/5 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <i data-lucide="file-text" class="w-4 h-4 text-gray-400"></i>
+                    <span class="text-sm text-gray-300" x-text="selectedProjectId ? getProjectName(selectedProjectId) : 'Selecione um projeto'"></span>
+                </div>
+                <button @click="exportProjectJson()" x-show="selectedProjectId" class="btn-primary text-xs px-3 py-1.5 rounded-md flex items-center gap-1">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    Exportar JSON
+                </button>
+            </div>
+
+            <!-- Corpo: File Explorer + Preview -->
+            <div class="flex-1 flex overflow-hidden" x-show="selectedProjectId">
+                <!-- File Explorer -->
+                <div class="w-80 glass-panel border-r border-white/5 overflow-y-auto p-3">
+                    <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-3">Explorador de Arquivos</h3>
+                    <div class="space-y-1">
+                        <template x-for="node in fileTree" :key="node.path">
+                            <div>
+                                <!-- Pasta -->
+                                <div x-show="node.type === 'folder'" @click="toggleFolder(node)" class="file-row px-2 py-1.5 rounded flex items-center gap-2 cursor-pointer">
+                                    <i :data-lucide="node.expanded ? 'folder-open' : 'folder'" class="w-4 h-4 text-indigo-400 flex-shrink-0"></i>
+                                    <span class="text-sm truncate" x-text="node.name"></span>
+                                    <i data-lucide="chevron-right" class="w-3 h-3 ml-auto transition-transform" :class="node.expanded ? 'rotate-90' : ''"></i>
+                                </div>
+                                <!-- Arquivos dentro da pasta (se expandida) -->
+                                <div x-show="node.expanded" class="tree-indent">
+                                    <template x-for="child in node.children" :key="child.path">
+                                        <div @click="selectFile(child)" 
+                                             :class="{'selected': selectedFile === child.path}"
+                                             class="file-row px-2 py-1.5 rounded flex items-center gap-2 cursor-pointer">
+                                            <i data-lucide="file" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+                                            <span class="text-sm truncate" x-text="child.name"></span>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <div x-show="!selectedFile" class="h-full flex items-center justify-center text-gray-500">
+                        <div class="text-center">
+                            <i data-lucide="eye" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p>Selecione um arquivo para visualizar</p>
+                        </div>
+                    </div>
+                    <div x-show="selectedFile" class="markdown-preview" x-html="previewHtml"></div>
+                </div>
+            </div>
+
+            <!-- Placeholder quando nenhum projeto selecionado -->
+            <div x-show="!selectedProjectId" class="flex-1 flex items-center justify-center text-gray-500">
+                <div class="text-center">
+                    <i data-lucide="folder-open" class="w-16 h-16 mx-auto mb-4 opacity-20"></i>
+                    <p class="text-lg">Selecione um projeto na barra lateral</p>
+                    <p class="text-sm mt-1">ou crie um novo para começar</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal: Adicionar/Editar Projeto -->
+    <div x-show="showProjectModal" class="fixed inset-0 z-50 flex items-center justify-center modal-overlay" @click.self="closeProjectModal()">
+        <div class="glass-panel rounded-xl w-full max-w-md p-6 mx-4" @click.stop="">
+            <h2 class="text-lg font-semibold mb-4" x-text="editingProject ? 'Editar Projeto' : 'Novo Projeto'"></h2>
+            <form @submit.prevent="saveProject()">
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Nome do Projeto</label>
+                    <input type="text" x-model="projectForm.name" required
+                           class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition"
+                           placeholder="Ex: Meu Projeto">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Descrição</label>
+                    <textarea x-model="projectForm.description" rows="3"
+                              class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition"
+                              placeholder="Breve descrição do projeto"></textarea>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Agentes (separados por vírgula)</label>
+                    <input type="text" x-model="projectForm.agentsInput"
+                           class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500 transition"
+                           placeholder="Ex: dev, qa, designer">
+                    <p class="text-xs text-gray-500 mt-1">Serão criadas pastas para cada agente com um CONTEXTO.md vazio.</p>
+                </div>
+                <div class="flex justify-end gap-3 mt-6">
+                    <button type="button" @click="closeProjectModal()" class="btn-ghost px-4 py-2 rounded-lg text-sm">Cancelar</button>
+                    <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function configScreen() {
+            return {
+                // Estado
+                projects: [],
+                selectedProjectId: null,
+                fileTree: [],
+                selectedFile: null,
+                fileContent: '',
+                previewHtml: '',
+                showProjectModal: false,
+                editingProject: null,
+                projectForm: {
+                    name: '',
+                    description: '',
+                    agentsInput: ''
+                },
+
+                // Inicialização
+                init() {
+                    // Mock de projetos iniciais
+                    this.projects = [
+                        {
+                            id: 'proj-1',
+                            name: 'Agent Factory Core',
+                            description: 'Plataforma principal de orquestração',
+                            agents: ['coordenador', 'dev', 'qa', 'designer']
+                        },
+                        {
+                            id: 'proj-2',
+                            name: 'E-commerce App',
+                            description: 'Aplicação de loja virtual',
+                            agents: ['dev', 'qa']
+                        }
+                    ];
+                    // Seleciona o primeiro projeto automaticamente
+                    if (this.projects.length > 0) {
+                        this.selectProject(this.projects[0].id);
+                    }
+                    // Re-inicializa ícones Lucide após renderização
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                // Projetos
+                selectProject(projectId) {
+                    this.selectedProjectId = projectId;
+                    this.selectedFile = null;
+                    this.fileContent = '';
+                    this.previewHtml = '';
+                    this.buildFileTree(projectId);
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                getProjectName(projectId) {
+                    const project = this.projects.find(p => p.id === projectId);
+                    return project ? project.name : '';
+                },
+
+                openAddProjectModal() {
+                    this.editingProject = null;
+                    this.projectForm = { name: '', description: '', agentsInput: '' };
+                    this.showProjectModal = true;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                openEditProjectModal(project) {
+                    this.editingProject = project;
+                    this.projectForm = {
+                        name: project.name,
+                        description: project.description,
+                        agentsInput: project.agents.join(', ')
+                    };
+                    this.showProjectModal = true;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                closeProjectModal() {
+                    this.showProjectModal = false;
+                    this.editingProject = null;
+                },
+
+                saveProject() {
+                    const agents = this.projectForm.agentsInput
+                        .split(',')
+                        .map(a => a.trim())
+                        .filter(a => a.length > 0);
+
+                    if (this.editingProject) {
+                        // Editar projeto existente
+                        const index = this.projects.findIndex(p => p.id === this.editingProject.id);
+                        if (index !== -1) {
+                            this.projects[index] = {
+                                ...this.projects[index],
+                                name: this.projectForm.name,
+                                description: this.projectForm.description,
+                                agents: agents
+                            };
+                            // Se o projeto editado é o selecionado, atualiza a árvore
+                            if (this.selectedProjectId === this.editingProject.id) {
+                                this.buildFileTree(this.selectedProjectId);
+                            }
+                        }
+                    } else {
+                        // Novo projeto
+                        const newProject = {
+                            id: 'proj-' + Date.now(),
+                            name: this.projectForm.name,
+                            description: this.projectForm.description,
+                            agents: agents
+                        };
+                        this.projects.push(newProject);
+                        this.selectProject(newProject.id);
+                    }
+                    this.closeProjectModal();
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                deleteProject(projectId) {
+                    if (confirm('Tem certeza que deseja remover este projeto?')) {
+                        this.projects = this.projects.filter(p => p.id !== projectId);
+                        if (this.selectedProjectId === projectId) {
+                            this.selectedProjectId = null;
+                            this.fileTree = [];
+                            this.selectedFile = null;
+                            this.fileContent = '';
+                            this.previewHtml = '';
+                        }
+                        this.$nextTick(() => lucide.createIcons());
+                    }
+                },
+
+                // File Explorer
+                buildFileTree(projectId) {
+                    const project = this.projects.find(p => p.id === projectId);
+                    if (!project) {
+                        this.fileTree = [];
+                        return;
+                    }
+                    // Cria uma árvore simulada: pasta raiz com subpastas de agentes
+                    const root = {
+                        type: 'folder',
+                        name: project.name,
+                        path: '/',
+                        expanded: true,
+                        children: project.agents.map(agent => ({
+                            type: 'file',
+                            name: 'CONTEXTO.md',
+                            path: `/contexts/${project.id}/${agent}/CONTEXTO.md`,
+                            agent: agent
+                        }))
+                    };
+                    this.fileTree = [root];
+                },
+
+                toggleFolder(node) {
+                    node.expanded = !node.expanded;
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                selectFile(fileNode) {
+                    this.selectedFile = fileNode.path;
+                    // Carrega conteúdo mockado baseado no agente
+                    this.fileContent = this.getMockContent(fileNode.agent);
+                    this.previewHtml = marked.parse(this.fileContent);
+                    this.$nextTick(() => lucide.createIcons());
+                },
+
+                // Conteúdo mockado para demonstração
+                getMockContent(agent) {
+                    const contents = {
+                        'coordenador': `# Coordenador\n\nO **Coordenador** é responsável por planejar e delegar tarefas.\n\n## Responsabilidades\n- Receber objetivos\n- Criar plano de ação\n- Delegar para agentes especializados\n- Auditar qualidade\n\n## Configuração\n\`\`\`json\n{\n  "provider": "groq",\n  "model": "llama-3.3-70b"\n}\n\`\`\``,
+                        'dev': `# Desenvolvedor\n\nAgente especializado em implementação de código.\n\n## Stack\n- Python 3.11+\n- React 19\n- Git\n\n## Exemplo de uso\n\`\`\`python\nprint("Hello from Dev Agent")\n\`\`\``,
+                        'qa': `# QA\n\nAgente de garantia de qualidade.\n\n## Atividades\n- Testes automatizados\n- Lint\n- Revisão de código\n\n> "Qualidade não é um ato, é um hábito." — Aristóteles`,
+                        'designer': `# Designer\n\nEspecialista em UX/UI.\n\n## Ferramentas\n- Figma\n- Design Systems\n- Prototipagem\n\n## Tabela de cores\n| Cor | Hex |\n|-----|-----|\n| Primária | #6366f1 |\n| Fundo | #0f1117 |`
+                    };
+                    return contents[agent] || `# ${agent}\n\nConteúdo não disponível.`;
+                },
+
+                // Exportação
+                exportProjectJson() {
+                    const project = this.projects.find(p => p.id === this.selectedProjectId);
+                    if (!project) return;
+                    const json = JSON.stringify(project, null, 2);
+                    const blob = new Blob([json], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${project.name.replace(/\s+/g, '_').toLowerCase()}.project.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                },
+
+                // Atualização de ícones após mudanças no DOM
+                refreshIcons() {
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            };
+        }
+    </script>
+</body>
 </html>
+```

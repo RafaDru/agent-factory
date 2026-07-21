@@ -103,6 +103,16 @@ def _get_registry():
 
 def _wire_subordinates(registry, project_id: str, agent):
     """Carrega e conecta subordinados ao coordenador."""
+    # Load agent_config.json for LLM provider overrides
+    agent_config_map = {}
+    try:
+        import json as _json
+        cfg_path = Path(".agent-factory/agent_config.json")
+        if cfg_path.exists():
+            agent_config_map = _json.loads(cfg_path.read_text())
+    except Exception:
+        pass
+
     subordinates = {}
     refs = registry.list_agent_refs(project_id)
     for aid in refs:
@@ -110,6 +120,18 @@ def _wire_subordinates(registry, project_id: str, agent):
             continue
         try:
             subordinate = registry.load_agent(project_id, aid)
+            # Set LLM provider from agent_config.json if available (overrides config file)
+            sub_cfg = agent_config_map.get(aid, {})
+            provider_str = sub_cfg.get("llm_provider")
+            if provider_str and hasattr(subordinate, '_llm'):
+                from src.llm import get_provider
+                try:
+                    prov = get_provider(provider_str)
+                    subordinate._llm = prov
+                    if hasattr(subordinate, '_llm_provider'):
+                        subordinate._llm_provider = prov
+                except Exception:
+                    pass
             subordinates[aid] = subordinate
             print(f"  [MCP] Worker carregado: {aid} ({type(subordinate).__name__})")
         except Exception as e:
@@ -300,6 +322,23 @@ def run_objective(
             "message": str(e),
             "project_id": project_id,
         }
+
+    # Set LLM provider from agent_config.json if available
+    try:
+        import json as _json
+        cfg_path = Path(".agent-factory/agent_config.json")
+        if cfg_path.exists():
+            cfg = _json.loads(cfg_path.read_text())
+            coord_cfg = cfg.get("coordenador", {})
+            provider_str = coord_cfg.get("llm_provider") or coord_cfg.get("llm_provider", "")
+            if provider_str:
+                from src.llm import get_provider
+                from src.agents.base import CoordinatorAgent
+                if isinstance(agent, CoordinatorAgent):
+                    agent.llm_provider = get_provider(provider_str)
+                    agent._llm = agent.llm_provider
+    except Exception as e:
+        print(f"  [MCP] Aviso: nao foi possivel configurar LLM do coordenador: {e}")
 
     _wire_subordinates(registry, project_id, agent)
 

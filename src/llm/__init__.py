@@ -877,24 +877,14 @@ def get_provider(
 
         "local_multi": squad de 4 modelos locais com roteamento inteligente
     """
-    PROVIDER_MAP = {
-        "opencode": (OpenCodeGoProvider, ["api_key", "model", "base_url"]),
-        "opencode_zen": (OpenCodeZenProvider, ["api_key", "model", "base_url"]),
-        "groq": (GroqProvider, []),
-        "gemini": (GeminiProvider, ["api_key", "model"]),
-        "deepseek": (DeepSeekProvider, ["api_key", "model"]),
-        "openrouter": (OpenRouterProvider, ["api_key", "model"]),
-        "cerebras": (CerebrasProvider, ["api_key", "model"]),
-        "mistral": (MistralProvider, ["api_key", "model"]),
-        "mimo": (MimoProvider, ["api_key", "model"]),
-        "nvidia": (NVIDIAProvider, ["api_key", "model"]),
-        "huggingface": (HuggingFaceProvider, ["api_key", "model"]),
-        "cloudflare": (CloudflareProvider, ["api_key", "model", "account_id"]),
-        "ollama": (OllamaProvider, ["base_url", "model"]),
-        "mock": (MockProvider, ["responses"]),
-        "local_multi": (MultiModelProvider, ["base_url", "capabilities", "classifier_model", "default_model"]),
-        "smart": (SmartRouterProvider, ["verbose"]),
-    }
+    _PM = PROVIDER_MAP  # module-level reference
+
+    # Suporte a sintaxe "provider:model" para selecionar modelo especifico
+    model_override = None
+    if ":" in provider_name:
+        parts = provider_name.split(":", 1)
+        provider_name = parts[0]
+        model_override = parts[1]
 
     if provider_name == "auto":
         provider_name = "smart"
@@ -902,14 +892,16 @@ def get_provider(
     if provider_name == "smart":
         return SmartRouterProvider(**kwargs)
 
-    if provider_name in PROVIDER_MAP:
-        cls, param_names = PROVIDER_MAP[provider_name]
+    if provider_name in _PM:
+        cls, param_names = _PM[provider_name]
         init_kwargs = {k: v for k, v in kwargs.items() if k in param_names}
+        if model_override and "model" in param_names:
+            init_kwargs["model"] = model_override
         return cls(**init_kwargs)
 
     raise ValueError(
         f"Provedor desconhecido: {provider_name}. "
-        f"Opcoes: {', '.join(PROVIDER_MAP.keys())}"
+        f"Opcoes: {', '.join(_PM.keys())}"
     )
 
 
@@ -1083,15 +1075,98 @@ class SmartRouterProvider(LLMProvider):
 
     _PROVIDER_CACHE: dict[str, LLMProvider] = {}
 
-    # Ranking: Free first (Zen, Groq, Cerebras), Go (paid) como fallback final
+    # Ranking: Free first (Zen), variantes de modelo como fallback, Go (paid) como fallback final
     RANKINGS: dict[str, list[str]] = {
-        "coder": ["opencode_zen", "groq", "cerebras", "deepseek", "mistral", "huggingface", "openrouter", "opencode", "gemini"],
-        "reasoner": ["opencode_zen", "groq", "deepseek", "cerebras", "mistral", "opencode", "gemini"],
-        "analysis": ["opencode_zen", "groq", "deepseek", "openrouter", "mistral", "huggingface", "opencode", "gemini"],
-        "fast": ["opencode_zen", "groq", "cerebras", "opencode"],
-        "planner": ["opencode_zen", "groq", "deepseek", "mistral", "opencode", "gemini"],
-        "review": ["opencode_zen", "groq", "deepseek", "mistral", "huggingface", "opencode", "gemini"],
-        "default": ["opencode_zen", "groq", "deepseek", "openrouter", "cerebras", "mistral", "huggingface", "opencode", "gemini"],
+        "coder": [
+            "opencode_zen:deepseek-v4-pro",
+            "opencode_zen:deepseek-v4-flash",
+            "opencode_zen:mimo-2.5-flash",
+            "groq",
+            "cerebras",
+            "deepseek",
+            "openrouter:google/gemma-7b:free",
+            "openrouter:meta-llama/llama-3-8b:free",
+            "mistral",
+            "huggingface",
+            "opencode:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "opencode:qwen3.5-plus",
+            "gemini",
+        ],
+        "reasoner": [
+            "opencode_zen:deepseek-v4-pro",
+            "opencode_zen:deepseek-v4-flash",
+            "groq",
+            "deepseek",
+            "opencode_zen:mimo-2.5-flash",
+            "cerebras",
+            "openrouter:google/gemma-7b:free",
+            "mistral",
+            "opencode:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "gemini",
+        ],
+        "analysis": [
+            "opencode_zen:deepseek-v4-pro",
+            "opencode_zen:deepseek-v4-flash",
+            "groq",
+            "deepseek",
+            "opencode_zen:mimo-2.5-flash",
+            "openrouter:google/gemma-7b:free",
+            "mistral",
+            "huggingface",
+            "opencode:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "gemini",
+        ],
+        "fast": [
+            "opencode_zen:deepseek-v4-flash",
+            "opencode_zen:mimo-2.5-flash",
+            "groq",
+            "cerebras",
+            "opencode_zen:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "openrouter:google/gemma-7b:free",
+        ],
+        "planner": [
+            "opencode_zen:deepseek-v4-pro",
+            "opencode_zen:deepseek-v4-flash",
+            "groq",
+            "deepseek",
+            "opencode_zen:mimo-2.5-flash",
+            "mistral",
+            "opencode:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "gemini",
+        ],
+        "review": [
+            "opencode_zen:deepseek-v4-pro",
+            "opencode_zen:deepseek-v4-flash",
+            "groq",
+            "deepseek",
+            "opencode_zen:mimo-2.5-flash",
+            "mistral",
+            "huggingface",
+            "opencode:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "gemini",
+        ],
+        "default": [
+            "opencode_zen:deepseek-v4-pro",
+            "opencode_zen:deepseek-v4-flash",
+            "opencode_zen:mimo-2.5-flash",
+            "groq",
+            "deepseek",
+            "openrouter:google/gemma-7b:free",
+            "openrouter:meta-llama/llama-3-8b:free",
+            "cerebras",
+            "mistral",
+            "huggingface",
+            "opencode:deepseek-v4-pro",
+            "opencode:deepseek-v4-flash",
+            "opencode:qwen3.5-plus",
+            "gemini",
+        ],
     }
 
     def __init__(self, verbose: bool = True):
@@ -1230,3 +1305,23 @@ class SmartRouterProvider(LLMProvider):
     def get_fallback_log(self) -> list[dict]:
         """Retorna historico de fallbacks."""
         return self._fallback_log
+
+
+PROVIDER_MAP = {
+    "opencode": (OpenCodeGoProvider, ["api_key", "model", "base_url"]),
+    "opencode_zen": (OpenCodeZenProvider, ["api_key", "model", "base_url"]),
+    "groq": (GroqProvider, []),
+    "gemini": (GeminiProvider, ["api_key", "model"]),
+    "deepseek": (DeepSeekProvider, ["api_key", "model"]),
+    "openrouter": (OpenRouterProvider, ["api_key", "model"]),
+    "cerebras": (CerebrasProvider, ["api_key", "model"]),
+    "mistral": (MistralProvider, ["api_key", "model"]),
+    "mimo": (MimoProvider, ["api_key", "model"]),
+    "nvidia": (NVIDIAProvider, ["api_key", "model"]),
+    "huggingface": (HuggingFaceProvider, ["api_key", "model"]),
+    "cloudflare": (CloudflareProvider, ["api_key", "model", "account_id"]),
+    "ollama": (OllamaProvider, ["base_url", "model"]),
+    "mock": (MockProvider, ["responses"]),
+    "local_multi": (MultiModelProvider, ["base_url", "capabilities", "classifier_model", "default_model"]),
+    "smart": (SmartRouterProvider, ["verbose"]),
+}

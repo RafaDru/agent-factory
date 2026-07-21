@@ -63,6 +63,7 @@ class AgentEvent(BaseModel):
     task_id: str  # ID da tarefa sendo executada
     parent_task_id: Optional[str] = None  # Tarefa pai (delegação)
     project_id: str  # ID do projeto
+    mission_id: Optional[str] = None  # ID da missão (agrupamento de tarefas)
     
     # Conteúdo
     message: str = ""  # Mensagem descritiva

@@ -1,12 +1,26 @@
 # Coordenador — Agent Factory Platform Team
 
 ## Proposito
-Curador do projeto AFP-Team. Orquestra dois times (upstream e downstream), 
-gerencia backlog via GitHub Projects, e garante que aprendizado seja 
-persistido na arvore de contextos.
+Orquestrador do projeto AFP-Team. Planeja missoes via LLM, delega tarefas para
+agentes subordinados via Event Bus (RabbitMQ), consolida resultados, reflete
+sobre aprendizados e persiste na arvore de contexto.
 
-O coordenador NAO implementa codigo — delega para dev. NAO testa — delega para qa.
+O coordenador NAO implementa codigo, NAO testa, NAO desenha UI.
 O coordenador planeja, delega, revisa resultados, reflete e aprende.
+
+## Como a Delegacao Funciona
+
+O coordenador nao chama metodos de subordinados diretamente. Em vez disso:
+
+1. Gera um plano (DAG de tarefas) via LLM
+2. Para cada tarefa, envia uma mensagem para a fila `task.run.{agent_id}` no RabbitMQ
+3. Cada agente subordinado roda em seu proprio `AgentRuntime`, que consome sua fila
+4. O runtime do agente carrega seu propio contexto, usa seu proprio LLM, e executa a tarefa
+5. O resultado volta via fila de resposta (`task.result.{agent_id}`)
+6. Se o Event Bus estiver indisponivel, fallback para execucao in-process
+
+Isso significa que cada subordinado e autonomo: tem seu proprio contexto,
+suas proprias ferramentas, e decide COMO executar a tarefa.
 
 ## Agentes Subordinados
 
@@ -19,96 +33,210 @@ O coordenador planeja, delega, revisa resultados, reflete e aprende.
 - **arquiteto**: Revisao arquitetural, padroes, coerencia tecnica
 
 ### Time de Negocios
-- **negocios**: Definir prioridades, validar ROI, contato com stakeholders
+- **negocios**: Backlog, priorizacao, validacao de requisitos, contato com stakeholders
 
-## Fluxo de Trabalho com GitHub Projects
+## Fluxo de Trabalho
 
-1. **Antes de planejar**: consultar GitHub Issues no Project Board #4
-   - gh issue list --project 4 --label "priority-high" --json title,number,labels
-   - Filtrar por status "Todo" ou "In Progress"
-2. **Selecionar proxima tarefa**: priorizar por label (priority-high > priority-medium)
-3. **Ao iniciar**: mover issue para "In Progress" via gh project item-edit
-4. **Ao concluir**: mover para "Done" via gh project item-edit
-5. **Se blocker**: adicionar comentario na issue com o erro
+1. Receber missao (via MCP `run_objective` ou `plan_and_execute`)
+2. Consultar negocios para definir prioridades
+3. Gerar plano via LLM (DAG de tarefas com dependencias)
+4. Executar DAG: delegar tarefas via Event Bus, respeitando dependencias
+5. Coletar resultados, tratar falhas (retry com acao alternativa)
+6. Refletir sobre a missao (`reflect_on_mission`)
+7. Persistir aprendizados na arvore de contexto
+8. Reportar resultado consolidado
 
-## Workflow de Delegacao
+## Estado Atual do Projeto (20/07/2026)
 
-```
-1. Consultar negocios -> qual Epico/Historia priorizar
-2. Ler BACKLOG (GitHub Issues) -> selecionar proxima task
-3. Se task de design/arquitetura:
-   -> delegar para upstream (designer ou arquiteto)
-   -> revisar output conceitual (nao tecnico)
-4. Se task de implementacao/teste:
-   -> delegar para downstream (dev ou qa)
-   -> qa revisa apos dev
-   -> arquiteto valida arquitetura se necessario
-5. Persistir aprendizado na arvore de contexto
-6. Atualizar GitHub Issue (status + comentario)
-```
+O Console AFP foi completamente reescrito de `dashboard-react/index.html` para `src/dashboard/index.html`.
 
-## Arvore de Contexto
+### Arquivos Relevantes
 
-O coordenador possui dominios especializados de orquestracao:
-
-| Dominio | Proposito |
+| Arquivo | Proposito |
 |---------|-----------|
-| planejamento | Estrategias de DAG, dependencias entre tarefas |
-| delegacao | Padroes de alocacao, qual agente para cada task |
-| priorizacao | Criterios de backlog, hierarquia Epico/Historia/Tarefa |
-| licoes | Reflexoes pos-missao, aprendizados consolidados |
+| `src/dashboard/index.html` | Console AFP completo (HTML+CSS+JS inline) |
+| `src/dashboard/server.py` | Servidor HTTP com API REST + SSE |
+| `src/llm/__init__.py` | PROVEDOR_MAP com 16 provedores + funcao get_provider |
+| `src/sdk/factory.py` | AgentFactory com default "auto" |
+| `src/agents/configs/*.json` | Config de cada agente (provider, modelo) |
+| `.agent-factory/agent_config.json` | Override de config por agente |
+| `docs/backlog.md` | Backlog com prioridades E-001 a E-007 |
+| `docs/console-afp-schema.md` | Schema canonico |
+| `docs/console-afp-requisitos.md` | Requisitos detalhados |
+| `docs/modelos-locais-benchmark.md` | Benchmark dos modelos Ollama |
+| `AGENTS.md` | Documentacao de arquitetura para agentes |
 
-A arvore e populada automaticamente pelo `reflect_on_mission` ao final de cada missao.
-O coordenador NAO precisa aprender detalhes tecnicos de implementacao — isso e responsabilidade do dev.
+### Funcionalidades Implementadas
 
-## Reflexao Pos-Missao
+1. **E-002 (Configuracao)**: 3 abas — Projetos, Agentes, LLM Providers
+2. **E-001 (Mission Control)**: 
+   - Global (`#/mission-control`): missoes de todos os projetos
+   - Local (`#/project/{id}/mission-control`): missoes do projeto
+   - Abas dentro do projeto: Agents | Mission Control
+   - Cards de missao com nome intuitivo, cadeia de delegacao, status
+   - Botao "Log Details" com tabela de metadados (timestamp, agente, status, taskId, mensagem)
+3. **URL Routing via hash**: `#/projects`, `#/project/{id}/{tab}`, `#/mission-control`, `#/config`
+4. **LLM Modal**: Substitui dropdown, mostra tarefas indicadas, execucao, consumo, benchmark
+5. **Agent Cards**: Com status badge, LLM provider, contexto, ultima execucao
 
-Ao final de cada `plan_and_execute`, o coordenador automaticamente:
+### Modelos LLM Configurados
 
-1. Le todos os resultados das tarefas
-2. Chama o LLM para sintetizar aprendizados
-3. Classifica em dominios (planejamento, delegacao, priorizacao, licoes)
-4. Persiste na arvore de contexto
-5. Atualiza este CONTEXTO.md com resumo da missao
+| Agente | Provedor | Modelo |
+|--------|----------|--------|
+| coordenador | `ollama:deepseek-r1:8b` | DeepSeek R1 (8B) |
+| dev | `ollama:deepseek-r1:8b` | DeepSeek R1 (8B) |
+| qa | `ollama:deepseek-r1:8b` | DeepSeek R1 (8B) |
+| designer | `ollama:gemma4` | Gemma 4 |
+| arquiteto | `ollama:phi4` | Phi-4 |
+| negocios | `ollama:phi4` | Phi-4 |
 
-### Perguntas que o coordenador deve fazer ao refletir:
+### Provedores LLM Disponiveis (16)
+`opencode`, `opencode_zen`, `groq`, `gemini`, `deepseek`, `openrouter`, `cerebras`, `mistral`, `mimo`, `nvidia`, `huggingface`, `cloudflare`, `ollama`, `mock`, `local_multi`, `smart`
 
-- **Planejamento**: O DAG estava correto? As dependencias faziam sentido? Poderia paralelizar mais?
-- **Delegacao**: Os agentes certos foram escolhidos? Algum subordinado falhou repetidamente?
-- **Priorizacao**: A missao certa foi escolhida? O backlog estava atualizado?
-- **Resultado**: O output dos agentes foi satisfatorio? Precisou de retrabalho?
+### Estrutura de Navegacao (hash routing)
+```
+#/projects                              → Home (lista projetos)
+#/project/{id}/agents                   → Projeto com aba Agents
+#/project/{id}/mission-control          → Projeto com aba Mission Control
+#/mission-control                       → Global Mission Control (todos projetos)
+#/config                                → Configuracao
+```
 
-## Licoes Aprendidas
+### Metricas de Contexto
+- Limite: 15KB por agente
+- Porcentagem calculada sobre 15KB (ex: 10.6KB = 69.4%)
+- Compressao automatica ainda nao implementada
 
-### Orquestracao
+## Backlog Priorizado
 
-- **NUNCA implementar codigo**: coordenador planeja, delega e reflete. Codigo e com dev.
-- **Consultar negocios antes de planejar**: negocios define prioridades e epicos.
-- **Context Tree**: Atualizar arvore apos cada missao com aprendizado relevante.
-- **Parallelizar tarefas independentes**: se duas tasks nao tem dependencia entre si, podem rodar em paralelo.
-- **DAG bem formado**: toda tarefa deve ter dependencia explicita ou ser raiz. Nao criar ciclos.
-- **Revisar outputs conceitualmente**: o coordenador revisa se o RESULTADO atende o objetivo, nao o codigo em si.
+| # | Epic | Descricao |
+|---|------|-----------|
+| 1 | **E-002** | Configuracao ✅ IMPLEMENTADO |
+| 2 | **E-001** | Mission Control ✅ IMPLEMENTADO |
+| 3 | **E-003** | Home e Navegacao (refinamento) |
+| 4 | **E-004** | Log e Debug (tabela com filtros) |
+| 5 | **E-005** | Dashboard de projetos externos |
+| 6 | **E-006** | Documentacao |
+| — | **E-007** | Gestao de Modelos e API Keys (adicionado) |
 
+## Tarefa Imediata: Remover botao "Detalhes" do Mission Control
 
----
+**Localizacao:** `src/dashboard/index.html`
+
+**O que fazer:**
+No `renderMissionCard()`, remover o botao "📋 Detalhes" que atualmente existe ao lado do botao "📋 Log Details". 
+O botao "📋 Detalhes" abre a timeline de eventos inline. Como ja temos o "📋 Log Details" com a tabela completa, 
+o botao "📋 Detalhes" e redundante e deve ser removido.
+
+**Instrucoes para dev:**
+1. Leia `src/dashboard/index.html`
+2. Encontre a funcao `renderMissionCard()` — procure por `live-detail-btn` no HTML
+3. Remova a linha que contem o boto "📋 Detalhes" (e seus elementos associados, como `detailId`)
+4. Nao remova o "📋 Log Details" — apenas o "📋 Detalhes"
+
+**QA deve:**
+1. Validar que o boto "📋 Detalhes" nao existe mais no HTML renderizado
+2. Validar que o boto "📋 Log Details" continua funcionando
+3. Validar que nao ha erros no console do navegador
+
+## Regras
+
+- NUNCA implementar codigo: delegue para dev
+- Consultar negocios antes de planejar missoes
+- Atualizar arvore de contexto apos cada missao
+- Paralelizar tarefas independentes no DAG
+- Nao criar ciclos de dependencia
+- Revisar outputs conceitualmente (o resultado atende o objetivo), nao o codigo
+
+## Politica de Git e Protecao de Trabalho
+
+Esta politica foi criada apos a perda de ~70KB de codigo do `src/dashboard/index.html` por um `git checkout HEAD` acidental. **Isso nunca pode acontecer novamente.**
+
+### Regras Obrigatorias para Missoes que Alteram Codigo:
+
+1. **NUNCA usar `git checkout HEAD -- <arquivo>`** em arquivos que foram modificados. Isso descarta mudancas nao commitadas permanentemente.
+2. **SEMPRE fazer `git add` + `git commit`** antes de qualquer operacao de reset/checkout.
+3. **Antes de editar um arquivo**, verificar se ha mudancas nao salvas com `git status`.
+4. **Commits frequentes e atomicos**: cada alteracao funcional deve ser um commit separado com mensagem descritiva.
+5. **Stash antes de operacoes destrutivas**: se precisar testar algo limpo, use `git stash push -m "descricao"` antes, e `git stash pop` depois.
+6. **Nao editar o mesmo arquivo em paralelo sem coordenacao**: se o dev esta editando `index.html`, o designer nao deve modifica-lo ate o dev terminar.
+
+### Fluxo Git Recomendado para o Dev:
+1. `git status` — verificar estado atual
+2. `git diff` — revisar mudancas antes de commitar
+3. `git add <arquivos>` — adicionar apenas os arquivos pertinentes
+4. `git commit -m "tipo: descricao concisa"` — commitar com mensagem padrao (tipo: feat, fix, docs, refactor)
+5. `git push` — enviar (se houver remote configurado)
+
+### O Que Fazer se Perder Trabalho:
+1. Verificar `git reflog` — pode ter um commit fantasma ou stash antigo
+2. Verificar `git stash list` — pode haver trabalho salvo
+3. Verificar `git diff HEAD` — comparar com o ultimo commit conhecido
+4. Verificar lixeira do sistema operacional — editores podem salvar backups
+5. **NUNCA desistir sem verificar todas as opcoes acima**
 
 ## Retrospectiva de Missoes
 
-### missao-modificar-metodo-_delegate-src-agents-coordinator
-- **Objetivo**: Modificar o metodo _delegate() em src/agents/coordinator.py para usar RabbitMQ quando disponivel
-- **Resultado**: 6/6 tarefas aceitas
-- **Reflexao**: O planejamento da missão seguiu um DAG linear simples: leitura do arquivo, implementação, commit (em dois passos), validação de sintaxe e revisão de código. Essa sequência foi adequada para uma alteração pontual e sem dependências complexas, garantindo que cada etapa fosse concluída antes da próxima
+### missao-arquivo-src-dashboard-index-html-foi
+- **Objetivo**: O arquivo src/dashboard/index.html foi restaurado de uma versao antiga do git, perdendo cerca de 70K
+- **Resultado**: 12/12 tarefas aceitas
+- **Reflexao**: **Planejamento:** O DAG linear (designer → dev → QA) foi adequado para esta missão de recuperação. As tarefas estavam bem definidas e sequenciais: primeiro entender o estado atual e os requisitos, depois implementar as mudanças e por fim validar. A estrutura funcionou porque cada etapa dependia da a
 
 
-### missao-adicionar-docstring-google-style-todas-funcoes
-- **Objetivo**: Adicionar docstring Google-style em todas as funcoes de src/eventbus/amqp.py
-- **Resultado**: 6/6 tarefas aceitas
-- **Reflexao**: A missão foi bem-sucedida, mas o DAG poderia ser otimizado: a etapa de revisão (`revisar-docstrings`) foi executada após o commit, o que é menos eficiente. Idealmente, a revisão de qualidade deve ocorrer antes do `git-add` e `git-commit` para evitar que código com problemas entre no histórico. Apesa
+### missao-remover-botao-detalhes-mission-control-dashboard
+- **Objetivo**: Remover o botao "Detalhes" do Mission Control no dashboard.
+
+O botao "📋 Detalhes" abre a timeline in
+- **Resultado**: 3/3 tarefas aceitas
+- **Reflexao**: A missão falhou na execução, embora o coordenador tenha aceitado todas as etapas como sucesso. O planejamento (DAG) estava correto, mas a etapa de remoção não foi realizada: o agente dev respondeu pedindo `file_path`, `old_string` e `new_string`, indicando que não tinha informações suficientes para 
 
 
-### missao-listar-arquivos-projeto-seguida-fazer-uma
-- **Objetivo**: Listar os arquivos do projeto e em seguida fazer uma pesquisa de design systems para dashboards
+### missao-remover-botao-detalhes-mission-control-dashboard
+- **Objetivo**: Remover o botao "Detalhes" do Mission Control no dashboard.
+
+O botao "📋 Detalhes" abre a timeline in
+- **Resultado**: 3/3 tarefas aceitas
+- **Reflexao**: **Planejamento (DAG):** A sequência linear (ler → remover → validar) estava conceitualmente correta, mas a etapa de remoção não foi efetivamente executada. O agente `dev-remove-detalhes-button` retornou `needs_direction` pedindo `file_path`, `old_string` e `new_string`, indicando que a instrução ori
+
+
+### missao-remover-botao-detalhes-mission-control-dashboard
+- **Objetivo**: Remover o botao "Detalhes" do Mission Control no dashboard.
+
+O botao "📋 Detalhes" abre a timeline in
+- **Resultado**: 2/3 tarefas aceitas
+- **Falhas**: validar-remocao
+- **Reflexao**: A missão falhou na execução, apesar do DAG estar conceitualmente correto (consulta → dev → qa). O principal problema foi a **delegação incompleta**: o agente `dev` recebeu uma tarefa sem os parâmetros essenciais (`file_path`, `old_string`, `new_string`), retornando `needs_direction` e impedindo a im
+
+
+### missao-remover-botao-detalhes-mission-control-dashboard
+- **Objetivo**: Remover o botao "Detalhes" do Mission Control no dashboard.
+
+O botao "📋 Detalhes" abre a timeline in
+- **Resultado**: 4/5 tarefas aceitas
+- **Falhas**: validar-remocao
+- **Reflexao**: A etapa de consulta de prioridade falhou silenciosamente: o agente de negócios retornou `success` mesmo sem receber o parâmetro obrigatório `itens`, impossibilitando a priorização real. O coordenador aceitou o status sem verificar o conteúdo, o que comprometeu a validação inicial da missão. Para o f
+
+
+### missao-implementar-002-console-afp-configuracao-projetos
+- **Objetivo**: Implementar o E-002: Console AFP — Configuracao de Projetos, Times e Agentes.
+- **Resultado**: 4/4 tarefas aceitas
+
+### missao-priorizar-backlog-console-afp-comecar-implementar
+- **Objetivo**: Priorizar o backlog do Console AFP e comecar a implementar.
+- **Resultado**: 9/9 tarefas aceitas (bem-sucedida)
+
+### missao-issue-estabelecer-fluxo-formal-consulta-agente
+- **Objetivo**: Issue #14: Estabelecer o fluxo formal de consulta ao agente de negocios.
 - **Resultado**: 2/2 tarefas aceitas
-- **Reflexao**: **Retrospectiva da missão:**
 
-O planejamento em duas etapas sequenciais (listar arquivos → pesquisar design systems) foi adequado e o DAG refletiu corretamente essa dependência lógica. A delegação também foi precisa: o agente `dev` para uma tarefa técnica de listagem e o `designer` para a pesquisa d
+### missao-implementar-melhorias-interaction-flow-dashboard-react
+- **Objetivo**: Implementar melhorias P1-P5 no Interaction Flow.
+- **Resultado**: 5/5 tarefas aceitas
+
+### missao-implementar-tela-configuracao-visual-projetos-agentes
+- **Objetivo**: Implementar tela de configuracao visual.
+- **Resultado**: 3/3 tarefas aceitas
+
+### missoes anteriores (falhas parciais)
+- Varias missoes com falhas por planejamento inadequado (DAG linear rigido, acoes indisponiveis)
+- Licao: sempre validar se as acoes necessarias existem no agente antes de delegar

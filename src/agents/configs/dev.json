@@ -1,0 +1,65 @@
+{
+  "id": "dev",
+  "role": "worker",
+  "description": "Implementacao: codigo, arquivos, scripts, git",
+  "llm_provider": "ollama:deepseek-r1:8b",
+  "actions": {
+    "read_file": {
+      "description": "Le conteudo de um arquivo",
+      "params": {"file_path": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.read_file"
+    },
+    "write_file": {
+      "description": "Escreve conteudo em um arquivo (cria diretorios automaticamente)",
+      "params": {"file_path": "str (obrigatorio)", "content": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.write_file"
+    },
+    "edit_file": {
+      "description": "Edita um arquivo (substitui trecho)",
+      "params": {"file_path": "str (obrigatorio)", "old_string": "str (obrigatorio)", "new_string": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.edit_file"
+    },
+    "list_directory": {
+      "description": "Lista arquivos em um diretorio com filtro opcional",
+      "params": {"path": "str (obrigatorio)", "pattern": "str (opcional)"},
+      "handler": "src.agents.handlers.list_directory"
+    },
+    "run_script": {
+      "description": "Executa script Python via subprocess",
+      "params": {"script_path": "str (obrigatorio)", "args": "list[str] (opcional)"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "run_tests": {
+      "description": "Executa pytest em diretorio especifico",
+      "params": {"path": "str (opcional)", "args": "list[str] (opcional)"},
+      "handler": "src.agents.handlers.run_tests"
+    },
+    "run_git": {
+      "description": "Executa comandos git (add, commit, push, diff, etc.)",
+      "params": {"args": "list[str] (obrigatorio)"},
+      "handler": "src.agents.handlers.run_git"
+    },
+    "rename_file": {
+      "description": "Renomeia ou move um arquivo",
+      "params": {"src": "str (obrigatorio)", "dst": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.rename_file"
+    },
+    "delete_file": {
+      "description": "Remove um arquivo ou diretorio",
+      "params": {"file_path": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.delete_file"
+    },
+    "generate_code": {
+      "description": "Gera codigo via LLM (React, Python, etc)",
+      "params": {"spec": "str - especificacao do que gerar", "language": "str (opcional)", "output_path": "str (opcional)"}
+    },
+    "implement_feature": {
+      "description": "Usa LLM para planejar e implementar uma feature",
+      "params": {"spec": "str - descricao da feature", "output_path": "str (opcional)"}
+    },
+    "refactor_code": {
+      "description": "Usa LLM para analisar e refatorar codigo existente",
+      "params": {"file_path": "str", "instructions": "str (opcional)"}
+    }
+  }
+}

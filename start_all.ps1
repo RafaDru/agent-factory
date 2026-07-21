@@ -31,11 +31,11 @@ if (-not $NoRuntimes) {
     Write-Host "=== Iniciando agent runtimes (RabbitMQ) ===" -ForegroundColor Cyan
     
     $agents = @(
-        @{id="dev"; class="src.agents.factory_dev.AgentFactoryDevAgent"}
-        @{id="qa"; class="src.agents.qa.QAAgent"}
-        @{id="designer"; class="src.agents.design_factory.DesignAgent"}
-        @{id="arquiteto"; class="src.agents.architect.ArchitectAgent"}
-        @{id="negocios"; class="src.agents.business.BusinessAgent"}
+        @{id="dev"; class="src.agents.worker.DeclarativeWorker"}
+        @{id="qa"; class="src.agents.worker.DeclarativeWorker"}
+        @{id="designer"; class="src.agents.worker.DeclarativeWorker"}
+        @{id="arquiteto"; class="src.agents.worker.DeclarativeWorker"}
+        @{id="negocios"; class="src.agents.worker.DeclarativeWorker"}
     )
     
     $runtimePids = @()

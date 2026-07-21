@@ -1,7 +1,15 @@
 # QA — Agent Factory
 
 ## Proposito
-Agente de qualidade do Agent Factory. Valida codigo, executa testes e linters.
+Agente de qualidade do Agent Factory. Executa em seu proprio `AgentRuntime`,
+consumindo tarefas da fila `task.run.qa` via RabbitMQ.
+
+Valida codigo, executa testes e linters.
+
+## Ambiente de Execucao
+
+- Runtime autonomo com LLM proprio (`ollama:deepseek-r1:8b`)
+- Recebe tarefas via Event Bus (RabbitMQ) ou fallback in-process
 
 ## Acoes Disponiveis
 
@@ -16,42 +24,31 @@ Agente de qualidade do Agent Factory. Valida codigo, executa testes e linters.
 | analyze_project | Usa LLM para analisar saude geral do projeto |
 | get_capabilities | Retorna acoes disponiveis |
 
-| test_event_pipeline | Executa pytest tests/test_event_pipeline.py -v e valida o pipeline de eventos |
+## Tarefa Imediata: Validar remocao do botao "Detalhes" no Mission Control
 
-## Exemplos
+**O que validar:**
+1. O botao "📋 Detalhes" foi removido do HTML renderizado pelo `renderMissionCard()`
+2. O botao "📋 Log Details" continua presente e funcional
+3. Nao ha erros no console do navegador apos a remocao
+4. A variavel `detailId` pode ter sido removida — verificar se nao causa erro de referencia
 
-```json
-{"action": "run_tests", "path": "tests/test_all.py", "args": ["-q"]}
-{"action": "lint", "path": "src/", "fix": true}
-{"action": "validate_python_syntax", "file_path": "src/agents/base.py"}
-{"action": "review_code", "file_path": "src/agents/factory_dev.py"}
-{"action": "suggest_fixes", "error": "pytest failed with AssertionError", "file_path": "tests/test_all.py"}
-{"action": "analyze_project", "path": "src/"}
+**Como testar:**
+1. Apos a modificacao do dev, reinicie o servidor (`python _run_dashboard.py`)
+2. Acesse `http://127.0.0.1:8080/#/project/AFP-Team/mission-control`
+3. Verifique visualmente se o botao "📋 Detalhes" nao aparece nos cards de missao
+4. Clique em "📋 Log Details" para garantir que a tabela de logs abre corretamente
+5. Verifique o console do navegador (F12) para erros JavaScript
 
-{"action": "run_tests", "path": "tests/test_event_pipeline.py", "args": ["-v"]}
-```
+## Working Directory
+`C:\Users\rafae\agent-factory`
 
-## Notas
-- pyright precisa estar instalado globalmente (npm install -g pyright)
-- pytest e ruff sao dependencias do projeto
+## Validacao Git
 
+Ao revisar o trabalho do dev, incluir estas verificacoes:
 
-## Testes de Pipeline de Eventos
+1. Verificar se `git status` mostra working tree limpo (sem mudancas nao commitadas)
+2. Verificar se `git log --oneline -5` mostra mensagens de commit descritivas
+3. Verificar se `git diff HEAD~1 --stat` mostra apenas arquivos relevantes no ultimo commit
+4. Se houver mudancas nao commitadas, alertar o coordenador para que o dev commite antes de prosseguir
 
-O QA deve validar que:
-- Eventos sao emitidos durante execucao de missoes
-- Eventos persistem em .agent-events/<project>/events.jsonl
-- REST /api/events retorna eventos apos missao
-- SSE entrega eventos em tempo real
-- Painel de logs no frontend exibe eventos corretamente
-
-## Licoes Aprendidas
-
-### Criterios de Revisao
-
-1. **Flexbox scroll**: verificar se elementos com scroll possuem 'min-height:0' e 'overflow-y:auto' quando o pai tem 'overflow:hidden'.
-2. **async/await**: verificar se toda função que usa 'await' é declarada como 'async'.
-3. **Event delegation**: verificar se listeners globais usam 'document.addEventListener' com 'closest()' e não estão aninhados em outras funções.
-4. **Timestamps**: verificar se o backend usa 'datetime.now(timezone.utc)' e se strings ISO sem timezone recebem 'Z' no frontend.
-5. **Interaction Flow**: verificar se 'switchView()' carrega eventos históricos de '/api/events' e popula 'agentState.events'.
-
+**Nunca aprovar uma missao se houver trabalho nao commitado em arquivos criticos** (`src/dashboard/index.html`, `src/dashboard/server.py`, `src/agents/`).

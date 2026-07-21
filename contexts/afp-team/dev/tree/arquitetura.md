@@ -2,6 +2,11 @@
 
 ## Decisoes
 
+### Listar arquivos Python do projeto para localizar notifier, config e entrypoint
+- **Acao**: list_directory
+- **Resumo**: Padrao: **/*.py, encontrados: 133
+
+
 ### list-src
 - **Acao**: list_directory
 - **Resumo**: Padrao: **/*.py, encontrados: 41

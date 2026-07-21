@@ -1,0 +1,33 @@
+{
+  "id": "gcode-opt",
+  "role": "worker",
+  "description": "Otimização de GCode e fatiamento: BED_MESH, PA, temperatura, pipeline completo",
+  "llm_provider": "auto",
+  "actions": {
+    "optimize_gcode": {
+      "description": "Otimiza GCode: injeta BED_MESH_CALIBRATE, SET_PRESSURE_ADVANCE, corrige temperaturas",
+      "params": {"input_path": "str (obrigatorio) - caminho do .gcode", "tier": "str (opcional) - draft|high|super"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "slice_stl": {
+      "description": "Fatia STL usando PrusaSlicer CLI com config .slicer_config/full_config.ini",
+      "params": {"stl_path": "str (obrigatorio)", "rotate_x": "float (opcional)", "tier": "str (opcional)"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "run_pipeline": {
+      "description": "Executa pipeline completo: slice -> optimize -> analyze -> upload",
+      "params": {"input_path": "str (obrigatorio)", "tier": "str (opcional)", "mode": "str (opcional) - screen|api"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "analyze_gcode": {
+      "description": "Analisa GCode: verifica temperatura, BED_MESH, PA, layers, Z-max",
+      "params": {"gcode_path": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.run_script"
+    },
+    "consolidate": {
+      "description": "Gera relatório pós-impressão (consolidate.py)",
+      "params": {},
+      "handler": "src.agents.handlers.run_script"
+    }
+  }
+}

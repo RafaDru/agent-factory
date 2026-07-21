@@ -508,6 +508,7 @@ class AgentBase(ABC):
             task_id=task.get("task_id", "unknown"),
             parent_task_id=task.get("parent_task_id"),
             project_id=self.project_id,
+            mission_id=task.get("_mission_id"),
             message=message,
             payload=payload or {},
             error=error,

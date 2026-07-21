@@ -77,11 +77,11 @@ class AgentFactory:
         """
         # Resolver provider LLM se configurado
         llm_provider: Optional[LLMProvider] = None
-        if config.llm_provider:
-            try:
-                llm_provider = get_provider(config.llm_provider)
-            except Exception as e:
-                print(f"  [Factory] ⚠️ LLM provider '{config.llm_provider}' falhou: {e}")
+        provider_name = config.llm_provider or "auto"
+        try:
+            llm_provider = get_provider(provider_name)
+        except Exception as e:
+            print(f"  [Factory] ?? LLM provider '{provider_name}' falhou: {e}")
 
         # Validar handlers antes de criar a classe
         resolved_handlers: dict[str, Any] = {}
@@ -146,8 +146,8 @@ class AgentFactory:
                 available_actions=list(config.actions.keys()),
             )
 
-        # Tentar usar LLM provider do agente
-        provider: Optional[LLMProvider] = getattr(agent, '_llm_provider', None)
+        # Tentar usar LLM provider do agente (procura em _llm_provider ou _llm)
+        provider: Optional[LLMProvider] = getattr(agent, '_llm_provider', None) or getattr(agent, '_llm', None)
         if provider is None or not provider.is_available():
             return TaskOutput.failure(
                 rationale=f"Acao '{action}' sem handler Python e LLM provider "

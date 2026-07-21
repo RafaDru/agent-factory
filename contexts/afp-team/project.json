@@ -4,64 +4,74 @@
   "team_id": "AFP-Team",
   "team_name": "Agent Factory Platform Team",
   "description": "Time que evolui recursivamente a plataforma Agent Factory.",
-  "icon": "⚙️",
   "working_dir": "C:/Users/rafae/agent-factory",
   "agents_source": "src/agents/",
   "agents": [
     {
       "agent_id": "coordenador",
+      "agent_name": "Coordenador",
+      "role": "coordenador",
+      "emoji": "🎯",
       "module_path": "src/agents/coordinator.py",
       "class_name": "AgentFactoryCoordinator",
       "context_limit_kb": 15.0,
       "llm_provider": "auto",
-      "emoji": "🎯",
-      "description": "Orquestrador: planeja via LLM e delega para workers"
+      "description": "Orquestrador: planeja via LLM, delega via Event Bus, reflete e aprende"
     },
     {
       "agent_id": "dev",
-      "module_path": "src/agents/factory_dev.py",
-      "class_name": "AgentFactoryDevAgent",
+      "agent_name": "Desenvolvedor",
+      "role": "desenvolvedor",
+      "emoji": "💻",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 15.0,
       "llm_provider": "auto",
-      "emoji": "⚙️",
-      "description": "Implementacao: codigo, arquivos, scripts, git, LLM"
+      "description": "Implementacao: codigo, arquivos, scripts, git"
     },
     {
       "agent_id": "qa",
-      "module_path": "src/agents/qa.py",
-      "class_name": "QAAgent",
+      "agent_name": "QA",
+      "role": "qa",
+      "emoji": "🧪",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 10.0,
       "llm_provider": "auto",
-      "emoji": "🧪",
       "description": "Qualidade: testes, lint, revisao, validacao"
     },
     {
       "agent_id": "designer",
-      "module_path": "src/agents/design_factory.py",
-      "class_name": "DesignAgent",
+      "agent_name": "Designer",
+      "role": "designer",
+      "emoji": "🎨",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 10.0,
       "llm_provider": "auto",
-      "emoji": "🎨",
       "description": "Design: pesquisa de design systems, prototipos, UX"
     },
     {
       "agent_id": "arquiteto",
-      "module_path": "src/agents/architect.py",
-      "class_name": "ArchitectAgent",
+      "agent_name": "Arquiteto",
+      "role": "arquiteto",
+      "emoji": "🏗️",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 10.0,
       "llm_provider": "auto",
-      "emoji": "🏛️",
       "description": "Arquitetura: revisao arquitetural, padroes, coerencia tecnica"
     },
     {
       "agent_id": "negocios",
-      "module_path": "src/agents/business.py",
-      "class_name": "BusinessAgent",
+      "agent_name": "Negocios",
+      "role": "negocios",
+      "emoji": "📊",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker",
       "context_limit_kb": 10.0,
       "llm_provider": "auto",
-      "emoji": "💼",
-      "role": "designer",
-      "description": "Negócios: definir prioridades, validar ROI, contato com stakeholders"
+      "description": "Negocios: backlog, priorizacao, validacao de requisitos, contato com stakeholders"
     }
   ]
 }

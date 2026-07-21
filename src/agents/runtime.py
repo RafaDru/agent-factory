@@ -159,7 +159,7 @@ def run_runtime_for(agent_class_path: str, agent_id: str, project_id: str,
                     queue_name: Optional[str] = None, amqp_url: str = DEFAULT_URL):
     """
     Inicia um runtime para um agente especifico, carregando a classe dinamicamente.
-    Uso: python -m src.agents.runtime src.agents.factory_dev AgentFactoryDevAgent dev AFP-Team
+    Uso: python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev AFP-Team
     """
     import importlib
 
@@ -199,4 +199,4 @@ if __name__ == "__main__":
                         sys.argv[4] if len(sys.argv) > 4 else None)
     else:
         print("Uso: python -m src.agents.runtime <module.class> <agent_id> <project_id> [queue_name]")
-        print("Ex:  python -m src.agents.runtime src.agents.factory_dev.AgentFactoryDevAgent dev AFP-Team")
+        print("Ex:  python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev AFP-Team")

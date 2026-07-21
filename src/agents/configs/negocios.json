@@ -1,0 +1,34 @@
+{
+  "id": "negocios",
+  "role": "worker",
+  "description": "Negocios: backlog, priorizacao, validacao de requisitos",
+  "actions": {
+    "read_file": {
+      "description": "Le conteudo de um arquivo para consulta ao backlog",
+      "params": {"file_path": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.read_file"
+    },
+    "write_file": {
+      "description": "Escreve conteudo em arquivo (para atualizar backlog)",
+      "params": {"file_path": "str (obrigatorio)", "content": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.write_file"
+    },
+    "list_directory": {
+      "description": "Lista arquivos em um diretorio",
+      "params": {"path": "str (obrigatorio)", "pattern": "str (opcional)"},
+      "handler": "src.agents.handlers.list_directory"
+    },
+    "analisar_mercado": {
+      "description": "Pesquisa tendencias e benchmarks de mercado",
+      "params": {"query": "str (obrigatorio)"}
+    },
+    "definir_prioridades": {
+      "description": "Organiza backlog por valor de negocio, retorna lista priorizada",
+      "params": {"itens": "list (obrigatorio) - lista de itens no backlog"}
+    },
+    "validar_requisitos": {
+      "description": "Valida se requisitos atendem necessidade de negocio",
+      "params": {"requisitos": "list (obrigatorio)", "contexto": "str (opcional)"}
+    }
+  }
+}

@@ -4,6 +4,12 @@
 
 This file describes how AI agents (OpenCode, Claude Code, Cursor, etc.) interact with the **Agent Factory Platform (AFP)**. If you are an AI agent reading this, your goal is to understand the recursive delegation flow so you can operate AFP autonomously.
 
+## 🧠 Memoria Imutavel (leia apos compactacao)
+
+Se voce perceber que perdeu contexto sobre conceitos da plataforma,
+releia `MEMORIA.md` para restaurar as definicoes essenciais:
+Console AFP, Live Stream vs Log, arquitetura de agentes, e regras criticas.
+
 ## ⚠️ Regra Critica: AFP deve rodar em background
 
 **Sempre** iniciar o AFP em processo detached/background (`Start-Process` no Windows, `&` ou `nohup` no Linux). **Nunca** bloquear a sessao do chat com o servidor rodando em foreground.
@@ -212,7 +218,8 @@ AFP MCP Gateway (src/server/)
 |--------|-----------|-------------|
 | **Externa** (IDE ↔ AFP) | MCP | Chamadas sincronas de ferramentas |
 | **Interna** (Agente ↔ Agente) | RabbitMQ | Delegacao, dialogo, progresso parcial |
-| **Monitoramento** (Dashboard) | SSE + REST | Eventos em tempo real, historico |
+| **Monitoramento** (Console AFP) | SSE + REST | Live Stream em tempo real, historico, log |
+| **Configuracao** (Console AFP) | REST | CRUD de Projetos, Times e Agentes |
 
 ### Como Executar
 
@@ -225,9 +232,9 @@ python -m src.server.main     # MCP em background
 python -m src.dashboard.server  # Dashboard em background
 
 # 3. Iniciar runtimes dos agentes
-python -m src.agents.runtime src.agents.factory_dev.AgentFactoryDevAgent dev AFP-Team
-python -m src.agents.runtime src.agents.qa.QAAgent qa AFP-Team
-python -m src.agents.runtime src.agents.design_factory.DesignAgent designer AFP-Team
+python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev AFP-Team
+python -m src.agents.runtime src.agents.worker.DeclarativeWorker qa AFP-Team
+python -m src.agents.runtime src.agents.worker.DeclarativeWorker designer AFP-Team
 
 # Ou usar o script completo:
 .\start_all.ps1
@@ -343,4 +350,16 @@ The delegating agent (or parent LLM) should:
 | 5 | Spawn sub-session mechanism (worker as mini-LLM) | ⏳ Planned |
 | 6 | Update all context files with new flow | ✅ Done |
 | 7 | Recursive self-improvement via AFP-Team | 🎯 Goal |
+| 8 | Console AFP — Live Stream, Configuracao, Log | 📋 Planned |
+
+---
+
+## Documentos de Referencia
+
+| Documento | Conteudo |
+|-----------|----------|
+| `MEMORIA.md` | **Memoria imutavel** — releia apos compactacao para restaurar conceitos essenciais |
+| `docs/console-afp-schema.md` | Schema canonico dos conceitos (Missao, Tarefa, Delegacao, Live Stream, Log) |
+| `docs/console-afp-requisitos.md` | Requisitos detalhados do Console AFP |
+| `docs/backlog.md` | Backlog operacional do projeto AFP-Team |
 

@@ -109,12 +109,10 @@ def register_discovered_projects(registry, notifier_factory=None):
             registered_count += 1
             print(f"  [Discovery] Projeto: {project_id} ({proj['name']})   Time: {proj.get('team_name','?')}")
 
-        # Register agent references if not exists
+        # Register / update agent references from project.json
         existing_refs = registry.list_agent_refs(project_id)
         for agent_data in entry.get("agent_refs", []):
             agent_id = agent_data["agent_id"]
-            if agent_id in existing_refs:
-                continue
 
             ref = AgentReference(
                 agent_id=agent_id,
@@ -123,8 +121,16 @@ def register_discovered_projects(registry, notifier_factory=None):
                 context_limit_kb=agent_data.get("context_limit_kb", 10.0),
                 context_file=agent_data.get("context_file"),
             )
-            registry.add_agent_ref(project_id, ref)
-            print(f"    + agente: {agent_id} ({agent_data['class_name']})")
+
+            if agent_id not in existing_refs:
+                registry.add_agent_ref(project_id, ref)
+                print(f"    + agente: {agent_id} ({agent_data['class_name']})")
+            else:
+                existing = existing_refs[agent_id]
+                if (existing.module_path != ref.module_path or existing.class_name != ref.class_name or
+                        existing.context_file != ref.context_file):
+                    registry.add_agent_ref(project_id, ref)  # overwrite
+                    print(f"    ~ agente: {agent_id} atualizado ({ref.class_name})")
 
     if registered_count:
         print(f"  [Discovery] {registered_count} novo(s) projeto(s) registrado(s)")
