@@ -129,8 +129,9 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self.send_error(404, "Endpoint DELETE não encontrado")
 
     def log_message(self, format: str, *args: Any) -> None:
-        """Suprime logs padrão do servidor para reduzir poluição no console."""
-        # Logs podem ser habilitados para debug se necessário
+        pass
+
+    def handle_error(self, request, client_address) -> None:
         pass
 
     def _serve_dashboard(self) -> None:
