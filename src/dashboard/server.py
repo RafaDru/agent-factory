@@ -93,6 +93,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         elif path == "/api/smoke":
             self._serve_smoke()
 
+        elif path == "/api/llm/ollama-models":
+            self._serve_ollama_models()
+        elif path == "/api/llm/api-keys":
+            self._serve_api_keys()
         elif path == "/api/context/stats":
             self._serve_context_stats(project_id)
         elif path.startswith("/api/agent/") and path.endswith("/provider"):
@@ -107,10 +111,22 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
         if path == "/api/agent-config":
             self._post_agent_config()
+        elif path == "/api/llm/test":
+            self._post_llm_test()
+        elif path == "/api/llm/api-keys":
+            self._post_api_key()
         elif path.startswith("/api/agent/") and path.endswith("/provider"):
             self._post_agent_provider(path)
         else:
             self.send_error(404, "Endpoint POST não encontrado")
+
+    def do_DELETE(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+        if path == "/api/llm/api-keys":
+            self._delete_api_key()
+        else:
+            self.send_error(404, "Endpoint DELETE não encontrado")
 
     def log_message(self, format: str, *args: Any) -> None:
         """Suprime logs padrão do servidor para reduzir poluição no console."""
@@ -525,6 +541,155 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             "provider": provider,
             "previous": previous_provider,
         }).encode("utf-8"))
+
+    def _read_json_body(self) -> Optional[dict]:
+        try:
+            content_len = int(self.headers.get("Content-Length", 0))
+            if content_len == 0:
+                return None
+            return json.loads(self.rfile.read(content_len))
+        except (json.JSONDecodeError, IOError):
+            return None
+
+    def _post_llm_test(self) -> None:
+        body = self._read_json_body()
+        if not body or "provider" not in body:
+            self.send_error(400, "Campo provider é obrigatório")
+            return
+        provider = body["provider"]
+        api_keys_file = Path(".agent-factory") / "api_keys.json"
+        api_keys = {}
+        if api_keys_file.exists():
+            try:
+                api_keys = json.loads(api_keys_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, IOError):
+                pass
+        api_key = api_keys.get(provider)
+        try:
+            import subprocess
+            import sys
+            if provider.startswith("ollama"):
+                model = provider.split(":")[1] if ":" in provider else ""
+                if model:
+                    result = subprocess.run(
+                        [sys.executable, "-c", f"import requests; r=requests.post('http://localhost:11434/api/generate', json={{'model':'{model}','prompt':'hi','stream':False}}, timeout=10); print(r.status_code)"],
+                        capture_output=True, text=True, timeout=15
+                    )
+                    if "200" in result.stdout:
+                        self._send_json({"status": "ok", "provider": provider})
+                    else:
+                        self._send_json({"status": "error", "error": f"Ollama retornou: {result.stderr.strip() or result.stdout.strip()}"})
+                else:
+                    result = subprocess.run(
+                        [sys.executable, "-c", "import requests; r=requests.get('http://localhost:11434/api/tags', timeout=5); print(r.status_code)"],
+                        capture_output=True, text=True, timeout=10
+                    )
+                    if "200" in result.stdout:
+                        self._send_json({"status": "ok", "provider": provider})
+                    else:
+                        self._send_json({"status": "error", "error": "Ollama não está rodando"})
+            elif provider in ("opencode", "opencode_zen"):
+                self._send_json({"status": "ok", "provider": provider, "note": "OpenCode providers são sempre disponíveis"})
+            elif provider == "mock":
+                self._send_json({"status": "ok", "provider": provider})
+            elif provider == "groq" and api_key:
+                import urllib.request
+                req = urllib.request.Request(
+                    "https://api.groq.com/openai/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    method="GET"
+                )
+                try:
+                    urllib.request.urlopen(req, timeout=10)
+                    self._send_json({"status": "ok", "provider": provider})
+                except Exception as e:
+                    self._send_json({"status": "error", "error": str(e)})
+            elif api_key:
+                self._send_json({"status": "ok", "provider": provider, "note": "Chave configurada. Teste específico não implementado para este provider."})
+            else:
+                self._send_json({"status": "error", "error": "Nenhuma chave API configurada para este provider. Adicione uma chave em Config > API Keys."})
+        except Exception as e:
+            self._send_json({"status": "error", "error": str(e)})
+
+    def _serve_ollama_models(self) -> None:
+        try:
+            import subprocess, sys
+            result = subprocess.run(
+                [sys.executable, "-c", "import requests, json; r=requests.get('http://localhost:11434/api/tags', timeout=5); print(json.dumps(r.json()))"],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode != 0:
+                self._send_json({"models": [], "error": result.stderr.strip()})
+                return
+            data = json.loads(result.stdout)
+            models = [
+                {"name": m["name"], "size": self._format_size(m.get("size", 0))}
+                for m in data.get("models", [])
+            ]
+            self._send_json({"models": models})
+        except json.JSONDecodeError:
+            self._send_json({"models": [], "error": "Falha ao decodificar resposta do Ollama"})
+        except Exception as e:
+            self._send_json({"models": [], "error": str(e)})
+
+    def _format_size(self, bytes_val: int) -> str:
+        if bytes_val < 1024:
+            return f"{bytes_val}B"
+        elif bytes_val < 1024**2:
+            return f"{bytes_val/1024:.0f}KB"
+        elif bytes_val < 1024**3:
+            return f"{bytes_val/1024**2:.1f}MB"
+        else:
+            return f"{bytes_val/1024**3:.2f}GB"
+
+    def _serve_api_keys(self) -> None:
+        api_keys_file = Path(".agent-factory") / "api_keys.json"
+        keys = {}
+        if api_keys_file.exists():
+            try:
+                keys = json.loads(api_keys_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, IOError):
+                pass
+        self._send_json({"keys": keys})
+
+    def _post_api_key(self) -> None:
+        body = self._read_json_body()
+        if not body or "provider" not in body or "api_key" not in body:
+            self.send_error(400, "Campos provider e api_key são obrigatórios")
+            return
+        api_keys_file = Path(".agent-factory") / "api_keys.json"
+        keys = {}
+        if api_keys_file.exists():
+            try:
+                keys = json.loads(api_keys_file.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, IOError):
+                pass
+        keys[body["provider"]] = body["api_key"]
+        api_keys_file.parent.mkdir(parents=True, exist_ok=True)
+        api_keys_file.write_text(json.dumps(keys, indent=2), encoding="utf-8")
+        self._send_json({"status": "ok", "provider": body["provider"]})
+
+    def _delete_api_key(self) -> None:
+        body = self._read_json_body()
+        if not body or "provider" not in body:
+            self.send_error(400, "Campo provider é obrigatório")
+            return
+        api_keys_file = Path(".agent-factory") / "api_keys.json"
+        if api_keys_file.exists():
+            try:
+                keys = json.loads(api_keys_file.read_text(encoding="utf-8"))
+                keys.pop(body["provider"], None)
+                api_keys_file.write_text(json.dumps(keys, indent=2), encoding="utf-8")
+            except (json.JSONDecodeError, IOError):
+                pass
+        self._send_json({"status": "ok"})
+
+    def _send_json(self, data: dict) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(json.dumps(data, default=str).encode("utf-8"))
 
     def _serve_projects(self) -> None:
         """Endpoint para listar todos os projetos com seus metadados.

@@ -1045,6 +1045,21 @@
             border-color: var(--cyan);
             background: rgba(34,211,238,0.08);
         }
+        .llm-test-btn {
+            padding: 3px 10px;
+            font-size: 0.7rem;
+            border-radius: var(--radius-full);
+            border: 1px solid var(--border-glass);
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            align-self: center;
+            transition: var(--transition-smooth);
+        }
+        .llm-test-btn:hover { border-color: var(--cyan); color: var(--text-primary); }
+        .llm-test-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         .llm-modal {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -1196,6 +1211,31 @@
             { id: 'cloudflare', label: 'Cloudflare' },
             { id: 'mock', label: 'Mock (teste)' },
         ];
+
+        const LLM_PROVIDER_META = {
+            'auto': { type: 'hybrid', models: 'deepseek-v4-pro', benchmark: 'N/A', tasks: 'Todas - roteamento automático' },
+            'smart': { type: 'hybrid', models: 'deepseek-v4-pro', benchmark: 'N/A', tasks: 'Todas - roteamento inteligente' },
+            'opencode': { type: 'cloud', models: 'deepseek-v4-pro', benchmark: 'Rápido', tasks: 'Código, reasoning, geral' },
+            'opencode_zen': { type: 'cloud', models: 'deepseek-v4-pro', benchmark: 'Rápido', tasks: 'Código, reasoning, geral' },
+            'groq': { type: 'cloud', models: 'llama-3.3-70b', benchmark: 'Muito rápido', tasks: 'Inferência rápida, chat' },
+            'ollama': { type: 'local', models: 'deepseek-r1:8b, phi4, gemma4, dolphin3, qwen3-vl:8b', benchmark: 'Variável (20s-116s)', tasks: 'Geral, código' },
+            'ollama:deepseek-r1:8b': { type: 'local', models: 'deepseek-r1:8b (5.2GB)', benchmark: '~84s (GPU 4.7GB)', tasks: 'Código, reasoning, planejamento' },
+            'ollama:dolphin3': { type: 'local', models: 'dolphin3 (4.9GB)', benchmark: '~20s (GPU 4.8GB)', tasks: 'Tarefas rápidas, protótipos' },
+            'ollama:phi4': { type: 'local', models: 'phi4 (9.1GB)', benchmark: '~116s (GPU 4.9GB)', tasks: 'Complexo, arquitetura, math' },
+            'ollama:qwen3-vl:8b': { type: 'local', models: 'qwen3-vl:8b (6.1GB)', benchmark: '~107s (GPU 5.6GB)', tasks: 'Visão, OCR, imagens' },
+            'ollama:gemma4': { type: 'local', models: 'gemma4 (9.6GB)', benchmark: '~48s (GPU 5.0GB)', tasks: 'Tool calling, multimodal' },
+            'local_multi': { type: 'local', models: 'deepseek-r1:8b, phi4, gemma4, dolphin3, qwen3-vl:8b', benchmark: 'Variável', tasks: 'Todas - roteamento local' },
+            'gemini': { type: 'cloud', models: 'gemini-pro', benchmark: 'Médio', tasks: 'Geral, código' },
+            'deepseek': { type: 'cloud', models: 'deepseek-chat', benchmark: 'Rápido', tasks: 'Código, reasoning' },
+            'openrouter': { type: 'cloud', models: 'Múltiplos', benchmark: 'Variável', tasks: 'Geral, acesso a vários modelos' },
+            'cerebras': { type: 'cloud', models: 'llama-3.3-70b', benchmark: 'Muito rápido', tasks: 'Inferência rápida' },
+            'mistral': { type: 'cloud', models: 'mistral-large', benchmark: 'Rápido', tasks: 'Geral, código' },
+            'mimo': { type: 'cloud', models: 'MIMO', benchmark: 'Médio', tasks: 'Geral' },
+            'nvidia': { type: 'cloud', models: 'nemotron, llama', benchmark: 'Médio', tasks: 'Geral, código' },
+            'huggingface': { type: 'cloud', models: 'Múltiplos', benchmark: 'Variável', tasks: 'Acesso a modelos open-source' },
+            'cloudflare': { type: 'cloud', models: 'workers-ai', benchmark: 'Rápido', tasks: 'Edge computing, geral' },
+            'mock': { type: 'local', models: 'N/A', benchmark: 'Instantâneo', tasks: 'Testes, desenvolvimento' },
+        };
     </script>
 <script>
 
@@ -1242,14 +1282,15 @@
             projects: [],
             missions: [],
             missionsData: {},
-            agentsState: {}, // agentId -> { status, subStatus, task, mission, timer, context, lastExecution, events }
+            agentsState: {}, // agentKey -> { status, subStatus, task, mission, timer, context, lastExecution, events }
             currentView: 'projects',
             currentProjectId: null,
             projectTab: 'agents',
             navigationStack: [],
             sseConnection: null,
             connectionStatus: 'connecting',
-            eventTimers: {} // agentId -> intervalId
+            eventTimers: {}, // agentKey -> intervalId
+            llmConfigs: {} // agentId -> { llm_provider }
         };
 
         // ==================== API ====================
@@ -1868,7 +1909,118 @@ function safeTime(iso) {
 
         function renderConfig() {
             const container = document.getElementById('view-config');
-            container.innerHTML = '<div class="mc-empty">⚙️ Configurações (em breve)</div>';
+            if (!state.projects || state.projects.length === 0) {
+                container.innerHTML = '<div class="mc-empty">Nenhum projeto carregado.</div>';
+                return;
+            }
+            const sections = state.projects.map(p => {
+                const agentsList = (p.agents || []).map(a => {
+                    const key = agentKey(p.id, a.id);
+                    const cfg = state.llmConfigs && state.llmConfigs[a.id];
+                    const provider = cfg ? cfg.llm_provider || 'AUTO' : 'AUTO';
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border-glass);font-size:0.85rem">
+                        <span style="flex:1">${getAgentEmoji(a.role || a.id)} ${a.name || a.id}</span>
+                        <button class="llm-select-btn" id="llm-btn-${key}" onclick="openLlmModal('${key}')">${provider}</button>
+                    </div>`;
+                }).join('');
+                return `<div style="margin-bottom:20px;background:var(--bg-glass);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-glass)">
+                    <h4 style="margin:0 0 8px 0;font-size:0.95rem">📁 ${p.name}</h4>
+                    ${agentsList || '<div style="color:var(--text-muted);font-size:0.85rem">Nenhum agente</div>'}
+                </div>`;
+            }).join('');
+
+            const apiKeysHtml = `
+                <div style="background:var(--bg-glass);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-glass);margin-bottom:20px">
+                    <h4 style="margin:0 0 12px 0;font-size:0.95rem">🔑 API Keys</h4>
+                    <div id="api-keys-list">
+                        <div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Carregando...</div>
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                        <input type="text" id="new-api-key-provider" placeholder="Provedor (ex: groq)" style="flex:1;background:var(--bg-surface);border:1px solid var(--border-glass);border-radius:var(--radius-sm);padding:8px;color:var(--text-primary)">
+                        <input type="password" id="new-api-key-value" placeholder="Chave da API" style="flex:2;background:var(--bg-surface);border:1px solid var(--border-glass);border-radius:var(--radius-sm);padding:8px;color:var(--text-primary)">
+                        <button class="btn primary" onclick="saveApiKey()" style="white-space:nowrap">Adicionar</button>
+                    </div>
+                </div>
+            `;
+
+            const ollamaHtml = `
+                <div style="background:var(--bg-glass);border-radius:var(--radius-md);padding:16px;border:1px solid var(--border-glass);margin-bottom:20px">
+                    <h4 style="margin:0 0 12px 0;font-size:0.95rem">🦙 Ollama Auto-Discovery</h4>
+                    <button class="btn" onclick="fetchOllamaModels()" style="margin-bottom:8px">🔍 Scan Local Models</button>
+                    <div id="ollama-models-list">
+                        <div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Clique em "Scan Local Models" para descobrir modelos Ollama disponíveis.</div>
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = `
+                <h3 style="margin:0 0 16px 0">⚙️ Configurações</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div>
+                        <h4 style="margin:0 0 12px 0;font-size:0.95rem">🤖 Provedores por Agente</h4>
+                        ${sections}
+                    </div>
+                    <div>
+                        ${apiKeysHtml}
+                        ${ollamaHtml}
+                    </div>
+                </div>
+            `;
+            loadApiKeys();
+            fetchOllamaModels();
+        }
+
+        async function loadApiKeys() {
+            const list = document.getElementById('api-keys-list');
+            if (!list) return;
+            try {
+                const resp = await fetch('/api/llm/api-keys');
+                const data = await resp.json();
+                const keys = data.keys || {};
+                const entries = Object.entries(keys);
+                if (entries.length === 0) {
+                    list.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;padding:8px 0">Nenhuma chave configurada.</div>';
+                    return;
+                }
+                list.innerHTML = entries.map(([provider, key]) => `
+                    <div style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border-glass);font-size:0.85rem">
+                        <span style="flex:1;font-weight:600">${provider}</span>
+                        <span style="color:var(--text-muted)">${key.substring(0, 8)}...${key.substring(key.length - 4)}</span>
+                        <button class="btn" onclick="deleteApiKey('${provider}')" style="padding:2px 8px;font-size:0.75rem">Remover</button>
+                    </div>
+                `).join('');
+            } catch(e) {
+                list.innerHTML = '<div style="color:var(--red);font-size:0.85rem;padding:8px 0">Erro ao carregar chaves API.</div>';
+            }
+        }
+
+        async function saveApiKey() {
+            const provider = document.getElementById('new-api-key-provider');
+            const key = document.getElementById('new-api-key-value');
+            if (!provider || !key || !provider.value.trim() || !key.value.trim()) return;
+            try {
+                const resp = await fetch('/api/llm/api-keys', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: provider.value.trim(), api_key: key.value.trim() })
+                });
+                if (resp.ok) {
+                    provider.value = '';
+                    key.value = '';
+                    loadApiKeys();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function deleteApiKey(provider) {
+            try {
+                const resp = await fetch('/api/llm/api-keys', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider })
+                });
+                if (resp.ok) loadApiKeys();
+            } catch(e) { console.error(e); }
         }
 
         function renderProjects() {
@@ -2238,13 +2390,8 @@ function safeTime(iso) {
                         </div>
                         ${timerDisplay}
                         <div class="llm-mode">
-                            <label for="llm-select-${agentKeyStr}" style="font-size:0.8rem; color: var(--text-secondary);">${L.llm}</label>
-                            <select id="llm-select-${agentKeyStr}" class="llm-select" onchange="updateAgentConfig('${agent.id}', this.value)">
-                                <option value="AUTO" ${(agent.llm_mode || 'AUTO') === 'AUTO' ? 'selected' : ''}>AUTO</option>
-                                <option value="opencode_zen" ${(agent.llm_mode || 'AUTO') === 'opencode_zen' ? 'selected' : ''}>opencode_zen (deepseek-v4-pro)</option>
-                                <option value="groq" ${(agent.llm_mode || 'AUTO') === 'groq' ? 'selected' : ''}>groq (llama-3.3-70b)</option>
-                                <option value="opencode" ${(agent.llm_mode || 'AUTO') === 'opencode' ? 'selected' : ''}>opencode (deepseek-v4-pro)</option>
-                            </select>
+                            <label style="font-size:0.8rem; color: var(--text-secondary);">${L.llm}</label>
+                            <button class="llm-select-btn" id="llm-btn-${agentKeyStr}" onclick="openLlmModal('${agentKeyStr}')">AUTO</button>
                         </div>
                         <div class="last-model">${L.last} <span>${modelUsed || L.noExecutionsYet}</span></div>
                         <div class="context-bar">
@@ -2351,9 +2498,13 @@ function safeTime(iso) {
                 fetch(`/api/agent-config?agent_id=${encodeURIComponent(agent.id)}`)
                     .then(response => response.json())
                     .then(data => {
-                        const selectEl = document.getElementById(`llm-select-${key}`);
-                        if (selectEl && data.llm_provider) {
-                            selectEl.value = data.llm_provider;
+                        const btn = document.getElementById(`llm-btn-${key}`);
+                        if (data.llm_provider) {
+                            state.llmConfigs[agent.id] = { llm_provider: data.llm_provider };
+                            if (btn) {
+                                const parts = data.llm_provider.split(':');
+                                btn.textContent = parts.length > 1 ? parts[0] + ' (' + parts[1] + ')' : data.llm_provider;
+                            }
                         }
                     })
                     .catch(err => console.error('Error fetching agent config:', err));
@@ -2442,21 +2593,6 @@ function safeTime(iso) {
             if (contextText) {
                 const kb = sizeBytes ? (sizeBytes / 1024).toFixed(1) : '0.0';
                 contextText.textContent = `Context: ${contextPct || 0}% (${kb} KB)`;
-            }
-        }
-
-        async function updateAgentConfig(agentId, llmProvider) {
-            try {
-                const response = await fetch('/api/agent-config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ agent_id: agentId, llm_provider: llmProvider })
-                });
-                if (!response.ok) {
-                    console.error('Failed to update agent config:', response.statusText);
-                }
-            } catch (error) {
-                console.error('Error updating agent config:', error);
             }
         }
 
@@ -2605,6 +2741,124 @@ function safeTime(iso) {
     </script>
 
 <script>
+// LLM Modal (global functions)
+let _llmAgentKey = null;
+let _llmSelected = null;
+
+function openLlmModal(agentKeyStr) {
+    _llmAgentKey = agentKeyStr;
+    const btn = document.getElementById('llm-btn-' + agentKeyStr);
+    const cur = btn ? btn.textContent.trim().toLowerCase() : 'auto';
+    _llmSelected = cur;
+    const title = agentKeyStr.includes(':') ? agentKeyStr.split(':')[1] : agentKeyStr;
+    document.getElementById('llm-modal-title').textContent = 'LLM: ' + title.charAt(0).toUpperCase() + title.slice(1);
+    const body = document.getElementById('llm-modal-body');
+    body.innerHTML = AVAILABLE_PROVIDERS.map(p => {
+        const meta = LLM_PROVIDER_META[p.id] || {};
+        const sel = p.id === cur || p.label.toLowerCase() === cur;
+        const typeTag = meta.type ? `<span class="llm-option-tag ${meta.type}">${meta.type}</span>` : '';
+        const details = meta.tasks ? `
+            <div class="llm-option-details">
+                <span>📦 ${meta.models || '\u2014'}</span>
+                <span>⏱ ${meta.benchmark || '\u2014'}</span>
+                <span>🎯 ${meta.tasks}</span>
+            </div>` : '';
+        const testBtn = meta.type ? `
+            <button class="llm-test-btn" id="test-btn-${p.id}" onclick="event.stopPropagation();testLlmConnection('${p.id}')">🔌 Test</button>
+        ` : '';
+        return `<div class="llm-option ${sel ? 'selected' : ''}" onclick="selectLlmOption('${p.id}')">
+            <input type="radio" class="llm-option-radio" name="llm-radio" value="${p.id}" ${sel ? 'checked' : ''}>
+            <div class="llm-option-info">
+                <div class="llm-option-name">${p.label} ${typeTag}</div>
+                ${details}
+            </div>
+            ${testBtn}
+        </div>`;
+    }).join('');
+    document.getElementById('llm-modal').style.display = 'flex';
+}
+
+function selectLlmOption(id) {
+    _llmSelected = id;
+    document.querySelectorAll('.llm-option').forEach(el => {
+        const rb = el.querySelector('input');
+        el.classList.toggle('selected', rb && rb.value === id);
+        if (rb && rb.value === id) rb.checked = true;
+    });
+}
+
+function closeLlmModal() {
+    document.getElementById('llm-modal').style.display = 'none';
+    _llmAgentKey = null;
+}
+
+async function saveLlmModal() {
+    if (!_llmAgentKey || !_llmSelected) return;
+    const bareId = _llmAgentKey.includes(':') ? _llmAgentKey.split(':')[1] : _llmAgentKey;
+    try {
+        const resp = await fetch('/api/agent-config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent_id: bareId, llm_provider: _llmSelected })
+        });
+        if (resp.ok) {
+            const btn = document.getElementById('llm-btn-' + _llmAgentKey);
+            if (btn) {
+                const parts = _llmSelected.split(':');
+                btn.textContent = parts.length > 1 ? parts[0] + ' (' + parts[1] + ')' : _llmSelected;
+            }
+        }
+    } catch(e) { console.error(e); }
+    closeLlmModal();
+}
+
+async function testLlmConnection(providerId) {
+    const btn = document.getElementById('test-btn-' + providerId);
+    if (!btn) return;
+    const origText = btn.textContent;
+    btn.textContent = '⏳...';
+    btn.disabled = true;
+    try {
+        const resp = await fetch('/api/llm/test', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ provider: providerId })
+        });
+        const data = await resp.json();
+        btn.textContent = data.status === 'ok' ? '✅ OK' : '❌ ' + (data.error || 'fail');
+        btn.style.color = data.status === 'ok' ? 'var(--green)' : 'var(--red)';
+    } catch(e) {
+        btn.textContent = '❌ Error';
+        btn.style.color = 'var(--red)';
+    }
+    setTimeout(() => { btn.disabled = false; btn.textContent = origText; btn.style.color = ''; }, 4000);
+}
+
+async function fetchOllamaModels() {
+    const list = document.getElementById('ollama-models-list');
+    if (list) list.innerHTML = '<div style="color:var(--text-muted)">⏳ Scanning...</div>';
+    try {
+        const resp = await fetch('/api/llm/ollama-models');
+        const data = await resp.json();
+        if (list) {
+            if (data.models && data.models.length > 0) {
+                list.innerHTML = data.models.map(m =>
+                    `<div style="padding:4px 8px;border-bottom:1px solid var(--border-glass);font-size:0.85rem">
+                        <span style="color:var(--cyan)">●</span> ${m.name}
+                        <span style="color:var(--text-muted);font-size:0.75rem"> ${m.size || ''}</span>
+                    </div>`
+                ).join('');
+            } else {
+                list.innerHTML = '<div style="color:var(--text-muted);padding:8px;">Nenhum modelo Ollama encontrado. Verifique se o Ollama est\u00e1 rodando.</div>';
+            }
+        }
+    } catch(e) {
+        if (list) list.innerHTML = '<div style="color:var(--red);padding:8px;">\u274c Erro ao conectar ao Ollama</div>';
+    }
+}
+</script>
+
+<script>
 document.addEventListener('DOMContentLoaded', function() {
     (function() {
         const MAX_ENTRIES = 200;
@@ -2691,62 +2945,6 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFilters();
         }
 
-        // LLM Modal
-        let _llmAgentId = null;
-        let _llmSelected = null;
-        
-        function openLlmModal(agentId) {
-            _llmAgentId = agentId;
-            const btn = document.getElementById('llm-btn-' + agentId);
-            const cur = (btn ? btn.textContent.trim() : 'auto').toLowerCase();
-            _llmSelected = cur;
-            document.getElementById('llm-modal-title').textContent = agentId.charAt(0).toUpperCase() + agentId.slice(1);
-            const body = document.getElementById('llm-modal-body');
-            body.innerHTML = AVAILABLE_PROVIDERS.map(p => {
-                const sel = p.id === cur || p.label.toLowerCase() === cur;
-                return `<div class="llm-option ${sel ? 'selected' : ''}" onclick="selectLlmOption('${p.id}')">
-                    <input type="radio" class="llm-option-radio" name="llm-radio" value="${p.id}" ${sel ? 'checked' : ''}>
-                    <div class="llm-option-info">
-                        <div class="llm-option-name">${p.label}</div>
-                    </div>
-                </div>`;
-            }).join('');
-            document.getElementById('llm-modal').style.display = 'flex';
-        }
-        
-        function selectLlmOption(id) {
-            _llmSelected = id;
-            document.querySelectorAll('.llm-option').forEach(el => {
-                const rb = el.querySelector('input');
-                el.classList.toggle('selected', rb && rb.value === id);
-                if (rb && rb.value === id) rb.checked = true;
-            });
-        }
-        
-        function closeLlmModal() {
-            document.getElementById('llm-modal').style.display = 'none';
-            _llmAgentId = null;
-        }
-        
-        async function saveLlmModal() {
-            if (!_llmAgentId || !_llmSelected) return;
-            try {
-                const resp = await fetch('/api/agent-config', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ agent_id: _llmAgentId, llm_provider: _llmSelected })
-                });
-                if (resp.ok) {
-                    const btn = document.getElementById('llm-btn-' + _llmAgentId);
-                    if (btn) {
-                        const parts = _llmSelected.split(':');
-                        btn.textContent = parts.length > 1 ? parts[0] + ' (' + parts[1] + ')' : _llmSelected;
-                    }
-                }
-            } catch(e) { console.error(e); }
-            closeLlmModal();
-        }
-        
         // Hash Navigation
         function onHashChange() {
             const hash = window.location.hash || '#/projects';
@@ -2867,6 +3065,21 @@ document.addEventListener('DOMContentLoaded', function() {
     
 <div id="log-entries" class="log-entries"></div>
     <button id="clear-logs" class="btn">Clear</button>
+</div>
+
+<!-- LLM Provider Modal -->
+<div id="llm-modal" style="display:none;">
+    <div class="llm-modal-content">
+        <div class="llm-modal-header">
+            <h3 id="llm-modal-title">Select LLM Provider</h3>
+            <button class="llm-modal-close" onclick="closeLlmModal()">✕</button>
+        </div>
+        <div class="llm-modal-body" id="llm-modal-body"></div>
+        <div class="llm-modal-footer">
+            <button class="btn" onclick="closeLlmModal()">Cancel</button>
+            <button class="btn primary" onclick="saveLlmModal()">Save</button>
+        </div>
+    </div>
 </div>
 
 </body>
