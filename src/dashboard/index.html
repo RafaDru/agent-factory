@@ -187,6 +187,25 @@
             background-clip: text;
         }
 
+        .header-nav {
+            display:flex; gap:4px; align-items:center; margin-left:20px; padding-left:20px;
+            border-left:1px solid var(--border-glass);
+        }
+        .header-nav a {
+            padding:6px 14px; border-radius:var(--radius-sm); color:var(--text-secondary);
+            font-size:0.85rem; font-weight:500; cursor:pointer; transition:var(--transition-smooth);
+            text-decoration:none;
+        }
+        .header-nav a:hover, .header-nav a.active {
+            background:var(--bg-glass); color:var(--cyan);
+        }
+        .project-selector {
+            background:var(--bg-glass); color:var(--text-secondary); border:1px solid var(--border-glass);
+            border-radius:var(--radius-sm); padding:5px 10px; font-size:0.8rem; cursor:pointer;
+            margin-left:12px; transition:var(--transition-smooth); max-width:160px;
+        }
+        .project-selector:hover { border-color:var(--border-neon-cyan); color:var(--text-primary); }
+
         .header-actions {
             display: flex;
             gap: 12px;
@@ -362,67 +381,22 @@
         }
 
         .execution-card {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 12px 16px;
-            background: var(--bg-glass);
-            border: 1px solid var(--border-glass);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            transition: var(--transition-smooth);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 16px; background: var(--bg-glass);
+            border: 1px solid var(--border-glass); border-radius: var(--radius-sm);
+            cursor: pointer; transition: var(--transition-smooth);
         }
+        .execution-card:hover { border-color: var(--border-neon-cyan); box-shadow: 0 0 15px var(--cyan-glow); }
+        .execution-info { display: flex; flex-direction: column; gap: 4px; }
+        .execution-project { font-weight: 600; color: var(--text-primary); }
+        .execution-details { font-size: 0.85rem; color: var(--text-secondary); }
+        .execution-status { font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-full); }
+        .execution-status.success { background: rgba(34,197,94,0.2); color: var(--green); }
+        .execution-status.failed { background: rgba(239,68,68,0.2); color: var(--red); }
+        .execution-status.running { background: rgba(59,130,246,0.2); color: var(--blue); }
+        .no-execution { text-align: center; color: var(--text-muted); padding: 20px; }
 
-        .execution-card:hover {
-            border-color: var(--border-neon-cyan);
-            box-shadow: 0 0 15px var(--cyan-glow);
-        }
-
-        .execution-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .execution-project {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .execution-details {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .execution-status {
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: var(--radius-full);
-        }
-
-        .execution-status.success {
-            background: rgba(34, 197, 94, 0.2);
-            color: var(--green);
-        }
-
-        .execution-status.failed {
-            background: rgba(239, 68, 68, 0.2);
-            color: var(--red);
-        }
-
-        .execution-status.running {
-            background: rgba(59, 130, 246, 0.2);
-            color: var(--blue);
-        }
-
-        .no-execution {
-            text-align: center;
-            color: var(--text-muted);
-            padding: 20px;
-        }
-
-.pulse-dot {
+        .pulse-dot {
             width: 10px;
             height: 10px;
             border-radius: 50%;
@@ -763,166 +737,6 @@
             font-variant-numeric: tabular-nums;
         }
 
-        .timeline-panel {
-            background: var(--bg-card);
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            border: 1px solid var(--border-glass);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
-
-        .timeline-header {
-            font-size: 1.1rem;
-            font-weight: 600;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .timeline-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 8px;
-            text-align: center;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: var(--radius-xs);
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: 500;
-            transition: var(--transition-smooth);
-            color: var(--text-secondary);
-        }
-
-        .tab-btn.active {
-            background: rgba(34, 211, 238, 0.2);
-            color: var(--cyan);
-        }
-
-        .timeline-items {
-            flex: 1;
-            overflow-y: auto;
-            padding-right: 8px;
-        }
-
-        .timeline-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 16px;
-            cursor: pointer;
-            transition: var(--transition-smooth);
-            position: relative;
-        }
-
-        .timeline-item.coordinator {
-            justify-content: flex-start;
-        }
-
-        .timeline-item.agent {
-            justify-content: flex-end;
-        }
-
-        .timeline-bubble {
-            max-width: 80%;
-            padding: 12px 16px;
-            border-radius: 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            transition: var(--transition-smooth);
-        }
-
-        .timeline-item.coordinator .timeline-bubble {
-            border-top-left-radius: 4px;
-            border-left: 2px solid var(--cyan);
-        }
-
-        .timeline-item.agent .timeline-bubble {
-            border-top-right-radius: 4px;
-            border-right: 2px solid var(--purple);
-        }
-
-        .timeline-bubble:hover {
-            box-shadow: 0 0 15px rgba(34, 211, 238, 0.15);
-            border-color: var(--border-neon-cyan);
-        }
-
-        .timeline-actor {
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 4px;
-        }
-
-        .coordinator-actor { color: var(--cyan); }
-        .agent-actor { color: var(--purple); }
-
-        .timeline-message {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .timeline-details {
-            margin-top: 8px;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            display: none;
-        }
-
-        .timeline-item.expanded .timeline-details {
-            display: block;
-        }
-
-        .timeline-details pre {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 8px;
-            border-radius: var(--radius-xs);
-            max-height: 200px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-all;
-            margin-top: 4px;
-        }
-
-        .connector {
-            width: 2px;
-            height: 20px;
-            background: var(--border-glass);
-            margin: 0 auto;
-            position: relative;
-        }
-
-        .connector.coordinator { background: var(--cyan); }
-        .connector.agent { background: var(--purple); }
-
-        .connector-arrow::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-top: 6px solid var(--cyan);
-        }
-        .connector-arrow.coordinator::after { border-top-color: var(--cyan); }
-        .connector-arrow.agent::after { border-top-color: var(--purple); }
-
         .loading, .error, .empty-state {
             text-align: center;
             padding: 60px 20px;
@@ -963,10 +777,6 @@
 
             .projects-grid, .agents-grid {
                 grid-template-columns: 1fr;
-            }
-
-            .timeline-panel {
-                max-height: 400px;
             }
         }
 
@@ -1135,162 +945,6 @@
     }
     .timeline-time { font-size:0.75rem; color: var(--text-secondary); margin-top:4px; }
 
-        .mission-card {
-            border-radius: var(--radius-md);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            margin-bottom: 8px;
-            background: var(--bg-glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            overflow: hidden;
-        }
-        .mission-card[open] {
-            padding-bottom: 4px;
-        }
-        .mission-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 14px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            user-select: none;
-        }
-        .mission-header::-webkit-details-marker {
-            display: none;
-        }
-        .mission-header::before {
-            content: '▶';
-            margin-right: 8px;
-            font-size: 0.7rem;
-            transition: transform 0.2s;
-            color: var(--text-secondary);
-        }
-        .mission-card[open] .mission-header::before {
-            transform: rotate(90deg);
-        }
-        .mission-title {
-            font-weight: 600;
-            color: var(--text-primary);
-            flex: 1;
-        }
-        .mission-status {
-            font-size: 0.7rem;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: var(--radius-full);
-            margin-right: 8px;
-        }
-        .mission-status.status-success { background: rgba(34,197,94,0.15); color: var(--green); }
-        .mission-status.status-failed { background: rgba(239,68,68,0.15); color: var(--red); }
-        .mission-time {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-        }
-        .mission-body {
-            padding: 0 14px 8px 14px;
-        }
-        .agent-node {
-            margin-left: 0;
-            border-left: 2px solid var(--border-glass);
-            padding-left: 12px;
-            margin-bottom: 6px;
-            transition: all 0.2s;
-        }
-        .agent-node.level-1 {
-            margin-left: 32px;
-        }
-        .agent-node.level-2 {
-            margin-left: 64px;
-        }
-        .node-card {
-            padding: 8px 12px;
-            border-radius: 6px;
-            border-left: 4px solid var(--border-glass);
-            background: var(--bg-glass);
-        }
-        .node-card.status-success { border-left-color: var(--green); background: rgba(34,197,94,0.05); }
-        .node-card.status-failed { border-left-color: var(--red); background: rgba(239,68,68,0.05); }
-        .node-card.status-running { border-left-color: var(--blue); background: rgba(59,130,246,0.05); }
-        .node-header {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .node-avatar {
-            font-size: 1rem;
-            line-height: 1;
-        }
-        .node-name {
-            font-weight: 600;
-            font-size: 0.8rem;
-            color: var(--text-primary);
-        }
-        .node-body {
-            margin: 4px 0 0 22px;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-        .node-card.delegation {
-            background: rgba(99, 102, 241, 0.08);
-            border-left-color: var(--cyan, #6366f1);
-        }
-        .delegation-arrow {
-            font-size: 0.75rem;
-            color: var(--cyan, #6366f1);
-            margin-left: auto;
-            opacity: 0.8;
-        }
-        .node-footer {
-            margin: 4px 0 0 22px;
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            opacity: 0.7;
-        }
-        .chat-left, .chat-right, .chat-avatar {
-            height: 28px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--cyan), var(--purple));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-            flex-shrink: 0;
-        }
-        .chat-bubble {
-            max-width: 70%;
-            padding: 8px 12px;
-            border-radius: 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        .chat-left .chat-bubble {
-            border-top-left-radius: 4px;
-            border-left: 2px solid var(--cyan);
-        }
-        .chat-right .chat-bubble {
-            border-top-right-radius: 4px;
-            border-right: 2px solid var(--purple);
-        }
-        .chat-message {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-        .chat-timestamp {
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
-        .mission-arrow {
-            color: var(--cyan);
-            font-weight: bold;
-            font-size: 1.2rem;
-            margin: 0 4px;
-            flex-shrink: 0;
-        }
-
         .mission-card-v2 {
             background: var(--bg-card);
             border: 1px solid var(--border-glass);
@@ -1315,15 +969,18 @@
         .mc-status-badge.running { background:rgba(59,130,246,0.15); color:var(--blue); }
         .mc-status-badge.completed { background:rgba(34,197,94,0.15); color:var(--green); }
         .mc-status-badge.failed { background:rgba(239,68,68,0.15); color:var(--red); }
+        .mc-status-badge.blocked { background:rgba(250,204,21,0.15); color:var(--yellow); }
         .mc-body { padding:0 20px 16px 20px; border-top:1px solid var(--border-glass); }
         .mc-tasks-label { font-size:0.75rem; font-weight:600; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; padding:10px 0 6px 0; }
         .mc-task-card {
-            background:var(--bg-glass); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:6px;
+            background:var(--bg-glass); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:10px;
             border-left:3px solid var(--border-glass); transition:var(--transition-smooth);
         }
+        .mc-task-card:last-child { margin-bottom:0; }
         .mc-task-card.status-running { border-left-color:var(--blue); background:rgba(59,130,246,0.05); }
         .mc-task-card.status-completed { border-left-color:var(--green); background:rgba(34,197,94,0.03); }
         .mc-task-card.status-failed { border-left-color:var(--red); background:rgba(239,68,68,0.03); }
+        .mc-task-card.status-blocked { border-left-color:var(--yellow); background:rgba(250,204,21,0.04); }
         .mc-task-card.status-pending { border-left-color:var(--text-muted); background:rgba(100,116,139,0.03); }
         .mc-task-top { display:flex; justify-content:space-between; align-items:center; gap:8px; }
         .mc-task-name { font-size:0.85rem; font-weight:600; color:var(--text-primary); flex:1; min-width:0; }
@@ -1331,6 +988,7 @@
         .mc-task-status.running { background:rgba(59,130,246,0.15); color:var(--blue); }
         .mc-task-status.completed { background:rgba(34,197,94,0.15); color:var(--green); }
         .mc-task-status.failed { background:rgba(239,68,68,0.15); color:var(--red); }
+        .mc-task-status.blocked { background:rgba(250,204,21,0.15); color:var(--yellow); }
         .mc-task-status.pending { background:rgba(100,116,139,0.15); color:var(--text-muted); }
         .mc-task-agent { font-size:0.75rem; color:var(--text-secondary); margin-top:4px; }
         .mc-task-agent span { font-weight:500; }
@@ -1485,17 +1143,19 @@
     <div id="app">
         <header class="header">
             <div class="header-left">
-                <div class="logo-icon">AF</div>
-                <span class="logo-text">Agent Factory</span>
+                <div class="logo-icon" onclick="switchView('projects')" style="cursor:pointer" title="Início">AF</div>
+                <span class="logo-text" onclick="switchView('projects')" style="cursor:pointer">Agent Factory</span>
+                <nav class="header-nav">
+                    <a onclick="switchView('projects')">🏠 Home</a>
+                    <a onclick="navigateTo('live')">🚀 Mission Control</a>
+                </nav>
+                <select class="project-selector" id="projectSelector" onchange="goToProject(this.value)">
+                    <option value="">📁 Projetos</option>
+                </select>
             </div>
             <div class="header-actions">
-                <button class="btn btn-back" id="btnBack" onclick="navigateBack()" title="Back">
-                    ← Back
-                </button>
-                <button class="btn" id="btnRefresh" onclick="refreshData()" title="Refresh">
-                    ↻
-                </button>
-                <button class="btn" id="btn-mc" onclick="navigateTo('live')" title="Mission Control">🚀</button>
+                <button class="btn btn-back" id="btnBack" onclick="navigateBack()" title="Back">← Back</button>
+                <button class="btn" id="btnRefresh" onclick="refreshData()" title="Refresh">↻</button>
                 <button class="btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌙</button>
                 <button class="btn" id="logs-toggle" title="Logs">📋</button>
             </div>
@@ -1572,6 +1232,11 @@
             mission: 'Mission:',
             uncategorized: 'Uncategorized',
         };
+        // ==================== HELPERS ====================
+        function agentKey(projectId, agentId) {
+            return projectId + ':' + agentId;
+        }
+
         // ==================== STATE MANAGEMENT ====================
         const state = {
             projects: [],
@@ -1634,10 +1299,12 @@
         // ==================== EVENT HANDLING ====================
         function handleAgentEvent(event) {
             const agentId = event.agent_id;
+            const projectId = event.project_id || state.currentProjectId || 'unknown';
+            const key = agentKey(projectId, agentId);
             if (!agentId) return;
 
-            if (!state.agentsState[agentId]) {
-                state.agentsState[agentId] = {
+            if (!state.agentsState[key]) {
+                state.agentsState[key] = {
                     status: 'ready',
                     subStatus: '',
                     task: null,
@@ -1651,18 +1318,18 @@
                 };
             }
 
-            const agentState = state.agentsState[agentId];
+            const agentState = state.agentsState[key];
 
             if (event.status) {
                 agentState.status = event.status.toLowerCase();
                 if (agentState.status === 'running' && !agentState.timerStart) {
                     agentState.timerStart = Date.now();
-                    if (state.eventTimers[agentId]) clearInterval(state.eventTimers[agentId]);
-                    state.eventTimers[agentId] = setInterval(() => updateTimer(agentId), 1000);
+                    if (state.eventTimers[key]) clearInterval(state.eventTimers[key]);
+                    state.eventTimers[key] = setInterval(() => updateTimer(key), 1000);
                 } else if (agentState.status !== 'running') {
-                    if (state.eventTimers[agentId]) {
-                        clearInterval(state.eventTimers[agentId]);
-                        delete state.eventTimers[agentId];
+                    if (state.eventTimers[key]) {
+                        clearInterval(state.eventTimers[key]);
+                        delete state.eventTimers[key];
                     }
                     agentState.timerStart = null;
                     agentState.timer = 0;
@@ -1682,13 +1349,13 @@
 
                 // Reset to idle after 5 seconds on completion
                 if (event.status === 'completed' || event.status === 'success') {
-                    if (state._idleTimers && state._idleTimers[agentId]) clearTimeout(state._idleTimers[agentId]);
+                    if (state._idleTimers && state._idleTimers[key]) clearTimeout(state._idleTimers[key]);
                     if (!state._idleTimers) state._idleTimers = {};
-                    state._idleTimers[agentId] = setTimeout(() => {
-                        if (state.agentsState[agentId]) {
-                            state.agentsState[agentId].status = 'ready';
-                            const card = document.getElementById('agent-' + agentId);
-                            if (card) updateAgentCardUI(agentId);
+                    state._idleTimers[key] = setTimeout(() => {
+                        if (state.agentsState[key]) {
+                            state.agentsState[key].status = 'ready';
+                            const card = document.getElementById('agent-' + key);
+                            if (card) updateAgentCardUI(key);
                         }
                     }, 5000);
                 }
@@ -1738,9 +1405,9 @@
             if (agentState.events.length > 250) agentState.events.pop();
 
             if (state.currentView === 'team-detail') {
-                const card = document.getElementById('agent-' + agentId);
+                const card = document.getElementById('agent-' + key);
                 if (card) {
-                    updateAgentCardUI(agentId);
+                    updateAgentCardUI(key);
                 } else {
                     renderTeamDetail();
                 }
@@ -1758,7 +1425,7 @@
             if (state.currentView === 'live') {
                 renderGlobalMissionControl();
             } else if (state.currentView === 'team-detail' && state.projectTab === 'mission-control') {
-                renderProjectMissionControl(state.currentProjectId);
+                renderTeamDetail();
             }
         }
 
@@ -1837,7 +1504,11 @@
                 if (isCoordinator) {
                     const objMatch = msg.match(/Missao\s+'[^']+':\s*([^\.]+)/i);
                     if (objMatch) {
-                        mission.objective = objMatch[1].trim();
+                        const captured = objMatch[1].trim();
+                        // Only use regex if meaningful (not just "N tarefas") AND no API objective exists
+                        if (!/^\d+\s*tarefas?$/i.test(captured) && !mission.objective) {
+                            mission.objective = captured;
+                        }
                     }
                     if (event.payload?.objective) {
                         mission.objective = event.payload.objective;
@@ -1906,7 +1577,10 @@
                             task.agent = agentId;
                         }
                         if (isCoordinator && msg.toLowerCase().includes('concluido')) {
-                            task.status = 'completed';
+                            // Mark all running tasks as completed when coordinator says concluido
+                            Object.values(mission.tasks).forEach(t => {
+                                if (t.status === 'running') t.status = 'completed';
+                            });
                         }
                     }
                 }
@@ -1922,15 +1596,46 @@
                 }
             });
 
+            // Stale cleanup: mark tasks running > 3 min without events as stale
+            const STALE_MS = 3 * 60 * 1000;
+            const now = Date.now();
+            Object.values(missionsData).forEach(mission => {
+                const tasks = Object.values(mission.tasks);
+                tasks.forEach(task => {
+                    if (task.status !== 'running') return;
+                    const lastEvt = task.events[task.events.length - 1];
+                    if (!lastEvt) return;
+                    const lastTime = new Date(lastEvt.timestamp).getTime();
+                    if (now - lastTime > STALE_MS) {
+                        task.status = 'blocked';
+                        task._stale = true;
+                    }
+                });
+                // Recompute aggregate after cleanup
+                if (mission.status === 'running') {
+                    const t = Object.values(mission.tasks);
+                    if (t.length > 0 && t.every(x => x.status === 'completed' || x.status === 'success' || x.status === 'blocked')) {
+                        mission.status = 'blocked';
+                    }
+                }
+            });
+
+            // Backfill objectives from API for missions created before API loaded
+            Object.entries(apiMissions).forEach(([id, apiObj]) => {
+                if (missionsData[id] && !missionsData[id].objective) {
+                    missionsData[id].objective = apiObj.objective;
+                }
+            });
+
             state.missionsData = missionsData;
         }
 
-        function updateTimer(agentId) {
-            const agentState = state.agentsState[agentId];
+        function updateTimer(key) {
+            const agentState = state.agentsState[key];
             if (agentState && agentState.timerStart && agentState.status === 'running') {
                 const elapsed = Math.floor((Date.now() - agentState.timerStart) / 1000);
                 agentState.timer = elapsed;
-                const timerEl = document.getElementById(`timer-${agentId}`);
+                const timerEl = document.getElementById(`timer-${key}`);
                 if (timerEl) {
                     timerEl.textContent = formatTime(elapsed);
                 }
@@ -1943,10 +1648,10 @@
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        function updateAgentCardUI(agentId) {
-            const card = document.getElementById('agent-' + agentId);
+        function updateAgentCardUI(key) {
+            const card = document.getElementById('agent-' + key);
             if (!card) return;
-            const aState = state.agentsState[agentId];
+            const aState = state.agentsState[key];
             if (!aState) return;
 
             const info = getStatusInfo(aState.status);
@@ -2002,6 +1707,44 @@
             switchView(prev.view, prev.params);
         }
 
+        function goToProject(projectId) {
+            if (!projectId) return;
+            navigateTo('team-detail', { projectId });
+        }
+
+        function populateProjectSelector() {
+            const sel = document.getElementById('projectSelector');
+            if (!sel || !state.projects) return;
+            const current = sel.value;
+            sel.innerHTML = '<option value="">📁 Projetos</option>';
+            state.projects.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name || p.id;
+                sel.appendChild(opt);
+            });
+            if (current) sel.value = current;
+        }
+
+        function updateNavActive() {
+            document.querySelectorAll('.header-nav a').forEach(a => a.classList.remove('active'));
+            const view = state.currentView;
+            if (view === 'projects') {
+                const el = document.querySelector('.header-nav a[onclick*="projects"]');
+                if (el) el.classList.add('active');
+            } else if (view === 'live') {
+                const el = document.querySelector('.header-nav a[onclick*="live"]');
+                if (el) el.classList.add('active');
+            }
+            // Update project selector
+            const sel = document.getElementById('projectSelector');
+            if (sel && state.currentProjectId) {
+                sel.value = state.currentProjectId;
+            } else if (sel) {
+                sel.value = '';
+            }
+        }
+
         function switchProjectTab(tab) {
             state.projectTab = tab;
             const hash = '#/project/' + state.currentProjectId + '/' + tab;
@@ -2025,9 +1768,11 @@
                 history.replaceState(null, '', hash);
             }
 
+            updateNavActive();
+            populateProjectSelector();
             updateBreadcrumb();
             updateBackButton();
-            // Carregar eventos históricos para o Interaction Flow
+            // Carregar eventos históricos para o mission control
         try {
             const eventsRes = await fetch('/api/events');
             if (eventsRes.ok) {
@@ -2035,11 +1780,11 @@
                 const events = Array.isArray(eventsData) ? eventsData : (eventsData.events || []);
                 events.forEach(event => {
                     const agentId = event.agent_id;
-                    if (agentId && !state.agentsState[agentId]) {
-                        state.agentsState[agentId] = { status:'ready', subStatus:'idle', task:null, mission:null, timer:0, timerStart:null, context:0, lastExecution:null, events: [] };
+                    const pid = event.project_id || state.currentProjectId || 'unknown'; const key = agentKey(pid, agentId); if (agentId && !state.agentsState[key]) {
+                        state.agentsState[key] = { status:'ready', subStatus:'idle', task:null, mission:null, timer:0, timerStart:null, context:0, lastExecution:null, events: [] };
                     }
-                    if (agentId && state.agentsState[agentId]) {
-                        const agentState = state.agentsState[agentId];
+                    if (agentId && state.agentsState[key]) {
+                        const agentState = state.agentsState[key];
                         agentState.events.unshift({
                             id: Date.now() + Math.random(),
                             type: agentId.includes('coordinator') ? 'coordinator' : 'agent',
@@ -2098,9 +1843,21 @@
         }
 
         // ==================== RENDER FUNCTIONS ====================
-function safeDate(iso) { if (!iso) return null; if (!iso.endsWith('Z') && !iso.includes('+')) iso += 'Z'; return new Date(iso); }
-function formatTimestamp(isoString) { const d = safeDate(isoString); return d ? d.toLocaleString() : ''; }
-function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeString() : ''; }
+function safeDate(iso) {
+    if (!iso) return null;
+    let d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+    return isNaN(d.getTime()) ? null : d;
+}
+function formatTimestamp(isoString) {
+    const d = safeDate(isoString);
+    if (!d) return '';
+    return d.toLocaleString(undefined, {timeZoneName:'short'});
+}
+function safeTime(iso) {
+    const d = safeDate(iso);
+    if (!d) return '';
+    return d.toLocaleTimeString();
+}
 
         function renderCurrentView() {
             if (state.currentView === 'projects') renderProjects();
@@ -2121,7 +1878,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                 return;
             }
 
-            // Count total running agents across all agents
+            // Count total running agents across all projects
             let totalRunning = 0;
             Object.values(state.agentsState).forEach(aState => {
                 if (aState.status === 'running') totalRunning++;
@@ -2136,7 +1893,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                 const agentsCount = project.agents?.length || 0;
                 let activeCount = 0;
                 project.agents?.forEach(agent => {
-                    const aState = state.agentsState[agent.id];
+                    const aState = state.agentsState[agentKey(project.id, agent.id)];
                     if (aState && aState.status === 'running') activeCount++;
                 });
 
@@ -2182,12 +1939,35 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
             const runningCount = missions.filter(m => m.status === 'running').length;
             const doneCount = missions.filter(m => m.status === 'completed').length;
             const failedCount = missions.filter(m => m.status === 'failed').length;
+            const blockedCount = missions.filter(m => m.status === 'blocked').length;
+
+            // Group by project
+            const projectMap = {};
+            missions.forEach(m => {
+                const pid = m.projectId || 'unknown';
+                const pName = state.projects?.find(p => p.id === pid)?.name || pid;
+                if (!projectMap[pid]) projectMap[pid] = { name: pName, missions: [] };
+                projectMap[pid].missions.push(m);
+            });
+
+            let groupsHtml = Object.entries(projectMap).map(([pid, group]) => `
+                <div style="margin-bottom:28px;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                        <h3 style="margin:0;font-size:1.05rem;cursor:pointer" onclick="navigateTo('team-detail', { projectId: '${pid}' })">
+                            📁 ${escapeHtml(group.name)}
+                        </h3>
+                        <span class="mc-count">${group.missions.length} missões</span>
+                    </div>
+                    ${group.missions.map(m => renderMissionCardV2(m)).join('')}
+                </div>
+            `).join('');
 
             container.innerHTML = `
                 <div class="mc-header-bar">
-                    <h2>🚀 Mission Control</h2>
+                    <h2>🚀 Mission Control Global</h2>
                     <div style="display:flex;gap:8px;align-items:center;">
                         ${runningCount > 0 ? `<span class="mc-status-badge running">${runningCount} em execução</span>` : ''}
+                        ${blockedCount > 0 ? `<span class="mc-status-badge blocked" title="Missões com tasks paradas por inatividade">⛔ ${blockedCount} blocked</span>` : ''}
                         <span class="mc-count">${totalMissions} missões</span>
                     </div>
                 </div>
@@ -2196,7 +1976,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                     <span>❌ ${failedCount} falhas</span>
                     <span>🔄 ${runningCount} executando</span>
                 </div>
-                ${missions.map(m => renderMissionCardV2(m)).join('')}
+                ${groupsHtml}
             `;
         }
 
@@ -2218,18 +1998,39 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
             `;
         }
 
+        function getTaskAgentChain(task) {
+            let last = '';
+            return task.events
+                .map(e => e.actor || e.agentId || '')
+                .filter(a => a && a !== '?' && a !== last ? (last = a, true) : false)
+                .map(a => `${getAgentEmoji(a)} ${a}`)
+                .join(' → ');
+        }
+
         function renderMissionCardV2(mission) {
             const taskList = Object.values(mission.tasks);
             const statusClass = mission.status || 'running';
-            const time = formatTimestamp(mission.timestamp);
             const totalTasks = taskList.length;
             const doneTasks = taskList.filter(t => t.status === 'completed' || t.status === 'success').length;
             const failedTasks = taskList.filter(t => t.status === 'failed').length;
+            const blockedTasks = taskList.filter(t => t.status === 'blocked').length;
+
+            // Compute start/end from the same sorted event list (guarantees start ≤ end)
+            const allEvts = [];
+            taskList.forEach(t => { t.events.forEach(e => allEvts.push(e)); });
+            allEvts.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // ascending
+            const missionStart = allEvts.length > 0 ? formatTimestamp(allEvts[0].timestamp) : (mission.timestamp ? formatTimestamp(mission.timestamp) : '');
+            const missionEnd = allEvts.length > 0 ? formatTimestamp(allEvts[allEvts.length - 1].timestamp) : '';
 
             const tasksHtml = taskList.map(task => {
                 const tStatusClass = task.status || 'pending';
                 const agentEmoji = getAgentEmoji(task.agent);
                 const requesterEmoji = getAgentEmoji(task.requestedBy);
+                const sortedEvts = [...task.events].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                const taskStart = sortedEvts.length > 0 ? safeTime(sortedEvts[0].timestamp) : '';
+                const taskEnd = sortedEvts.length > 0 ? safeTime(sortedEvts[sortedEvts.length - 1].timestamp) : '';
+
+                const chain = getTaskAgentChain(task);
                 const interactionCount = task.events.length;
 
                 const interactionsHtml = interactionCount > 0 ? `
@@ -2260,30 +2061,40 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                             <span class="mc-task-status ${tStatusClass}">${tStatusClass.toUpperCase()}</span>
                         </div>
                         <div class="mc-task-agent">
-                            Solicitado por: ${requesterEmoji} <span>${escapeHtml(task.requestedBy)}</span>
+                            ${requesterEmoji} <span>${escapeHtml(task.requestedBy)}</span>
+                            ${chain ? `<span style="margin-left:6px;font-size:0.75rem;color:var(--text-muted)">→ ${chain}</span>` : ''}
+                        </div>
+                        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:2px;">
+                            ${taskStart ? `<span>⏱ ${taskStart}</span>` : ''}
+                            ${taskEnd ? `<span style="margin-left:10px">🏁 ${taskEnd}</span>` : ''}
                         </div>
                         ${interactionsHtml}
                     </div>
                 `;
             }).join('');
 
-            const statusIcon = statusClass === 'completed' ? '✅' : statusClass === 'failed' ? '❌' : '🔄';
+            const statusIcon = statusClass === 'completed' ? '✅' : statusClass === 'failed' ? '❌' : statusClass === 'blocked' ? '⛔' : '🔄';
+            const title = mission.objective && mission.objective !== mission.id
+                ? escapeHtml(mission.objective)
+                : escapeHtml(mission.id);
 
             return `
                 <div class="mission-card-v2">
                     <div class="mc-header" onclick="toggleMcBody(this)">
                         <div class="mc-header-left">
-                            <div class="mc-objective">${escapeHtml(mission.objective || mission.id)}</div>
+                            <div class="mc-objective">${title}</div>
                             <div class="mc-meta">
-                                <span>${time}</span>
+                                <span>📅 ${missionStart}</span>
+                                ${missionEnd ? `<span>→ ${missionEnd}</span>` : ''}
                                 <span>•</span>
                                 <span>${doneTasks}/${totalTasks} tarefas</span>
                                 ${failedTasks > 0 ? `<span>• ${failedTasks} falhas</span>` : ''}
+                                ${blockedTasks > 0 ? `<span style="color:var(--yellow)">⛔ ${blockedTasks} blocked</span>` : ''}
                             </div>
                         </div>
                         <span class="mc-status-badge ${statusClass}">${statusIcon} ${statusClass.toUpperCase()}</span>
                     </div>
-                    <div class="mc-body" style="display:block">
+                    <div class="mc-body" style="display:none">
                         <div class="mc-tasks-label">📋 Tarefas (${doneTasks}/${totalTasks})</div>
                         ${tasksHtml}
                     </div>
@@ -2392,8 +2203,9 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                     if (contextPct >= 80) contextClass = 'context-high';
                     else if (contextPct >= 50) contextClass = 'context-medium';
                     const emoji = getAgentEmoji(agent.role || agent.id);
+                    const agentKeyStr = agentKey(project.id, agent.id);
                     const timerDisplay = agentState.status === 'running' ? `
-                        <div class="timer" id="timer-${agent.id}">${formatTime(agentState.timer || 0)}</div>
+                        <div class="timer" id="timer-${agentKeyStr}">${formatTime(agentState.timer || 0)}</div>
                     ` : '';
                     const modelUsed = agentState.lastExecution?.model || null;
                     const lastExecHtml = agentState.lastExecution ? `
@@ -2406,7 +2218,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                         </div>
                     ` : '';
                     return `
-                    <div class="agent-card ${statusInfo.cardClass}" id="agent-${agent.id}" data-agent-id="${agent.id}" data-flash-success="${agentState.flashSuccess ? 'true' : 'false'}">
+                    <div class="agent-card ${statusInfo.cardClass}" id="agent-${agentKeyStr}" data-agent-id="${agentKeyStr}" data-flash-success="${agentState.flashSuccess ? 'true' : 'false'}">
                         <div class="agent-card-header">
                             <div class="agent-avatar">${emoji}</div>
                             <div class="agent-info">
@@ -2418,7 +2230,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                                 <div class="last-task-badge ${lastStatusInfo.statusClass}">${L.last} ${lastLabel}</div>
                                 ${(agentState.status === 'running' || agentState.status === 'completed' || agentState.status === 'success' || agentState.status === 'failed') ? `<div class="sub-status">${agentState.task || agentState.subStatus || L.executing}</div>` : ''}
                             </div>
-                            <button class="agent-log-btn" onclick="openAgentLog('${agent.id}')" title="Logs deste agente">📋</button>
+                            <button class="agent-log-btn" onclick="openAgentLog('${agentKeyStr}')" title="Logs deste agente">📋</button>
                         </div>
                         <div class="task-center">
                             <div class="task-name">${agentState.task || L.noActiveTask}</div>
@@ -2426,8 +2238,8 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                         </div>
                         ${timerDisplay}
                         <div class="llm-mode">
-                            <label for="llm-select-${agent.id}" style="font-size:0.8rem; color: var(--text-secondary);">${L.llm}</label>
-                            <select id="llm-select-${agent.id}" class="llm-select" onchange="updateAgentConfig('${agent.id}', this.value)">
+                            <label for="llm-select-${agentKeyStr}" style="font-size:0.8rem; color: var(--text-secondary);">${L.llm}</label>
+                            <select id="llm-select-${agentKeyStr}" class="llm-select" onchange="updateAgentConfig('${agent.id}', this.value)">
                                 <option value="AUTO" ${(agent.llm_mode || 'AUTO') === 'AUTO' ? 'selected' : ''}>AUTO</option>
                                 <option value="opencode_zen" ${(agent.llm_mode || 'AUTO') === 'opencode_zen' ? 'selected' : ''}>opencode_zen (deepseek-v4-pro)</option>
                                 <option value="groq" ${(agent.llm_mode || 'AUTO') === 'groq' ? 'selected' : ''}>groq (llama-3.3-70b)</option>
@@ -2476,7 +2288,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                     if (agentsInGroup.length === 0) return;
                     agentsHtml += `<div class="team-section"><h3>${groupNames[groupKey]}</h3><div class="agents-grid">`;
                     agentsInGroup.forEach(agent => {
-                        const agentState = state.agentsState[agent.id] || {
+                        const agentState = state.agentsState[agentKey(project.id, agent.id)] || {
                             status: 'ready',
                             subStatus: 'idle',
                             task: null,
@@ -2496,7 +2308,6 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
             if (!state.projectTab) state.projectTab = 'agents';
             const showAgents = state.projectTab === 'agents';
 
-            const timelineHtml = renderTimeline(project.agents);
             const mcHtml = renderProjectMissionControl(project.id);
 
             container.innerHTML = `
@@ -2509,7 +2320,6 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                         </div>
                         ${showAgents ? agentsHtml : mcHtml}
                     </div>
-                    ${showAgents ? `<div class="timeline-panel" id="interaction-flow" style="margin-top: 32px;">${timelineHtml}</div>` : ''}
                 </div>
             `;
 
@@ -2518,28 +2328,30 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
             // Flash success animation for agents that just completed
             document.querySelectorAll('.agent-card[data-flash-success="true"]').forEach(card => {
                 card.classList.add('flash-success');
-                const agentId = card.dataset.agentId;
-                if (state.agentsState[agentId]) {
-                    state.agentsState[agentId].flashSuccess = false;
+                const agentKeyFromCard = card.dataset.agentId;
+                if (state.agentsState[agentKeyFromCard]) {
+                    state.agentsState[agentKeyFromCard].flashSuccess = false;
                 }
                 setTimeout(() => {
                     card.classList.remove('flash-success');
                 }, 1500);
             });
             project.agents.forEach(agent => {
-                const aState = state.agentsState[agent.id];
-                if (aState && aState.status === 'running' && !state.eventTimers[agent.id]) {
+                const key = agentKey(project.id, agent.id);
+                const aState = state.agentsState[key];
+                if (aState && aState.status === 'running' && !state.eventTimers[key]) {
                     aState.timerStart = Date.now() - (aState.timer || 0) * 1000;
-                    state.eventTimers[agent.id] = setInterval(() => updateTimer(agent.id), 1000);
+                    state.eventTimers[key] = setInterval(() => updateTimer(key), 1000);
                 }
             });
 
             // Fetch and set LLM config for each agent
             project.agents.forEach(agent => {
+                const key = agentKey(project.id, agent.id);
                 fetch(`/api/agent-config?agent_id=${encodeURIComponent(agent.id)}`)
                     .then(response => response.json())
                     .then(data => {
-                        const selectEl = document.getElementById(`llm-select-${agent.id}`);
+                        const selectEl = document.getElementById(`llm-select-${key}`);
                         if (selectEl && data.llm_provider) {
                             selectEl.value = data.llm_provider;
                         }
@@ -2553,173 +2365,16 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                     Object.entries(data.agents).forEach(([agentId, agentContext]) => {
                         const contextPct = agentContext.context_pct || 0;
                         const sizeBytes = agentContext.context_size_bytes || 0;
-                        if (state.agentsState[agentId]) {
-                            state.agentsState[agentId].context = contextPct;
+                        const key = agentKey(project.id, agentId);
+                        if (state.agentsState[key]) {
+                            state.agentsState[key].context = contextPct;
                         }
-                        updateAgentContext(agentId, contextPct, sizeBytes);
+                        updateAgentContext(key, contextPct, sizeBytes);
                     });
                 }
             }).catch(err => console.error('Error fetching context:', err));
         }
 
-        function renderTimeline(agents) {
-            let allEvents = [];
-            agents.forEach(agent => {
-                const aState = state.agentsState[agent.id];
-                if (aState && aState.events) {
-                    allEvents = allEvents.concat(aState.events.map(e => ({ ...e, agentId: agent.id })));
-                }
-            });
-            allEvents.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            allEvents = allEvents.slice(0, 200);
-
-            if (allEvents.length === 0) {
-                return `
-                    <div class="timeline-header">Interaction Flow</div>
-                    <div class="empty-state">${L.noInteractions}</div>
-                `;
-            }
-
-            const groups = {};
-            allEvents.forEach(event => {
-                const key = event.taskId || event.task_id || event.trace_id || new Date(event.timestamp).toLocaleDateString();
-                if (!groups[key]) groups[key] = [];
-                groups[key].push(event);
-            });
-
-            const sortedGroups = Object.entries(groups).sort((a, b) => {
-                const aTime = new Date(a[1][0].timestamp).getTime();
-                const bTime = new Date(b[1][0].timestamp).getTime();
-                return bTime - aTime;
-            });
-
-            let html = `
-                <div class="timeline-header">
-                    <span>${L.interactionFlow}</span>
-                    <span class="mission-count">${sortedGroups.length} missions</span>
-                </div>
-                <div class="timeline-items">
-            `;
-
-            sortedGroups.forEach(([groupKey, events]) => {
-                events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                const firstEvent = events[0];
-                const lastEvent = events[events.length - 1];
-                const startTime = formatTimestamp(firstEvent.timestamp);
-                const status = lastEvent.status || 'unknown';
-                const statusClass = status === 'completed' || status === 'success' ? 'status-success' :
-                                    status === 'failed' ? 'status-failed' : '';
-                const isRunning = status === 'running';
-
-                html += `
-                <details class="mission-card"${isRunning ? ' open' : ''}>
-                    <summary class="mission-header">
-                        <span class="mission-title">${groupKey}</span>
-                        <span class="mission-status ${statusClass}">${status.toUpperCase()}</span>
-                        <span class="mission-time">${startTime}</span>
-                    </summary>
-                    <div class="mission-body">
-                `;
-
-                // Build delegation tree from flat events
-                const treeRoot = { children: [] };
-                let scope = null; // { delegator, targetAgent, children: [] }
-
-                events.forEach(event => {
-                    const agentId = event.actor || event.agentId || '?';
-                    const msg = event.message || '';
-                    const isCoordinator = agentId.toLowerCase().includes('coorden') || agentId === 'coordenador' || agentId.toLowerCase().includes('coordinator');
-
-                    if (isCoordinator && msg.includes('Delegando')) {
-                        const match = msg.match(/para\s+(\w+)/i);
-                        const target = match ? match[1] : 'worker';
-                        scope = { delegator: agentId, targetAgent: target, children: [event] };
-                        treeRoot.children.push(scope);
-                    } else if (scope && agentId === scope.targetAgent) {
-                        scope.children.push(event);
-                        if (event.status === 'completed' || event.status === 'success' || event.status === 'failed') {
-                            const closeEvent = { ...event, _closeScope: true };
-                            scope.children.push(closeEvent);
-                            scope = null;
-                        }
-                    } else if (scope && isCoordinator && msg.includes('Concluido')) {
-                        scope.children.push(event);
-                        scope = null;
-                    } else {
-                        treeRoot.children.push({ type: 'event', agentId, message: msg, status: event.status, timestamp: event.timestamp });
-                    }
-                });
-
-                // Render the delegation tree
-                function renderNode(node, depth) {
-                    if (node.type === 'event' || node.agentId) {
-                        const agentId = node.agentId || '?';
-                        const message = node.message || 'Event';
-                        const timestamp = safeTime(node.timestamp);
-                        const emoji = getAgentEmoji(agentId);
-                        const evtStatus = node.status || 'unknown';
-                        const nsClass = evtStatus === 'completed' || evtStatus === 'success' ? 'status-success' :
-                                        evtStatus === 'failed' ? 'status-failed' :
-                                        evtStatus === 'running' ? 'status-running' : '';
-                        return `<div class="agent-node level-${depth}">
-                            <div class="node-card ${nsClass}">
-                                <div class="node-header">
-                                    <span class="node-avatar">${emoji}</span>
-                                    <span class="node-name">${agentId}</span>
-                                </div>
-                                <div class="node-body">${message}</div>
-                                <div class="node-footer">${evtStatus} • ${timestamp}</div>
-                            </div>
-                        </div>`;
-                    }
-                    if (node.children) {
-                        const delegator = node.delegator || '?';
-                        const target = node.targetAgent || 'worker';
-                        const first = node.children[0] || {};
-                        const emoji = getAgentEmoji(delegator);
-                        const tgtEmoji = getAgentEmoji(target);
-                        const delegMsg = `→ delegou para ${tgtEmoji} ${target}`;
-                        const ts = safeTime(first.timestamp);
-                        let html = `<div class="agent-node level-${depth}">
-                            <div class="node-card delegation">
-                                <div class="node-header">
-                                    <span class="node-avatar">${emoji}</span>
-                                    <span class="node-name">${delegator}</span>
-                                    <span class="delegation-arrow">${delegMsg}</span>
-                                </div>
-                                <div class="node-footer">${first.message || ''} • ${ts}</div>
-                            </div>`;
-                        node.children.forEach((child, i) => {
-                            if (i === 0) return;
-                            if (child._closeScope) return;
-                            html += renderNode({ type: 'event', agentId: child.actor || child.agentId || target, message: child.message || 'Event', status: child.status, timestamp: child.timestamp }, depth + 1);
-                        });
-                        html += `</div>`;
-                        return html;
-                    }
-                    return '';
-                }
-
-                treeRoot.children.forEach(child => {
-                    if (child.children) {
-                        html += renderNode(child, 0);
-                    } else {
-                        html += renderNode(child, 0);
-                    }
-                });
-
-                html += `
-                    </div>
-                </details>`;
-            });
-
-            html += '</div>';
-            return html;
-        }
-
-        function toggleTimelineDetails(element) {
-            element.classList.toggle('expanded');
-        }
 
         function getAgentEmoji(role) {
             const emojis = {
@@ -2834,8 +2489,9 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                 // Inicializa estado dos agentes
                 state.projects.forEach(project => {
                     project.agents?.forEach(agent => {
-                        if (!state.agentsState[agent.id]) {
-                            state.agentsState[agent.id] = {
+                        const key = agentKey(project.id, agent.id);
+                        if (!state.agentsState[key]) {
+                            state.agentsState[key] = {
                                 status: 'ready',
                                 subStatus: 'idle',
                                 task: null,
@@ -2852,6 +2508,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
                 });
 
                 renderCurrentView();
+                populateProjectSelector();
             } catch (error) {
                 console.error('Failed to load initial data:', error);
                 document.getElementById('view-projects').innerHTML = '<div class="error">Failed to load projects. Is the server running?</div>';
@@ -2896,7 +2553,6 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
         window.navigateTo = navigateTo;
         window.navigateBack = navigateBack;
         window.refreshData = refreshData;
-        window.toggleTimelineDetails = toggleTimelineDetails;
         window.switchProjectTab = switchProjectTab;
         window.toggleMcBody = toggleMcBody;
         window.toggleMcTaskInteractions = toggleMcTaskInteractions;
@@ -2911,7 +2567,7 @@ function safeTime(iso) { const d = safeDate(iso); return d ? d.toLocaleTimeStrin
             }
             const filterAgent = document.getElementById('log-filter-agent');
             if (filterAgent) {
-                filterAgent.value = agentId;
+                filterAgent.value = agentId.includes(':') ? agentId.split(':')[1] : agentId;
             }
             if (typeof applyFilters === 'function') {
                 applyFilters();
@@ -2966,7 +2622,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     project.agents?.forEach(agent => agents.add(agent.id));
                 });
             }
-            Object.keys(state.agentsState).forEach(id => agents.add(id));
+            Object.keys(state.agentsState).forEach(k => agents.add(k.includes(':') ? k.split(':')[1] : k));
             while (filterAgent.options.length > 1) {
                 filterAgent.remove(1);
             }
@@ -3127,23 +2783,26 @@ document.addEventListener('DOMContentLoaded', function() {
             else if (view === 'team-detail') renderTeamDetail();
             else if (view === 'live') renderCurrentView();
             else if (view === 'config') renderConfig();
+            updateNavActive();
+            populateProjectSelector();
         }
         
 
         function updateLogFilterInfo(agentId) {
             const infoDiv = document.getElementById('log-filter-info');
             if (!infoDiv) return;
-            const agentState = state.agentsState[agentId];
+            const bareId = agentId.includes(':') ? agentId.split(':')[1] : agentId;
+            const agentState = state.agentsState[agentId] || Object.values(state.agentsState).find(s => s.lastExecution?.model);
             if (!agentState) {
                 infoDiv.style.display = 'none';
                 return;
             }
             const lastExec = agentState.lastExecution;
-            let modelText = '—';
+            let modelText = '\u2014';
             if (lastExec && lastExec.model) {
                 modelText = lastExec.model;
             }
-            infoDiv.innerHTML = `${L.filteredBy} ${agentId} | ${L.last} modelo: ${modelText}`;
+            infoDiv.innerHTML = `${L.filteredBy} ${bareId} | ${L.last} modelo: ${modelText}`;
             infoDiv.style.display = 'block';
         }
 

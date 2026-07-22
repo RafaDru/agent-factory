@@ -119,25 +119,23 @@ O Console AFP foi completamente reescrito de `dashboard-react/index.html` para `
 | 6 | **E-006** | Documentacao |
 | — | **E-007** | Gestao de Modelos e API Keys (adicionado) |
 
-## Tarefa Imediata: Remover botao "Detalhes" do Mission Control
+## Tarefa Imediata: Atualizar contextos e commitar mudancas
 
-**Localizacao:** `src/dashboard/index.html`
+**Objetivo:** Esta sessaoo (22/07/2026) completou 3 entregas:
+1. Remocao do Interaction Flow (E-008 concluido)
+2. Correcao de poluicao de estado entre projetos (agenteKey com escopo)
+3. Bugfixes: `info` → `statusInfo`, `agentKeyStr` TDZ, Cache-Control header
 
-**O que fazer:**
-No `renderMissionCard()`, remover o botao "📋 Detalhes" que atualmente existe ao lado do botao "📋 Log Details". 
-O botao "📋 Detalhes" abre a timeline de eventos inline. Como ja temos o "📋 Log Details" com a tabela completa, 
-o botao "📋 Detalhes" e redundante e deve ser removido.
+**Tarefas:**
+1. **Dev**: Revisar e garantir que os aprendizados foram registrados em seu contexto
+2. **QA**: Verificar que dashboard carrega sem erros, sem poluicao entre projetos
+3. **Todos os agentes**: Garantir que contextos estao atualizados com licoes
+4. **Dev**: Commitar e fazer push para origin/master
 
-**Instrucoes para dev:**
-1. Leia `src/dashboard/index.html`
-2. Encontre a funcao `renderMissionCard()` — procure por `live-detail-btn` no HTML
-3. Remova a linha que contem o boto "📋 Detalhes" (e seus elementos associados, como `detailId`)
-4. Nao remova o "📋 Log Details" — apenas o "📋 Detalhes"
-
-**QA deve:**
-1. Validar que o boto "📋 Detalhes" nao existe mais no HTML renderizado
-2. Validar que o boto "📋 Log Details" continua funcionando
-3. Validar que nao ha erros no console do navegador
+**Apos o commit, verificar:**
+- `git status` limpo
+- `git log --oneline -3` mostra commits descritivos
+- Push bem-sucedido para origin/master
 
 ## Regras
 
@@ -175,7 +173,23 @@ Esta politica foi criada apos a perda de ~70KB de codigo do `src/dashboard/index
 4. Verificar lixeira do sistema operacional — editores podem salvar backups
 5. **NUNCA desistir sem verificar todas as opcoes acima**
 
+### missao-cross-project-isolation-e-cache
+- **Objetivo**: Corrigir poluicao de estado entre projetos no dashboard, adicionar Cache-Control, corrigir bugs de template
+- **Resultado**: Completo (fora do DAG do coordenador — execucao direta no chat)
+- **Reflexao**: 
+  - **Poluicao de estado**: `state.agentsState` usava `agentId` como chave, mas IDs como `coordenador`, `qa`, `designer` sao compartilhados entre projetos. Isso fazia o contador de agentes running de um projeto inflar os demais. **Licao**: qualquer estado global indexado por ID de agente deve usar `projectId:agentId` como chave.
+  - **Cache-Control**: A ausencia de `Cache-Control: no-cache` no HTML fazia o navegador servir JS estale apos atualizacoes. **Licao**: sempre definir `Cache-Control` em respostas HTML de SPA.
+  - **TDZ (Temporal Dead Zone)**: A template string `timerDisplay` referenciava `agentKeyStr` antes de sua declaracao `const`, causando `ReferenceError`. **Licao**: em arquivos grandes, manter declaracoes no topo ou revisar ordem de definicao.
+  - **In-process fallback**: A missao `plan_and_execute` via MCP em 21/07/2026 caiu em fallback in-process (Event Bus timeout). O coordenador planejou mas nao executou as edicoes — o sub-agente in-process nao tem ferramentas de arquivo. **Licao**: o fallback in-process e fragil para execucao real; so e confiavel para planejamento.
+
 ## Retrospectiva de Missoes
+
+### missao-remover-interaction-flow-timeline-panel-console
+- **Objetivo**: Remover o Interaction Flow (timeline-panel) do Console AFP, mantendo apenas o Mission Control
+- **Resultado**: 1/7 tarefas aceitas
+- **Falhas**: read-console-file
+- **Reflexao**: A missão foi interrompida precocemente devido à falha na segunda tarefa (`read-console-file`), revelando uma fragilidade no planejamento do DAG: não havia contingência para falhas em etapas iniciais de levantamento. Embora a sequência lógica (listar → ler → modificar → validar) estivesse correta, a 
+
 
 ### missao-arquivo-src-dashboard-index-html-foi
 - **Objetivo**: O arquivo src/dashboard/index.html foi restaurado de uma versao antiga do git, perdendo cerca de 70K

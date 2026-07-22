@@ -8,8 +8,8 @@
 | 2 | E-001 | Diferencial principal, maior valor percebido |
 | 3 | E-003 | Experiencia integrada, depende de E-002 e E-001 |
 | 4 | E-004 | Diagnostico, secundario ao monitoramento |
-| 5 | E-005 | Suporte, ja em andamento |
-| 6 | E-006 | Baixo valor no momento, postergavel |
+| 6 | E-005 | Suporte, ja em andamento |
+| 7 | E-006 | Baixo valor no momento, postergavel |
 
 ## Infra-Estrutura
 
@@ -73,6 +73,22 @@ Tela de configuracao no Console AFP com:
 - Integrado ao sistema de navegacao existente (botao ⚙️ no header) ✅
 - Usa endpoints REST existentes (/api/agent-config POST, /api/projects GET) ✅
 - Consistencia visual com o dashboard (glass morphism, neon accents, dark theme) ✅
+
+### E-008: Remover Interaction Flow, manter apenas Mission Control
+**Prioridade:** 4
+**Status:** Implementado ✅
+
+Remocao completa: funcao `renderTimeline()`, div `.timeline-panel`, CSS exclusivo.
+Mission Control permanece como unica interface de visualizacao de missoes.
+
+### E-009: Isolamento de estado entre projetos
+**Prioridade:** 4
+**Status:** Implementado ✅
+
+Corrigida poluicao de estado entre projetos no dashboard:
+- `state.agentsState` agora usa chave `projectId:agentId` via helper `agentKey()`
+- Cache-Control adicionado ao HTML server response
+- Bugs: `info` → `statusInfo` em template, `agentKeyStr` TDZ corrigido
 
 ### E-003: Console AFP — Home e Navegacao
 **Prioridade:** 3

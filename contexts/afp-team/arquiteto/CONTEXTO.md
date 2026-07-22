@@ -42,5 +42,17 @@ src/dashboard/
 4. **Modal LLM**: Substitui dropdown nativo por modal com informacoes detalhadas
 5. **Sync setView**: Navegacao sincrona (sem async/await) para evitar race conditions
 
+## Tarefa Imediata: Contextos atualizados
+
+A remocao do Interaction Flow foi concluida sem impacto arquitetural.
+Navegacao e dados compartilhados nao foram afetados.
+
+Correcao arquitetural adicional: `state.agentsState` agora usa chave composta
+`projectId:agentId` para evitar poluicao entre projetos. Esta e uma licao
+importante:任何时候 um objeto global e indexado por ID de agente, o escopo
+do projeto deve fazer parte da chave.
+
+Nenhuma acao arquitetural pendente no momento.
+
 ## Working Directory
 `C:\Users\rafae\agent-factory`

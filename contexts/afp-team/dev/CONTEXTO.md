@@ -40,21 +40,47 @@ O servidor esta em `src/dashboard/server.py`.
 - URL routing via hash
 - LLM Modal com benchmarks
 
-### Tarefa Imediata: Remover botao "Detalhes" do Mission Control
+### Tarefa Imediata: Contextos atualizados — commit e push
 
 **O que fazer:**
-No `renderMissionCard()` em `src/dashboard/index.html`, remover o botao "📋 Detalhes".
+Todos os contextos foram atualizados com licoes desta sessaoo. Agora commitar e fazer push.
 
-**Instrucoes:**
-1. Leia `src/dashboard/index.html`
-2. Encontre a funcao `renderMissionCard()` — procure pelo HTML que contem `live-detail-btn`
-3. Remova a linha do botao "📋 Detalhes" (a que tem `onclick="document.getElementById('${detailId}')..."`)
-4. Nao remova o "📋 Log Details" — apenas o "📋 Detalhes"
-5. Nao remova a div `live-timeline` ou o `detailId` — eles podem ser mantidos ou removidos
-6. A variavel `detailId` (`const detailId = 'detail-' + ...`) pode ser removida se nao for mais usada
+**Commits:**
+1. `git add -A`
+2. `git commit -m "fix: cross-project agent state isolation, Cache-Control, template bugs"`
+3. `git push origin master`
 
-## Working Directory
+**Verificar:**
+- `git status` limpo
+- Push bem-sucedido sem erros
+
+**Working Directory:**
 `C:\Users\rafae\agent-factory`
+
+## Licoes Aprendidas (22/07/2026)
+
+### 1. Escopo de chaves de estado global
+Ao armazenar estado por agente em `state.agentsState`, sempre usar chave composta `projectId:agentId`.
+Nunca usar `agentId` puro, pois IDs como `coordenador`, `qa`, `designer`, `negocios`, `arquiteto`
+sao compartilhados entre projetos. Um projeto rodando 3 agentes inflava o contador dos demais.
+
+Criar helper `agentKey(pId, aId) => \`${pId}:${aId}\`` e usar em todos os lookup/set.
+
+### 2. Cache-Control em SPAs
+Sempre adicionar `Cache-Control: no-cache, no-store, must-revalidate` no header HTTP
+de respostas HTML. Sem isso, o navegador serve JS/CSS estale apos deploy, causando
+bugs "ja corrigidos" que persistem para o usuario.
+
+### 3. Temporal Dead Zone (TDZ) de `const`
+Se uma template string referencia uma variavel `const` que e declarada depois dela,
+o interpretador lanca `ReferenceError: Cannot access before initialization`.
+Em arquivos grandes (+3000 linhas), manter declaracoes no topo ou verificar
+a ordem de definicao antes de usar em templates.
+
+### 4. Nomes de variaveis em templates
+Ao usar `info.dotClass` e `info.label` em template, garantir que a variavel
+realmente se chama `info` e nao `statusInfo`. Esse bug (referencia a `info` indefinido)
+passou despercebido porque o template foi copiado de outro contexto.
 
 ## Git Workflow — Protecao de Trabalho
 

@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### Remover Interaction Flow: funções renderTimeline, div timeline-panel e CSS exclusivo
+- **Acao**: edit_file
+- **Resumo**: Informe file_path, old_string e new_string.
+
+
 ### Implementar navegacao por hash (setView, onHashChange, navigateHash) e atualizar header buttons
 - **Acao**: edit_file
 - **Resumo**: Informe file_path, old_string e new_string.

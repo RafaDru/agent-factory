@@ -27,6 +27,14 @@ melhorias visuais para o Console AFP.
 | research_design_systems | Pesquisa design systems do mercado focados em dashboards operacionais |
 | get_capabilities | Retorna acoes disponiveis |
 
+## Tarefa Imediata: Contextos atualizados
+
+O Interaction Flow foi removido com sucesso. O Mission Control cobre todas as
+funcionalidades de visualizacao. Nenhum elemento visual unico foi perdido.
+A sessaoo tambem corrigiu poluicao de estado entre projetos.
+
+Nenhuma acao de design pendente no momento.
+
 ## Estado Atual
 O Console AFP esta em `src/dashboard/index.html` (arquivo unico, HTML+CSS+JS inline).
 Tema: Dark/Light mode com glass morphism, cores neon (ciano, roxo, verde).

@@ -42,7 +42,9 @@ validar requisitos de negocio, e representar a perspectiva do usuario/stakeholde
 | 4 | **E-004** | Log e Debug (tabela com filtros dedicada) |
 | 5 | **E-005** | Dashboard de projetos externos |
 | 6 | **E-006** | Documentacao |
+| — | **E-008** | Remover Interaction Flow, manter apenas Mission Control ✅ |
 | — | **E-007** | Gestao de Modelos e API Keys (auto-discovery Ollama, API Keys UI, teste de conectividade) |
+| — | **E-009** | Isolamento de estado entre projetos (corrigido) ✅ |
 
 ### Documentos de Referencia
 - `docs/backlog.md` — Backlog completo com prioridades

@@ -24,23 +24,36 @@ Valida codigo, executa testes e linters.
 | analyze_project | Usa LLM para analisar saude geral do projeto |
 | get_capabilities | Retorna acoes disponiveis |
 
-## Tarefa Imediata: Validar remocao do botao "Detalhes" no Mission Control
+## Tarefa Imediata: Validar estado apos correcoes
 
 **O que validar:**
-1. O botao "📋 Detalhes" foi removido do HTML renderizado pelo `renderMissionCard()`
-2. O botao "📋 Log Details" continua presente e funcional
-3. Nao ha erros no console do navegador apos a remocao
-4. A variavel `detailId` pode ter sido removida — verificar se nao causa erro de referencia
+1. Dashboard carrega sem erros no console (F12)
+2. Projetos PTA e AFP-Team mostram contagem de agentes running independente
+3. Navegacao entre abas AGENTS e Mission Control em cada projeto funciona
+4. Mission Control Global e Local exibem missoes corretamente
+5. Nao ha poluicao de estado entre projetos (agentes running de um NAO aparecem no outro)
 
 **Como testar:**
-1. Apos a modificacao do dev, reinicie o servidor (`python _run_dashboard.py`)
-2. Acesse `http://127.0.0.1:8080/#/project/AFP-Team/mission-control`
-3. Verifique visualmente se o botao "📋 Detalhes" nao aparece nos cards de missao
-4. Clique em "📋 Log Details" para garantir que a tabela de logs abre corretamente
-5. Verifique o console do navegador (F12) para erros JavaScript
+1. Acesse `http://127.0.0.1:8080/#/projects` — verifique cards de projeto
+2. Acesse PTA e AFP-Team — verifique se agentes running sao independentes
+3. Verifique console para erros JS
+4. Teste Mission Control Global e Local
 
 ## Working Directory
 `C:\Users\rafae\agent-factory`
+
+## Licoes Aprendidas (22/07/2026)
+
+### Verificacao de isolamento entre projetos
+Ao testar estado de agentes no dashboard, sempre verificar que projetos diferentes
+nao contaminam as metricas uns dos outros. Agentes com mesmo ID (`coordenador`, `qa`,
+`designer`) em projetos diferentes devem ter estados independentes.
+
+### Escaneamento de console apos qualquer mudanca JS
+Sempre verificar o console do navegador apos alteracoes no JavaScript. Erros comuns:
+- `ReferenceError: Cannot access before initialization` (TDZ)
+- `XXX is not defined` (variavel inexistente na template)
+- TypeError em propriedades de `undefined`
 
 ## Validacao Git
 

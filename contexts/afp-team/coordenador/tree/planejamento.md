@@ -2,6 +2,16 @@
 
 ## Estrategias
 
+### missao-missao-remover-interaction-flow-timeline-panel-console-planejamento
+- **Acao**: reflect_on_mission
+- **Resumo**: A missão foi interrompida precocemente devido à falha na segunda tarefa (`read-console-file`), revelando uma fragilidade
+
+
+### missao-missao-remover-interaction-flow-timeline-panel-console
+- **Acao**: reflect_on_mission
+- **Resumo**: A missão foi interrompida precocemente devido à falha na segunda tarefa (`read-console-file`), revelando uma fragilidade
+
+
 ### missao-missao-arquivo-src-dashboard-index-html-foi-planejamento
 - **Acao**: reflect_on_mission
 - **Resumo**: **Planejamento:** O DAG linear (designer → dev → QA) foi adequado para esta missão de recuperação. As tarefas estavam be

@@ -2,6 +2,11 @@
 
 ## Conhecidos
 
+### Analisar impacto UX da remoção do timeline-panel
+- **Acao**: analyze_ux
+- **Resumo**: **Análise de UX do Dashboard Atual (com base no código fornecido e contexto da missão)**
+
+
 ### Analisar e criar plano de implementacao para recuperacao de funcionalidades
 - **Acao**: analyze_ux
 - **Resumo**: ## Análise de UX — Console AFP (dashboard atual)
