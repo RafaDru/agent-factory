@@ -6,8 +6,9 @@
 |------------|------|---------------|
 | 1 | E-002 | Fundacional: sem configuracao, nada funciona |
 | 2 | E-001 | Diferencial principal, maior valor percebido |
-| 3 | E-003 | Experiencia integrada, depende de E-002 e E-001 |
-| 4 | E-004 | Diagnostico, secundario ao monitoramento |
+| 3 | E-010 | UI Refresh: hierarquia visual, grupos colapsaveis, responsividade |
+| 4 | E-003 | Experiencia integrada, depende de E-002 e E-001 |
+| 5 | E-004 | Diagnostico, secundario ao monitoramento |
 | 6 | E-005 | Suporte, ja em andamento |
 | 7 | E-006 | Baixo valor no momento, postergavel |
 
@@ -37,14 +38,14 @@ Cinco modelos rodando localmente via Ollama (GPU 6GB VRAM | RAM 40 GB):
 > **Nota:** Modelos `deepseek-coder-v2` (8.9 GB) e `gemma3:4b` (3.3 GB) foram removidos por desempenho inferior. Ver `docs/modelos-locais-benchmark.md`. |
 
 ### E-007: Gestão de Modelos e API Keys
-**Prioridade:** Pós E-003
+**Prioridade:** 5
+**Status:** Implementado ✅
 
-Permitir que o usuário gerencie modelos LLM diretamente pela interface:
-- **Auto-discovery Ollama**: ao iniciar o servidor, escanear modelos disponíveis no Ollama local (`ollama list`) e expor via API
-- **API Keys UI**: formulário para adicionar/remover chaves de API de provedores cloud (Groq, OpenRouter, Gemini, etc.)
-- **Teste de conectividade**: botão "Testar" que valida se a chave/endpoint está funcional
-- **Seletor de modelo melhorado**: modal com informações detalhadas (tarefas indicadas, consumo estimado, local vs cloud)
-- **Fallback automático**: configurar ordem de fallback entre provedores
+- **Auto-discovery Ollama**: scan local via `/api/llm/ollama-models` ✅
+- **API Keys UI**: formulario add/remove via `/api/llm/api-keys` ✅
+- **Teste de conectividade**: botao "Testar" via `POST /api/llm/test` ✅
+- **Seletor de modelo melhorado**: modal LLM com metadados (tipo, benchmark, tarefas) ✅
+- **Fallback automático**: postergado
 
 ## Epicos
 
@@ -125,7 +126,58 @@ Tela de Log separada do Live Stream com:
 Interface de linha de comando para gerenciar projetos, iniciar
 runtimes, e enviar objetivos sem depender do MCP ou Console AFP.
 
+### E-011: System Tray Icon para AFP (Windows)
+**Prioridade:** 2
+**Status:** Backlog
+
+Icone na bandeja do sistema (ao lado do relogio) para controlar o AFP:
+
+**Funcionalidades:**
+- Icone do AFP na system tray (area de notificacao do Windows)
+- Menu de contexto com: Iniciar, Parar, Reiniciar, Abrir Dashboard
+- Indicador visual de status: rodando (verde), parado (vermelho), ocupado (amarelo)
+- Tooltip com info basica: PID, uptime, agentes ativos
+- Iniciar automaticamente com o Windows (opcional)
+
+**Tecnologia sugerida:** `pystray` + `PIL` (gerar icone via codigo, sem依赖 de .ico externo) ou `tkinter` nativo.
+
+**Dependencias:**
+- Usar `start_afp.ps1` como backend (start/stop ja implementados)
+- Ler `.agent-factory/afp.pid` para status
+- Ler eventos em `.agent-events/AFP-Team/events.jsonl` para indicador de atividade
+
+### E-010: Console AFP — UI Refresh (Hierarquia, Grupos, Responsividade)
+**Prioridade:** 3
+**Status:** Parcial (A e E executados, 6 bloqueados por bug RPC)
+
+Refresh de UI baseado na Design Evaluation (`docs/design-evaluation.md`):
+
+| Item | Descricao | Agente |
+|------|-----------|--------|
+| A | Borda lateral colorida por status no card do agente | designer |
+| B | Grupos colapsaveis (coord/upstream/downstream) no Team Detail | designer |
+| C | Timer condicional (so aparece quando RUNNING) | designer |
+| D | Config reorganizada em abas (Provedores / API Keys / Ollama) | designer+dev |
+| E | Breadcrumb navegaveis em todos os niveis | dev |
+| F | Modal LLM com header contextual (nome do agente + projeto) | designer |
+| G | Responsividade (3/2/1 colunas conforme viewport) | dev |
+| H | Logs Panel integrado ao card do agente (visual) | designer+dev |
+
+**Dependencias:**
+- B depende de A (borda de status define a identidade visual)
+- D depende de E (navegacao breadcrumb para voltar)
+- H depende de G (responsividade do layout)
+
 ---
+
+## Bugs Conhecidos
+
+| Bug | Impacto | Afeta |
+|-----|---------|-------|
+| RPC reply nao retorna ao coordinator | Tasks dependentes de E-010 bloqueadas | coordinator, runtime |
+| Reflexao falha ao salvar arvore de contexto | Coordinator termina com warning nao critico | coordinator |
+| Agente aparece como "worker" nos eventos | Dificulta identificar qual runtime executou | dashboard, events |
+| SSE/Mission Control nao consome eventos do RabbitMQ | Monitor nao reflete em tempo real | dashboard |
 
 ## Issues Abertas no GitHub
 
