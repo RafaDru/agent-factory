@@ -1453,9 +1453,14 @@
                 const card = document.getElementById('agent-' + key);
                 if (card) {
                     updateAgentCardUI(key);
+                    if (state.projectTab === 'mission-control') {
+                        renderTeamDetail();
+                    }
                 } else {
                     renderTeamDetail();
                 }
+            } else if (state.currentView === 'live') {
+                renderGlobalMissionControl();
             }
 
             // Add to logs panel
