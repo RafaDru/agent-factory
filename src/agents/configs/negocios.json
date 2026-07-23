@@ -2,6 +2,7 @@
   "id": "negocios",
   "role": "worker",
   "description": "Negocios: backlog, priorizacao, validacao de requisitos",
+  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
   "actions": {
     "read_file": {
       "description": "Le conteudo de um arquivo para consulta ao backlog",

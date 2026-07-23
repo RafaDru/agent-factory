@@ -2,21 +2,27 @@
   "id": "visao-llm",
   "role": "worker",
   "description": "Análise visual de impressão 3D: snapshots da câmera, detecção de falhas, monitoramento óptico",
-  "llm_provider": "auto",
+  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
   "actions": {
     "capture_snapshot": {
       "description": "Captura snapshot da câmera MJPG (porta 8080) e salva localmente",
-      "params": {"output_path": "str (opcional) - caminho para salvar"},
+      "params": {
+        "output_path": "str (opcional) - caminho para salvar"
+      },
       "handler": "src.agents.handlers.run_script"
     },
     "analyze_print": {
       "description": "Analisa frame atual em busca de falhas (spaghetti, descolamento, warp)",
-      "params": {"frame_path": "str (opcional) - caminho do frame para analisar"},
+      "params": {
+        "frame_path": "str (opcional) - caminho do frame para analisar"
+      },
       "handler": "src.agents.handlers.run_script"
     },
     "start_monitoring": {
       "description": "Inicia monitoramento contínuo (loop a cada 15s com análise visual)",
-      "params": {"interval_seconds": "int (opcional) - intervalo entre frames"},
+      "params": {
+        "interval_seconds": "int (opcional) - intervalo entre frames"
+      },
       "handler": "src.agents.handlers.run_script"
     },
     "stop_monitoring": {

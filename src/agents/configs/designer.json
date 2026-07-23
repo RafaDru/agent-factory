@@ -2,11 +2,26 @@
   "id": "designer",
   "role": "worker",
   "description": "Design: pesquisa de design systems, prototipos, UX",
+  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
   "actions": {
     "read_file": {
       "description": "Le conteudo de um arquivo para referencia",
       "params": {"file_path": "str (obrigatorio)"},
       "handler": "src.agents.handlers.read_file"
+    },
+    "write_file": {
+      "description": "Escreve conteudo em um arquivo",
+      "params": {"file_path": "str (obrigatorio)", "content": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.write_file"
+    },
+    "edit_file": {
+      "description": "Edita um arquivo (substitui trecho)",
+      "params": {"file_path": "str (obrigatorio)", "old_string": "str (obrigatorio)", "new_string": "str (obrigatorio)"},
+      "handler": "src.agents.handlers.edit_file"
+    },
+    "refactor_code": {
+      "description": "Usa LLM para analisar e refatorar codigo existente",
+      "params": {"file_path": "str", "instructions": "str (opcional)"}
     },
     "list_directory": {
       "description": "Lista arquivos em um diretorio",

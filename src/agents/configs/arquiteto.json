@@ -2,29 +2,42 @@
   "id": "arquiteto",
   "role": "architect",
   "description": "Arquitetura: revisao arquitetural, padroes, coerencia tecnica",
-  "llm_provider": "ollama:phi4",
+  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
   "actions": {
     "read_file": {
       "description": "Le arquivo para revisao arquitetural",
-      "params": {"file_path": "str (obrigatorio)"},
+      "params": {
+        "file_path": "str (obrigatorio)"
+      },
       "handler": "src.agents.handlers.read_file"
     },
     "list_directory": {
       "description": "Lista arquivos para entender estrutura",
-      "params": {"path": "str (obrigatorio)", "pattern": "str (opcional)"},
+      "params": {
+        "path": "str (obrigatorio)",
+        "pattern": "str (opcional)"
+      },
       "handler": "src.agents.handlers.list_directory"
     },
     "analyze_project": {
       "description": "Analisa estrutura do projeto com foco arquitetural",
-      "params": {"path": "str (opcional)"}
+      "params": {
+        "path": "str (opcional)"
+      }
     },
     "review_code": {
       "description": "Revisa codigo com foco em arquitetura e padroes",
-      "params": {"file_path": "str (obrigatorio)", "focus": "str (opcional)"}
+      "params": {
+        "file_path": "str (obrigatorio)",
+        "focus": "str (opcional)"
+      }
     },
     "suggest_fixes": {
       "description": "Sugere correcoes arquiteturais",
-      "params": {"error": "str (obrigatorio)", "file_path": "str (opcional)"}
+      "params": {
+        "error": "str (obrigatorio)",
+        "file_path": "str (opcional)"
+      }
     }
   }
 }

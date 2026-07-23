@@ -2,49 +2,71 @@
   "id": "qa",
   "role": "worker",
   "description": "Qualidade: testes, lint, revisao, validacao",
-  "llm_provider": "ollama:deepseek-r1:8b",
+  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
   "actions": {
     "run_tests": {
       "description": "Executa pytest com saida detalhada",
-      "params": {"path": "str (opcional)", "args": "list[str] (opcional)"},
+      "params": {
+        "path": "str (opcional)",
+        "args": "list[str] (opcional)"
+      },
       "handler": "src.agents.handlers.run_tests"
     },
     "lint": {
       "description": "Executa ruff check (opcional: --fix)",
-      "params": {"path": "str (opcional)", "fix": "bool (opcional)"},
+      "params": {
+        "path": "str (opcional)",
+        "fix": "bool (opcional)"
+      },
       "handler": "src.agents.handlers.lint"
     },
     "type_check": {
       "description": "Executa pyright para tipos",
-      "params": {"path": "str (opcional)"},
+      "params": {
+        "path": "str (opcional)"
+      },
       "handler": "src.agents.handlers.type_check"
     },
     "validate_python_syntax": {
       "description": "Valida sintaxe Python de um arquivo",
-      "params": {"file_path": "str (obrigatorio)"},
+      "params": {
+        "file_path": "str (obrigatorio)"
+      },
       "handler": "src.agents.handlers.validate_python_syntax"
     },
     "file_exists": {
       "description": "Verifica se um arquivo existe",
-      "params": {"file_path": "str (obrigatorio)"},
+      "params": {
+        "file_path": "str (obrigatorio)"
+      },
       "handler": "src.agents.handlers.file_exists"
     },
     "analyze_artifact": {
       "description": "Analisa um artefato (arquivo) usando o filesystem",
-      "params": {"file_path": "str (obrigatorio)", "checks": "list[str] (opcional)"},
+      "params": {
+        "file_path": "str (obrigatorio)",
+        "checks": "list[str] (opcional)"
+      },
       "handler": "src.agents.handlers.read_file"
     },
     "review_code": {
       "description": "Usa LLM para revisar codigo (boas praticas, seguranca, qualidade)",
-      "params": {"file_path": "str (obrigatorio)"}
+      "params": {
+        "file_path": "str (obrigatorio)"
+      }
     },
     "suggest_fixes": {
       "description": "Usa LLM para analisar falhas e sugerir correcoes",
-      "params": {"error": "str (obrigatorio)", "file_path": "str (opcional)"}
+      "params": {
+        "error": "str (obrigatorio)",
+        "file_path": "str (opcional)"
+      }
     },
     "analyze_project": {
       "description": "Usa LLM para analisar saude geral do projeto",
-      "params": {"path": "str (opcional)"}
+      "params": {
+        "path": "str (opcional)"
+      }
     }
   }
 }

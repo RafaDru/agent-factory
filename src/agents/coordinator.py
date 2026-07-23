@@ -540,12 +540,23 @@ Regras:
 
             for attempt in range(1, max_attempts + 1):
                 try:
-                    tr = self._subordinates[agent_id].run(enriched_subtask)
-                    to = TaskOutput(
-                        status=OutputStatus.SUCCESS,
-                        summary=tr.summary,
-                        details=tr.output,
-                    )
+                    conn = AMQPConnection()
+                    conn.connect()
+                    rpc = RPCClient(conn, timeout=120.0)
+                    response = rpc.call(f"task.run.{agent_id}", enriched_subtask)
+                    conn.close()
+
+                    if response and response.get("result"):
+                        rd = response["result"]
+                        status = OutputStatus.SUCCESS if rd.get("status") != "error" else OutputStatus.FAILURE
+                        tr = TaskOutput(
+                            status=status,
+                            summary=rd.get("summary", rd.get("output", {}).get("summary", "")),
+                            details=rd.get("output", rd),
+                        )
+                    else:
+                        raise Exception("RPC sem resposta")
+                    to = TaskOutput(status=OutputStatus.SUCCESS, summary=tr.summary, details=tr.output)
                     if tr.status == AgentStatus.FAILED:
                         to.status = OutputStatus.FAILURE
                         to.rationale = tr.summary
