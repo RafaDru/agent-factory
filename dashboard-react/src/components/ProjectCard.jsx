@@ -1,109 +1,62 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import {
-  EuiCard,
+  EuiPanel,
   EuiHealth,
   EuiFlexGroup,
   EuiFlexItem,
   EuiText,
-  EuiButtonIcon,
-  EuiPanel,
-  EuiSpacer,
-  EuiCodeBlock,
   EuiBadge,
+  EuiIcon,
 } from '@elastic/eui';
 
-const ProjectCard = ({ projectId, events, status, onToggleExpand }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const timerRef = useRef(null);
-  const startTimeRef = useRef(null);
+function ProjectCard({ project, aggregateStatus, runningCount, eventCount, onClick }) {
+  const title = project.project_name || project.project_id;
+  const team = project.team_name || project.team_id;
 
-  const isRunning = status?.status === 'running';
-
-  useEffect(() => {
-    if (isRunning) {
-      startTimeRef.current = Date.now();
-      setElapsed(0);
-      timerRef.current = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
-      timerRef.current = null;
-      setElapsed(0);
-    }
-    return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [isRunning]);
-
-  const formatTimer = (sec) => {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${String(s).padStart(2, '0')}`;
-  };
-
-  const getColor = () => {
-    switch (status?.status) {
-      case 'running': return 'success';
-      case 'completed': return 'primary';
-      case 'failed': return 'danger';
-      default: return 'subdued';
-    }
-  };
-
-  const handleToggle = () => {
-    setIsExpanded(!isExpanded);
-    if (onToggleExpand) onToggleExpand();
-  };
+  const healthColor = {
+    running: 'success',
+    completed: 'primary',
+    failed: 'danger',
+    ready: 'subdued',
+  }[aggregateStatus] || 'subdued';
 
   return (
-    <EuiCard layout="compact" hasShadow={false}>
-      <EuiFlexGroup alignItems="center">
+    <EuiPanel
+      paddingSize="m"
+      onClick={onClick}
+      style={{
+        cursor: 'pointer',
+        borderLeft: aggregateStatus === 'running' ? '4px solid #22d3ee' : undefined,
+        boxShadow: aggregateStatus === 'running' ? '0 0 16px rgba(34,211,238,0.2)' : undefined,
+      }}
+    >
+      <EuiFlexGroup alignItems="center" gutterSize="s">
         <EuiFlexItem grow={false}>
-          <EuiHealth color={getColor()}>{status?.status || 'idle'}</EuiHealth>
+          <EuiText size="l">{project.icon || '📦'}</EuiText>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiFlexGroup alignItems="center" gutterSize="s">
-            <EuiFlexItem>
-              <EuiText><h2>{projectId}</h2></EuiText>
-            </EuiFlexItem>
-            {isRunning ? (
-              <EuiFlexItem grow={false}>
-                <EuiBadge color="success">{formatTimer(elapsed)}</EuiBadge>
-              </EuiFlexItem>
-            ) : (
-              <EuiFlexItem grow={false}>
-                <EuiText size="s" color="subdued">Idle</EuiText>
-              </EuiFlexItem>
-            )}
-          </EuiFlexGroup>
+          <EuiText><h3>{title}</h3></EuiText>
+          <EuiText size="s" color="subdued">{team}</EuiText>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
-          <EuiText size="s" color="subdued">{events.length} eventos</EuiText>
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiButtonIcon
-            iconType={isExpanded ? 'arrowUp' : 'arrowDown'}
-            onClick={handleToggle}
-            aria-label="Expandir"
-          />
+          <EuiHealth color={healthColor}>{aggregateStatus}</EuiHealth>
         </EuiFlexItem>
       </EuiFlexGroup>
-      {isExpanded && (
-        <>
-          <EuiSpacer size="s" />
-          <EuiPanel color="subdued" paddingSize="s">
-            <EuiText size="s"><strong>Logs recentes</strong></EuiText>
-            <EuiSpacer size="xs" />
-            <EuiCodeBlock fontSize="s" isCopyable={false} paddingSize="s" transparentBackground>
-              {events.slice(-5).map((e) =>
-                `[${new Date(e.timestamp).toLocaleTimeString('pt-BR')}] ${e.agent_id}: ${e.message}`
-              ).join('\n') || '(sem logs)'}
-            </EuiCodeBlock>
-          </EuiPanel>
-        </>
-      )}
-    </EuiCard>
+      <EuiFlexGroup gutterSize="s" style={{ marginTop: 12 }}>
+        <EuiFlexItem grow={false}>
+          <EuiBadge color={runningCount ? 'success' : 'hollow'}>
+            {runningCount} running
+          </EuiBadge>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
+          <EuiText size="xs" color="subdued">{eventCount} eventos</EuiText>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false} style={{ marginLeft: 'auto' }}>
+          <EuiIcon type="arrowRight" />
+        </EuiFlexItem>
+      </EuiFlexGroup>
+    </EuiPanel>
   );
-};
+}
 
 export default ProjectCard;
