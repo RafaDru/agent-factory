@@ -2,6 +2,11 @@
 
 ## Implementadas
 
+### test-tool-calling
+- **Acao**: implement_feature
+- **Resumo**: ## Resumo
+
+
 ### Remover Interaction Flow: funções renderTimeline, div timeline-panel e CSS exclusivo
 - **Acao**: edit_file
 - **Resumo**: Informe file_path, old_string e new_string.

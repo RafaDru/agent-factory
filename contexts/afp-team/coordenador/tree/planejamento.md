@@ -2,214 +2,134 @@
 
 ## Estrategias
 
-### missao-missao-remover-interaction-flow-timeline-panel-console-planejamento
+### missao-missao-010-refresh-tasks-grupos-colapsaveis-timer-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão foi interrompida precocemente devido à falha na segunda tarefa (`read-console-file`), revelando uma fragilidade
+- **Resumo**: **Planejamento (DAG):** O DAG atribuiu ações de implementação (`implement_feature`) ao agente `designer`, cujas capacida
 
 
-### missao-missao-remover-interaction-flow-timeline-panel-console
+### missao-missao-010-refresh-tasks-grupos-colapsaveis-timer
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão foi interrompida precocemente devido à falha na segunda tarefa (`read-console-file`), revelando uma fragilidade
+- **Resumo**: **Planejamento (DAG):** O DAG atribuiu ações de implementação (`implement_feature`) ao agente `designer`, cujas capacida
 
 
-### missao-missao-arquivo-src-dashboard-index-html-foi-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento:** O DAG linear (designer → dev → QA) foi adequado para esta missão de recuperação. As tarefas estavam be
+- **Resumo**: **Planejamento (DAG):** A missão foi estruturada como três tarefas independentes (listar-agents, listar-dashboard, valid
 
 
-### missao-missao-arquivo-src-dashboard-index-html-foi
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento:** O DAG linear (designer → dev → QA) foi adequado para esta missão de recuperação. As tarefas estavam be
+- **Resumo**: **Planejamento (DAG):** A missão foi estruturada como três tarefas independentes (listar-agents, listar-dashboard, valid
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou na execução, embora o coordenador tenha aceitado todas as etapas como sucesso. O planejamento (DAG) esta
+- **Resumo**: A missão falhou em suas etapas de desenvolvimento, com ambos os agentes `dev` retornando `failure` sem detalhes, sugerin
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou na execução, embora o coordenador tenha aceitado todas as etapas como sucesso. O planejamento (DAG) esta
+- **Resumo**: A missão falhou em suas etapas de desenvolvimento, com ambos os agentes `dev` retornando `failure` sem detalhes, sugerin
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento (DAG):** A sequência linear (ler → remover → validar) estava conceitualmente correta, mas a etapa de remo
+- **Resumo**: A missão revelou fragilidades no planejamento e na execução. O DAG previa que as tarefas de listagem (dev) fossem pré-re
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento (DAG):** A sequência linear (ler → remover → validar) estava conceitualmente correta, mas a etapa de remo
+- **Resumo**: A missão revelou fragilidades no planejamento e na execução. O DAG previa que as tarefas de listagem (dev) fossem pré-re
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou na execução, apesar do DAG estar conceitualmente correto (consulta → dev → qa). O principal problema foi
+- **Resumo**: **Planejamento:** O DAG previa duas tarefas de listagem executadas por agentes `dev` e uma validação por `qa` dependente
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: A etapa de consulta de prioridade falhou silenciosamente: o agente de negócios retornou `success` mesmo sem receber o pa
+- **Resumo**: **Planejamento:** O DAG previa duas tarefas de listagem executadas por agentes `dev` e uma validação por `qa` dependente
 
 
-### missao-missao-remover-botao-detalhes-mission-control-dashboard
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: A etapa de consulta de prioridade falhou silenciosamente: o agente de negócios retornou `success` mesmo sem receber o pa
+- **Resumo**: A missão foi estruturada com um DAG simples: dois agentes dev em paralelo (listar-agents e listar-dashboard) e, na sequê
 
 
-### missao-missao-implementar-002-console-afp-configuracao-projetos-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: ## Retrospectiva da Missão
+- **Resumo**: A missão foi estruturada com um DAG simples: dois agentes dev em paralelo (listar-agents e listar-dashboard) e, na sequê
 
 
-### missao-missao-implementar-002-console-afp-configuracao-projetos
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: ## Retrospectiva da Missão
+- **Resumo**: **Planejamento (DAG):** O DAG estava correto ao encadear as tarefas de listagem (dev) antes da validação (qa). A falha n
 
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: A sequência planejada (ler documentos → priorizar → projetar → revisar arquitetura → implementar → revisar e testar) mos
+- **Resumo**: **Planejamento (DAG):** O DAG estava correto ao encadear as tarefas de listagem (dev) antes da validação (qa). A falha n
 
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: A falha na etapa de priorização expôs uma fragilidade no planejamento: o DAG linear presumia que o agente de negócios co
+- **Resumo**: **Planejamento e delegação:** O DAG previa duas tarefas de desenvolvimento (`listar-agents` e `listar-dashboard`) seguid
 
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: A falha na etapa de priorização expôs uma fragilidade no planejamento: o DAG linear presumia que o agente de negócios co
+- **Resumo**: **Planejamento e delegação:** O DAG previa duas tarefas de desenvolvimento (`listar-agents` e `listar-dashboard`) seguid
 
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar-planejamento
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc-planejamento
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou já no primeiro passo, com o agente de negócios incapaz de definir prioridades. O planejamento do DAG est
+- **Resumo**: A missão foi estruturada com um DAG simples e coerente: listar diretórios (agentes dev) e validar sintaxe (agente qa). A
 
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar
+### missao-missao-listar-diretorios-validar-sintaxe-teste-rpc
 - **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou já no primeiro passo, com o agente de negócios incapaz de definir prioridades. O planejamento do DAG est
+- **Resumo**: A missão foi estruturada com um DAG simples e coerente: listar diretórios (agentes dev) e validar sintaxe (agente qa). A
 
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento (DAG):** O DAG linear (ler docs → analisar → design → arquitetura → dev → QA) não considerou as capacidad
+### Estrutura do DAG
+- Tasks de leitura/levantamento primeiro (sem dependencias)
+- Tasks de implementacao dependem de leitura
+- Tasks de validacao/teste dependem de implementacao
+- Tasks de deploy/commit sao as ultimas
 
+### Politica de Git e Protecao de Trabalho
 
-### missao-missao-priorizar-backlog-console-afp-comecar-implementar
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento (DAG):** O DAG linear (ler docs → analisar → design → arquitetura → dev → QA) não considerou as capacidad
+**Regras Obrigatorias:**
+1. NUNCA usar `git checkout HEAD -- <arquivo>` em arquivos modificados
+2. SEMPRE `git add` + `git commit` antes de reset/checkout
+3. Antes de editar, verificar `git status` para mudancas nao salvas
+4. Commits frequentes e atomicos: cada alteracao funcional = um commit
+5. Stash antes de operacoes destrutivas: `git stash push -m "desc"` e `git stash pop`
+6. Nao editar o mesmo arquivo em paralelo sem coordenacao
 
+**Fluxo Git para o Dev:**
+1. `git status` → `git diff` → `git add` → `git commit -m "tipo: desc"` → `git push`
 
-### missao-missao-issue-estabelecer-fluxo-formal-consulta-agente
-- **Acao**: reflect_on_mission
-- **Resumo**: A missão cumpriu o objetivo formal de estabelecer o fluxo de consulta, mas o resultado prático ficou aquém do esperado. 
+**Se perder trabalho:**
+1. Verificar `git reflog`
+2. Verificar `git stash list`
+3. Verificar `git diff HEAD`
+4. Verificar lixeira do SO
+5. NUNCA desistir sem verificar todas as opcoes acima
 
+### Acao Alternativa em Falha
 
-### missao-missao-resolver-issue-dashboard-dashboard-react-index-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: O planejamento do DAG falhou ao assumir caminhos fixos para arquivos críticos (EventNotifier, configuração RabbitMQ, ent
+Se uma tarefa falha, NAO repetir a mesma acao. Tentar:
+- `read_file` para entender o estado atual antes de `edit_file`/`refactor_code`
+- `list_directory` para descobrir arquivos disponiveis
+- `run_tests` antes de `refactor_code` para entender falhas
+- Consultar `negocios` antes de planejar mudancas
 
+### Reflexao Pos-Missao
 
-### missao-missao-resolver-issue-dashboard-dashboard-react-index
-- **Acao**: reflect_on_mission
-- **Resumo**: O planejamento do DAG falhou ao assumir caminhos fixos para arquivos críticos (EventNotifier, configuração RabbitMQ, ent
-
-
-### missao-missao-resolver-issue-dashboard-dashboard-react-index-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento (DAG):** O encadeamento linear — leituras, revisão de arquitetura, implementação, testes — mostrou-se frá
-
-
-### missao-missao-resolver-issue-dashboard-dashboard-react-index
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento (DAG):** O encadeamento linear — leituras, revisão de arquitetura, implementação, testes — mostrou-se frá
-
-
-### missao-missao-implementar-tela-configuracao-visual-projetos-agentes-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: A retrospectiva revela que o DAG (protótipo → implementação → QA) foi conceitualmente correto, mas a execução mostrou so
-
-
-### missao-missao-implementar-tela-configuracao-visual-projetos-agentes
-- **Acao**: reflect_on_mission
-- **Resumo**: A retrospectiva revela que o DAG (protótipo → implementação → QA) foi conceitualmente correto, mas a execução mostrou so
-
-
-### missao-missao-implementar-melhorias-interaction-flow-dashboard-react-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento e DAG:**  
-
-
-### missao-missao-implementar-melhorias-interaction-flow-dashboard-react
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento e DAG:**  
-
-
-### missao-missao-ler-resultado-missao-anterior-missao-priorizar-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou porque o agente `dev` não conseguiu ler a saída da missão anterior, retornando `failure` com decisão de 
-
-
-### missao-missao-ler-resultado-missao-anterior-missao-priorizar
-- **Acao**: reflect_on_mission
-- **Resumo**: A missão falhou porque o agente `dev` não conseguiu ler a saída da missão anterior, retornando `failure` com decisão de 
-
-
-### missao-missao-priorizar-backlog-projeto-afp-team-issues-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento e Delegação**  
-
-
-### missao-missao-priorizar-backlog-projeto-afp-team-issues
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento e Delegação**  
-
-
-### missao-missao-analisar-backlog-projeto-afp-team-validar-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento e delegação:** O DAG estava conceitualmente correto, com dependências lógicas entre as tarefas, mas a fal
-
-
-### missao-missao-analisar-backlog-projeto-afp-team-validar
-- **Acao**: reflect_on_mission
-- **Resumo**: **Planejamento e delegação:** O DAG estava conceitualmente correto, com dependências lógicas entre as tarefas, mas a fal
-
-
-### missao-missao-analisar-pontos-abaixo-classificar-cada-como-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Retrospectiva da Missão: Análise de Pontos e Classificação**
-
-
-### missao-missao-analisar-pontos-abaixo-classificar-cada-como
-- **Acao**: reflect_on_mission
-- **Resumo**: **Retrospectiva da Missão: Análise de Pontos e Classificação**
-
-
-### missao-missao-modificar-metodo-_delegate-src-agents-coordinator-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: O planejamento da missão seguiu um DAG linear simples: leitura do arquivo, implementação, commit (em dois passos), valid
-
-
-### missao-missao-modificar-metodo-_delegate-src-agents-coordinator
-- **Acao**: reflect_on_mission
-- **Resumo**: O planejamento da missão seguiu um DAG linear simples: leitura do arquivo, implementação, commit (em dois passos), valid
-
-
-### missao-missao-adicionar-docstring-google-style-todas-funcoes
-- **Acao**: reflect_on_mission
-- **Resumo**: A missão foi bem-sucedida, mas o DAG poderia ser otimizado: a etapa de revisão (`revisar-docstrings`) foi executada após
-
-
-### missao-missao-listar-arquivos-projeto-seguida-fazer-uma-planejamento
-- **Acao**: reflect_on_mission
-- **Resumo**: **Retrospectiva da missão:**
-
-
-### missao-missao-listar-arquivos-projeto-seguida-fazer-uma
-- **Acao**: reflect_on_mission
-- **Resumo**: **Retrospectiva da missão:**
-
-
-(Nenhum registro ainda)
+Apos cada missao (bem-sucedida ou falha):
+1. Consolidar o que funcionou e o que nao funcionou
+2. Persistir aprendizados em tree/licoes.md
+3. Atualizar tree/delegacao.md com novos padroes
+4. Nao repetir erros de missoes anteriores
