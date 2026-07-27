@@ -5,8 +5,6 @@ import {
   EuiHeaderSection,
   EuiHeaderSectionItem,
   EuiHeaderLogo,
-  EuiHeaderLink,
-  EuiHeaderLinks,
   EuiFlexGrid,
   EuiFlexGroup,
   EuiFlexItem,
@@ -15,23 +13,44 @@ import {
   EuiText,
   EuiTitle,
   EuiSpacer,
+  EuiButtonIcon,
+  EuiTabs,
+  EuiTab,
+  EuiModal,
+  EuiModalHeader,
+  EuiModalHeaderTitle,
+  EuiModalBody,
+  EuiModalFooter,
+  EuiButton,
+  EuiIcon,
+  EuiHealth,
+  EuiBadge,
 } from '@elastic/eui';
 import EventTable from './components/EventTable';
 import ProviderSelector from './components/ProviderSelector';
-import { fetchProjects as apiFetchProjects, fetchEvents, fetchAgentProvider } from './services/api';
+import Breadcrumb from './components/Breadcrumb';
+import { fetchProjects as apiFetchProjects, fetchEvents } from './services/api';
+
+const GROUP_LABELS = { coordenador: 'Coordenador', upstream: 'Upstream', downstream: 'Downstream' };
+const getGroupFor = (projectId) => {
+  if (projectId === 'AFP-Team') return 'coordenador';
+  if (['pta', 'cr10se'].includes(projectId)) return 'upstream';
+  return 'downstream';
+};
 
 function App() {
-  const [isSideNavOpen, setSideNavOpen] = useState(true);
   const [projects, setProjects] = useState([]);
   const [events, setEvents] = useState([]);
   const [providers, setProviders] = useState([]);
-  const [selectedProject, setSelectedProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const toggleSideNav = () => {
-    setSideNavOpen(!isSideNavOpen);
-  };
+  const [view, setView] = useState('home');
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [activeTab, setActiveTab] = useState('events');
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [llmModalAgent, setLlmModalAgent] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -64,6 +83,12 @@ function App() {
     return () => clearInterval(intervalId);
   }, [loadData]);
 
+  const handleNavigate = (newView, projectId, agentId) => {
+    setView(newView);
+    setSelectedProject(projectId);
+    setSelectedAgent(agentId);
+  };
+
   const handleProviderChange = async (agentId, newProvider) => {
     try {
       const { updateAgentProvider } = await import('./services/api');
@@ -74,32 +99,149 @@ function App() {
     }
   };
 
-  const handleProjectSelect = (project) => {
-    setSelectedProject(project);
+  const toggleGroup = (groupKey) => {
+    setExpandedGroups(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
+  };
+
+  const getProjectStatus = (projectId) => {
+    const projectEvents = events.filter(e => e.project_id === projectId);
+    const latest = projectEvents[0];
+    return latest ? latest.status : 'idle';
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'running': return 'success';
+      case 'completed': return 'primary';
+      case 'failed': return 'danger';
+      default: return 'subdued';
+    }
   };
 
   const filteredEvents = selectedProject
     ? events.filter((e) => e.project_id === selectedProject)
     : events;
 
-  const renderProjectCards = () => (
-    <EuiFlexGrid columns={3}>
-      {projects.map((projectId) => (
-        <EuiFlexItem key={projectId}>
-          <EuiPanel
-            paddingSize="m"
-            onClick={() => setSelectedProject(projectId === selectedProject ? null : projectId)}
-            style={{ cursor: 'pointer' }}
-          >
-            <EuiText><h3>{projectId}</h3></EuiText>
-            <EuiText size="s" color="subdued">
-              {events.filter(e => e.project_id === projectId).length} eventos
-            </EuiText>
-          </EuiPanel>
+  const renderProjectCard = (projectId) => {
+    const status = getProjectStatus(projectId);
+    const eventCount = events.filter(e => e.project_id === projectId).length;
+    return (
+      <EuiFlexItem key={projectId}>
+        <EuiPanel
+          paddingSize="m"
+          onClick={() => handleNavigate('project', projectId, null)}
+          style={{ cursor: 'pointer' }}
+        >
+          <EuiFlexGroup alignItems="center" gutterSize="s">
+            <EuiFlexItem grow={false}>
+              <EuiHealth color={getStatusColor(status)}>{status}</EuiHealth>
+            </EuiFlexItem>
+            <EuiFlexItem>
+              <EuiText><h3>{projectId}</h3></EuiText>
+            </EuiFlexItem>
+            <EuiFlexItem grow={false}>
+              <EuiText size="s" color="subdued">{eventCount} eventos</EuiText>
+            </EuiFlexItem>
+          </EuiFlexGroup>
+        </EuiPanel>
+      </EuiFlexItem>
+    );
+  };
+
+  const renderGroup = (groupKey, label) => {
+    const groupProjects = projects.filter(p => getGroupFor(p) === groupKey);
+    if (groupProjects.length === 0) return null;
+    const isExpanded = expandedGroups[groupKey] !== false;
+    return (
+      <div key={groupKey} style={{ marginBottom: 24 }}>
+        <EuiFlexGroup alignItems="center" gutterSize="s" onClick={() => toggleGroup(groupKey)} style={{ cursor: 'pointer' }}>
+          <EuiFlexItem grow={false}>
+            <EuiButtonIcon iconType={isExpanded ? 'arrowDown' : 'arrowRight'} aria-label={label} />
+          </EuiFlexItem>
+          <EuiFlexItem>
+            <EuiText><h4>{label}</h4></EuiText>
+          </EuiFlexItem>
+          <EuiFlexItem grow={false}>
+            <EuiText size="s" color="subdued">{groupProjects.length} projetos</EuiText>
+          </EuiFlexItem>
+        </EuiFlexGroup>
+        {isExpanded && (
+          <div style={{ paddingLeft: 8 }}>
+            <EuiFlexGrid columns={3}>
+              {groupProjects.map(renderProjectCard)}
+            </EuiFlexGrid>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderHome = () => (
+    <>
+      <EuiFlexGroup gutterSize="none" alignItems="center">
+        <EuiFlexItem grow={false}>
+          <EuiTitle><h2>Projetos</h2></EuiTitle>
         </EuiFlexItem>
-      ))}
-    </EuiFlexGrid>
+        <EuiFlexItem grow={false} style={{ marginLeft: 12 }}>
+          <EuiButtonIcon
+            iconType={projects.some(p => getGroupFor(p) === 'coordenador') ? 'usersRolesApp' : 'grid'}
+            onClick={() => setExpandedGroups({})}
+            aria-label="Dashboard"
+          />
+        </EuiFlexItem>
+      </EuiFlexGroup>
+      <EuiSpacer />
+      {Object.entries(GROUP_LABELS).map(([key, label]) => renderGroup(key, label))}
+    </>
   );
+
+  const renderProjectDetail = () => {
+    if (!selectedProject) return null;
+    const tabs = [
+      { id: 'events', label: 'Eventos' },
+      { id: 'providers', label: 'Provedores LLM' },
+      { id: 'config', label: 'Config' },
+      { id: 'logs', label: 'Logs' },
+    ];
+    const projectEvents = events.filter(e => e.project_id === selectedProject);
+    const agentProviders = providers.filter(p => projectEvents.some(e => e.agent_id === p.agent_id));
+    return (
+      <>
+        <EuiTabs>
+          {tabs.map(tab => (
+            <EuiTab key={tab.id} isSelected={activeTab === tab.id} onClick={() => setActiveTab(tab.id)}>
+              {tab.label}
+            </EuiTab>
+          ))}
+        </EuiTabs>
+        <EuiSpacer />
+        {activeTab === 'events' && (
+          <EuiPanel>
+            <EventTable events={filteredEvents} />
+          </EuiPanel>
+        )}
+        {activeTab === 'providers' && (
+          <EuiPanel>
+            <ProviderSelector
+              agents={agentProviders.length > 0 ? agentProviders : providers}
+              onProviderChange={handleProviderChange}
+              onOpenLlmModal={(agent) => setLlmModalAgent(agent)}
+            />
+          </EuiPanel>
+        )}
+        {activeTab === 'config' && (
+          <EuiPanel>
+            <EuiText color="subdued">Configurações do projeto em abas (em desenvolvimento)</EuiText>
+          </EuiPanel>
+        )}
+        {activeTab === 'logs' && (
+          <EuiPanel>
+            <EuiText color="subdued">Logs do projeto (em desenvolvimento)</EuiText>
+          </EuiPanel>
+        )}
+      </>
+    );
+  };
 
   return (
     <>
@@ -109,16 +251,10 @@ function App() {
             <EuiHeaderLogo iconType="logoElastic">Agent Factory</EuiHeaderLogo>
           </EuiHeaderSectionItem>
         </EuiHeaderSection>
-        <EuiHeaderSection side="right">
-          <EuiHeaderSectionItem>
-            <EuiHeaderLinks>
-              <EuiHeaderLink isActive>Dashboard</EuiHeaderLink>
-              <EuiHeaderLink>Settings</EuiHeaderLink>
-            </EuiHeaderLinks>
-          </EuiHeaderSectionItem>
-        </EuiHeaderSection>
       </EuiHeader>
       <div style={{ padding: '24px', marginTop: '56px' }}>
+        <Breadcrumb projectId={selectedProject} agentId={selectedAgent} tab={activeTab} onNavigate={handleNavigate} />
+        <EuiSpacer />
         {loading ? (
           <EuiFlexGroup justifyContent="center" alignItems="center" style={{ minHeight: 200 }}>
             <EuiFlexItem grow={false}>
@@ -127,26 +263,44 @@ function App() {
           </EuiFlexGroup>
         ) : error ? (
           <EuiEmptyPrompt iconType="warning" title={<h2>Erro ao carregar dados</h2>} body={<p>{error.message}</p>} />
+        ) : view === 'home' ? (
+          renderHome()
         ) : (
-          <>
-            <EuiTitle><h2>Projetos</h2></EuiTitle>
-            <EuiSpacer />
-            {renderProjectCards()}
-            <EuiSpacer size="xxl" />
-            <EuiTitle><h2>Eventos</h2></EuiTitle>
-            <EuiSpacer />
-            <EuiPanel>
-              <EventTable events={filteredEvents} />
-            </EuiPanel>
-            <EuiSpacer size="xxl" />
-            <EuiTitle><h2>Provedores LLM</h2></EuiTitle>
-            <EuiSpacer />
-            <EuiPanel>
-              <ProviderSelector agents={providers} onProviderChange={handleProviderChange} />
-            </EuiPanel>
-          </>
+          renderProjectDetail()
         )}
       </div>
+
+      {llmModalAgent && (
+        <EuiModal onClose={() => setLlmModalAgent(null)}>
+          <EuiModalHeader>
+            <EuiModalHeaderTitle>
+              <EuiFlexGroup alignItems="center" gutterSize="m">
+                <EuiFlexItem grow={false}>
+                  <EuiIcon type="userAvatar" size="l" />
+                </EuiFlexItem>
+                <EuiFlexItem>
+                  <EuiText><h3>{llmModalAgent.agent_id}</h3></EuiText>
+                  <EuiText size="s" color="subdued">{selectedProject || 'AFP-Team'}</EuiText>
+                </EuiFlexItem>
+                <EuiFlexItem grow={false}>
+                  <EuiBadge color={getStatusColor(getProjectStatus(selectedProject))}>
+                    {llmModalAgent.current_provider || 'auto'}
+                  </EuiBadge>
+                </EuiFlexItem>
+              </EuiFlexGroup>
+            </EuiModalHeaderTitle>
+          </EuiModalHeader>
+          <EuiModalBody>
+            <EuiText>
+              <p>Provedor atual: <strong>{llmModalAgent.current_provider || 'auto'}</strong></p>
+              <p>Modelo: {llmModalAgent.model || '-'}</p>
+            </EuiText>
+          </EuiModalBody>
+          <EuiModalFooter>
+            <EuiButton onClick={() => setLlmModalAgent(null)} fill>Fechar</EuiButton>
+          </EuiModalFooter>
+        </EuiModal>
+      )}
     </>
   );
 }
