@@ -169,7 +169,7 @@ def run_runtime_for(agent_class_path: str, agent_id: str, project_id: str,
 
     from src.protocols.events import EventNotifier
     notifier = EventNotifier(project_id)
-    agent = agent_class(project_id=project_id, notifier=notifier)
+    agent = agent_class(project_id=project_id, notifier=notifier, agent_id=agent_id)
 
     queue = queue_name or f"{agent_id}-tasks"
     runtime = AgentRuntime(

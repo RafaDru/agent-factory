@@ -38,5 +38,11 @@ Thumbs.db
 # Test artifacts
 .agent-factory-test/
 
+# Local dev scratch (RPC/delegate one-offs)
+/delegate_*.py
+/test_full.py
+/test_rpc_direct.py
+.opencode/delegate_task.py
+
 # External projects (examples live in separate repos)
 pta-mobile/

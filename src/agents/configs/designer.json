@@ -2,7 +2,7 @@
   "id": "designer",
   "role": "worker",
   "description": "Design: pesquisa de design systems, prototipos, UX",
-  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
+  "llm_provider": "auto",
   "actions": {
     "read_file": {
       "description": "Le conteudo de um arquivo para referencia",

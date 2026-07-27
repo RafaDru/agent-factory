@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 import urllib.request
 import urllib.error
 from pathlib import Path
@@ -8,6 +9,8 @@ from mcp.server.fastmcp import FastMCP
 from src.registry import get_registry
 from src.protocols.schema import AgentStatus
 from src.mcp.event_bus import call_agent_via_event_bus, event_bus_available
+
+logger = logging.getLogger(__name__)
 
 CONTEXT_TEMPLATE_COORD = """# {agent_id} — {project_name}
 
@@ -133,9 +136,9 @@ def _wire_subordinates(registry, project_id: str, agent):
                 except Exception:
                     pass
             subordinates[aid] = subordinate
-            print(f"  [MCP] Worker carregado: {aid} ({type(subordinate).__name__})")
+            logger.info("Worker carregado: %s (%s)", aid, type(subordinate).__name__)
         except Exception as e:
-            print(f"  [MCP] Worker {aid} nao carregado: {e}")
+            logger.warning("Worker %s nao carregado: %s", aid, e)
     if subordinates:
         agent.set_subordinates(subordinates)
 
@@ -338,7 +341,7 @@ def run_objective(
                     agent.llm_provider = get_provider(provider_str)
                     agent._llm = agent.llm_provider
     except Exception as e:
-        print(f"  [MCP] Aviso: nao foi possivel configurar LLM do coordenador: {e}")
+        logger.warning("Nao foi possivel configurar LLM do coordenador: %s", e)
 
     _wire_subordinates(registry, project_id, agent)
 

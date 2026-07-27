@@ -50,7 +50,9 @@ class AMQPConnection:
                 params = pika.URLParameters(self.url)
                 self._connection = pika.BlockingConnection(params)
                 self._channel = self._connection.channel()
-                self._channel.exchange_declare(exchange="afp", exchange_type="topic", durable=True)
+                self._channel.exchange_declare(
+                    exchange="afp", exchange_type="topic", durable=True
+                )
                 logger.info("AMQP conectado a %s", self.url.replace("afp123", "****"))
                 return self._channel
             except Exception as e:
@@ -195,26 +197,34 @@ class Consumer:
                     corr_id = msg.get("correlation_id")
                     if reply_key:
                         pub = Publisher(self._conn)
-                        pub.publish(reply_key, {
-                            "correlation_id": corr_id,
-                            "status": "ok",
-                            "result": result,
-                        })
+                        pub.publish(
+                            reply_key,
+                            {
+                                "correlation_id": corr_id,
+                                "status": "ok",
+                                "result": result,
+                            },
+                        )
             except Exception as e:
                 logger.error("Handler error on %s: %s", self._queue_name, e)
                 reply_key = msg.get("reply_to")
                 corr_id = msg.get("correlation_id")
                 if reply_key:
                     pub = Publisher(self._conn)
-                    pub.publish(reply_key, {
-                        "correlation_id": corr_id,
-                        "status": "error",
-                        "error": str(e),
-                    })
+                    pub.publish(
+                        reply_key,
+                        {
+                            "correlation_id": corr_id,
+                            "status": "error",
+                            "error": str(e),
+                        },
+                    )
             finally:
                 ch.basic_ack(delivery_tag=method.delivery_tag)
 
-        self._tag = ch.basic_consume(queue=self._queue_name, on_message_callback=callback)
+        self._tag = ch.basic_consume(
+            queue=self._queue_name, on_message_callback=callback
+        )
         self._running = True
         logger.info("Consumer %s ouvindo: %s", self._queue_name, self._routing_keys)
 
@@ -243,14 +253,17 @@ class RPCClient:
         """
         self._conn = connection
         self._timeout = timeout
-        self._response: Optional[dict] = None
         self._correlation_id: Optional[str] = None
         self._queue: Optional[str] = None
         import uuid
+
         self._correlation_id = str(uuid.uuid4())
 
     def call(self, routing_key: str, message: dict) -> Optional[dict]:
-        """Envia uma requisição RPC e aguarda a resposta.
+        """Envia uma requisição RPC e aguarda a resposta via polling basic_get.
+
+        Usa basic_get (polling) em vez de basic_consume para evitar problemas
+        de sincronizacao do consumer callback no BlockingConnection do pika.
 
         Args:
             routing_key: Chave de roteamento para envio.
@@ -259,19 +272,22 @@ class RPCClient:
         Returns:
             Resposta recebida ou None se ocorrer timeout.
         """
-        ch = self._conn.connect()
+        # Garantir conexao ativa
+        try:
+            ch = self._conn.connect()
+            if not ch or not ch.is_open:
+                logger.warning("Canal RPCClient fechado, reconectando...")
+                self._conn.reconnect()
+                ch = self._conn.connect()
+        except Exception as e:
+            logger.error("RPCClient erro ao conectar: %s", e)
+            return None
+
         result = ch.queue_declare(queue="", exclusive=True)
         self._queue = result.method.queue
         reply_rk = f"agent.reply.{self._queue}"
 
         ch.queue_bind(queue=self._queue, exchange="afp", routing_key=reply_rk)
-
-        self._response = None
-        tag = ch.basic_consume(
-            queue=self._queue,
-            on_message_callback=self._on_response,
-            auto_ack=True,
-        )
 
         msg = dict(message)
         msg["correlation_id"] = self._correlation_id
@@ -281,28 +297,27 @@ class RPCClient:
         pub.publish(routing_key, msg)
 
         deadline = time.time() + self._timeout
-        while self._response is None and time.time() < deadline:
+        while time.time() < deadline:
             try:
-                ch.connection.process_data_events(time_limit=0.5)
+                method_frame, properties, body = ch.basic_get(
+                    queue=self._queue, auto_ack=True
+                )
+                if method_frame and body:
+                    reply = json.loads(body.decode("utf-8"))
+                    if reply.get("correlation_id") == self._correlation_id:
+                        ch.queue_unbind(
+                            queue=self._queue, exchange="afp", routing_key=reply_rk
+                        )
+                        return reply
             except Exception:
-                break
+                pass
+            time.sleep(0.2)
 
-        ch.basic_cancel(tag)
+        logger.warning(
+            "RPCClient timeout apos %.1fs aguardando reply em %s (rk=%s)",
+            self._timeout,
+            self._queue,
+            reply_rk,
+        )
         ch.queue_unbind(queue=self._queue, exchange="afp", routing_key=reply_rk)
-        return self._response
-
-    def _on_response(self, ch, method, properties, body):
-        """Callback interno para processar a resposta RPC.
-
-        Args:
-            ch: Canal AMQP.
-            method: Método de entrega.
-            properties: Propriedades da mensagem.
-            body: Corpo da mensagem.
-        """
-        try:
-            msg = json.loads(body.decode("utf-8"))
-            if msg.get("correlation_id") == self._correlation_id:
-                self._response = msg
-        except json.JSONDecodeError:
-            pass
+        return None

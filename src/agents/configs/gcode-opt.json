@@ -2,7 +2,7 @@
   "id": "gcode-opt",
   "role": "worker",
   "description": "Otimização de GCode e fatiamento: BED_MESH, PA, temperatura, pipeline completo",
-  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
+  "llm_provider": "auto",
   "actions": {
     "optimize_gcode": {
       "description": "Otimiza GCode: injeta BED_MESH_CALIBRATE, SET_PRESSURE_ADVANCE, corrige temperaturas",
