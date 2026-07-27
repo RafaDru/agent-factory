@@ -358,6 +358,7 @@ The delegating agent (or parent LLM) should:
 
 | Documento | Conteudo |
 |-----------|----------|
+| `docs/ARCHITECTURE.md` | **Arquitetura canonica** — principios, componentes, modos Standard/Lite |
 | `MEMORIA.md` | **Memoria imutavel** — releia apos compactacao para restaurar conceitos essenciais |
 | `docs/console-afp-schema.md` | Schema canonico dos conceitos (Missao, Tarefa, Delegacao, Live Stream, Log) |
 | `docs/console-afp-requisitos.md` | Requisitos detalhados do Console AFP |
