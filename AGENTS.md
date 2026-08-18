@@ -355,3 +355,28 @@ See `contexts/README.md` and `docs/playbook-onboarding.md`.
 | `docs/console-afp-requisitos.md` | Requisitos detalhados do Console AFP |
 | `docs/backlog.md` | Backlog operacional do projeto AFP-Team |
 
+---
+
+## Cursor Cloud specific instructions
+
+Notes for future cloud agents (dependencies are already installed by the startup update script; do not re-run installs here).
+
+### Running the services (Linux, background — never foreground)
+- Backend (Dashboard + MCP): `python3 start_agent_factory.py --no-ollama --mcp`. Serves the legacy HTML dashboard + REST/SSE API at `http://localhost:8080` and the MCP SSE gateway at `http://127.0.0.1:8081/sse`. This is a blocking keep-alive process — start it detached (tmux/`nohup`/`&`), per the "AFP deve rodar em background" rule above.
+- React dashboard: `cd dashboard-react && npm run dev` → `http://localhost:5173` (Vite). It expects the backend reachable at `http://localhost:8080` (hardcoded in `dashboard-react/src/services/api.js`, no Vite proxy).
+- Use `--no-ollama`: Ollama is not installed in this environment. There is no local GPU/model server.
+
+### Non-obvious gotchas
+- **`pip install -e .` does NOT work** and is not used. `pyproject.toml` declares both `license = "MIT"` (SPDX string) and a deprecated `License ::` classifier; every setuptools version rejects that combination. The code runs from the repo root via the `src.*` namespace, so no editable/package install is needed — dependencies are installed directly instead.
+- **`pyproject.toml` under-declares runtime deps.** The servers also import `mcp` (FastMCP), `pika`, `requests`, and `python-dotenv`, which are not in `pyproject.toml`. These are installed by the update script.
+- **RabbitMQ is optional and not running here.** On startup you will see loud `pika`/AMQP "Connection refused" tracebacks — these are expected and harmless. `run_agent`/`run_objective` fall back to in-process execution automatically. Only needed for the async event-bus path (`docker compose up -d rabbitmq`, not available without Docker).
+- **No LLM API keys / no Ollama → LLM provider degrades to a mock.** Deterministic, handler-backed agent actions still work end-to-end without any LLM: e.g. the `dev` worker's `write_file`/`read_file`/`list_directory`/`run_git`, and `qa`'s `run_tests` (see `src/agents/configs/*.json`). LLM-reasoning actions (e.g. coordinator `plan_and_execute`) need real keys in root `.env` to be meaningful.
+
+### Tests / lint / build
+- Python suite: `pytest` (or `pytest tests/`). 4 tests in `tests/test_loader.py` and `tests/test_event_pipeline.py` fail because they reference the author's hardcoded path `C:/Users/rafae/PersonalTrainerAgent/agentes`; these are pre-existing, machine-specific failures, not environment problems (59/63 pass). Root-level `test_*.py` / `run_*.py` files are ad-hoc scripts, not the suite.
+- React lint: `cd dashboard-react && npm run lint` (oxlint; emits warnings only). Build: `npm run build`.
+- Quick backend E2E smoke: with the backend running, `python3 test_mcp_smoke.py` exercises the MCP tools/resources over SSE.
+
+### npm install caveat
+- Install React deps with `npm install --legacy-peer-deps` (or `npm ci --legacy-peer-deps`). `@elastic/eui@117` peer-depends on `@types/react@^17||^18` while the project uses React 19 types, so a plain `npm install` fails with ERESOLVE.
+
