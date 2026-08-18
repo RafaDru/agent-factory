@@ -27,7 +27,10 @@ env/
 # IDE
 .vscode/
 .idea/
-.cursor/
+.cursor/*
+!.cursor/mcp.json
+!.cursor/rules/
+!.cursor/rules/**
 .tmp-opendesign/
 *.swp
 *.swo

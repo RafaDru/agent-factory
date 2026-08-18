@@ -1,0 +1,17 @@
+---
+description: Operar a Agent Factory Platform (AFP) neste repositorio
+globs:
+alwaysApply: true
+---
+
+# Agent Factory — regras para o assistente
+
+Ao operar a AFP neste repo:
+
+1. Leia primeiro `docs/AI_ONBOARDING.md` e `AGENTS.md`.
+2. **Nunca** bloqueie o chat com servidor em foreground — use `.\start_afp.ps1` (background).
+3. Projeto padrao versionado: `demo-onboarding` (nao use AFP-Team/pta/cr10se — sao locais).
+4. Stack: `docker compose up -d rabbitmq` + `.\start_afp.ps1 -Restart` + healthcheck.
+5. MCP SSE: `http://127.0.0.1:8081/sse` — tool principal: `run_objective(project_id, objective, context)`.
+6. Validacao automatizada: `.\scripts\first-mission.ps1` ou `python run_smoke_e012.py`.
+7. API keys em `.env` (copie de `.env.example`). Sem chave LLM, missoes autonomas falham.

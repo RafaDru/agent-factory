@@ -52,8 +52,8 @@ pip install -e ".[llm,dev]"
 # 2. Event bus (modo Standard)
 docker compose up -d rabbitmq
 
-# 3. Subir stack AFP (projeto demo padrao)
-.\start_afp.ps1
+# 3. Stack AFP + primeira missao (humano ou IA)
+.\scripts\first-mission.ps1
 
 # 4. Console API
 # http://localhost:8080
@@ -125,6 +125,7 @@ agent-factory/
 
 | Doc | Para que |
 |-----|----------|
+| [docs/AI_ONBOARDING.md](docs/AI_ONBOARDING.md) | **IAs (Cursor/Claude/OpenCode)** — MCP e primeira missao |
 | [docs/QUICKSTART.md](docs/QUICKSTART.md) | **Comece aqui** — setup e primeira missao |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitetura, modos, componentes |
 | [docs/playbook-onboarding.md](docs/playbook-onboarding.md) | Onboarding de projeto novo |
