@@ -22,6 +22,37 @@ class AgentStatus(str, Enum):
     WAITING = "waiting"  # Aguardando input humano
 
 
+class MissionStatus(str, Enum):
+    """Status canônico de uma missão (agrupamento de tarefas)."""
+    PLANNED = "planned"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    PARTIAL = "partial"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class MissionRecord(BaseModel):
+    """Estado persistido em .agent-factory/missions/{id}/status.json"""
+    mission_id: str
+    project_id: str
+    status: MissionStatus
+    goal: str = ""
+    objective: str = ""
+    task_count: int = 0
+    completed: int = 0
+    failed: int = 0
+    skipped: int = 0
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: Optional[datetime] = None
+    message: str = ""
+
+    def touch(self, **fields: Any) -> "MissionRecord":
+        fields["updated_at"] = datetime.now(timezone.utc)
+        return self.model_copy(update=fields)
+
+
 class OutputStatus(str, Enum):
     """
     Status de saida de um agente apos execucao.

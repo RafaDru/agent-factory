@@ -27,6 +27,8 @@ env/
 # IDE
 .vscode/
 .idea/
+.cursor/
+.tmp-opendesign/
 *.swp
 *.swo
 *~
@@ -46,3 +48,11 @@ Thumbs.db
 
 # External projects (examples live in separate repos)
 pta-mobile/
+
+# Local project contexts — only template + demo are versioned
+contexts/*
+!contexts/_template/
+!contexts/_template/**
+!contexts/demo-onboarding/
+!contexts/demo-onboarding/**
+!contexts/README.md

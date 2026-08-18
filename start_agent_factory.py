@@ -170,26 +170,7 @@ def start_dashboard(port: int, demo: bool = False):
     register_discovered_projects(registry)
 
     # === Legacy: PTA project (sem project.json em contexts/) ===
-    if not registry.project_exists("pta"):
-        registry.register(ProjectConfig(
-            project_id="pta",
-            name="Personal Trainer Agent",
-            description="App mobile com IA e visao computacional",
-        ))
-    pta_agent_path = Path.home() / "PersonalTrainerAgent" / "agentes" / "__init__.py"
-    if pta_agent_path.exists() and not registry.list_agent_refs("pta"):
-        pta_refs = [
-            AgentReference(agent_id="coordenador", module_path=str(pta_agent_path), class_name="CoordenadorAgent"),
-            AgentReference(agent_id="frontend-mobile", module_path=str(pta_agent_path), class_name="FrontendMobileAgent"),
-            AgentReference(agent_id="visao-computacional", module_path=str(pta_agent_path), class_name="VisaoComputacionalAgent"),
-            AgentReference(agent_id="ui-ux", module_path=str(pta_agent_path), class_name="UIUXAgent"),
-            AgentReference(agent_id="qa", module_path=str(pta_agent_path), class_name="QAAgent"),
-            AgentReference(agent_id="renderizacao", module_path=str(pta_agent_path), class_name="RenderizacaoAgent"),
-            AgentReference(agent_id="agent-factory-dev", module_path=str(pta_agent_path), class_name="AgentFactoryDevAgent"),
-            AgentReference(agent_id="research", module_path=str(pta_agent_path), class_name="ResearchAgent"),
-        ]
-        for ref in pta_refs:
-            registry.add_agent_ref("pta", ref)
+    # Removido — projetos devem viver em contexts/{proj}/ via auto-discovery ou scaffold local.
 
     # === Notifiers for each project ===
 
@@ -239,27 +220,23 @@ def run_demo_agents(registry):
     """Load and run real agents to populate the dashboard with live events."""
     from src.protocols.schema import AgentEvent, AgentStatus, AgentRole
 
-    print("\n[Demo] 🎬 Carregando agentes do AFP-Team...")
+    print("\n[Demo] Carregando agentes do demo-onboarding...")
 
-    project_id = "AFP-Team"
+    project_id = "demo-onboarding"
 
     # Load agents from registry (this triggers real imports)
     try:
         coordenador = registry.load_agent(project_id, "coordenador")
         dev_agent = registry.load_agent(project_id, "dev")
-        qa_agent = registry.load_agent(project_id, "qa")
-        design_agent = registry.load_agent(project_id, "designer")
     except Exception as e:
-        print(f"[Demo] ⚠️  Erro ao carregar agentes: {e}")
-        print("[Demo] → Usando fallback com eventos diretos")
-        _demo_fallback(registry.get_notifier(project_id))
+        print(f"[Demo] Erro ao carregar agentes: {e}")
+        print("[Demo] -> Usando fallback com eventos diretos")
+        _demo_fallback(registry.get_notifier(project_id), project_id)
         return
 
-    # Wire subordinates (nomes EXATOS do registro e do prompt do coordenador)
+    # Wire subordinates
     coordenador.set_subordinates({
         "dev": dev_agent,
-        "qa": qa_agent,
-        "designer": design_agent,
     })
 
     print("[Demo] ✅ Agentes carregados. Executando tarefas...")
@@ -272,23 +249,23 @@ def run_demo_agents(registry):
     })
     print(f"  [dev] capabilities: {result1.status.value}")
 
-    # Task 2: QAAgent validates syntax of a core file
+    # Task 2: dev reads a core file
     core_file = str(Path(__file__).parent / "src" / "agents" / "base.py")
-    result2 = qa_agent.run({
-        "task_id": "startup-validate",
-        "title": "Validacao Inicial",
-        "description": "Validar sintaxe do AgentBase",
-        "action": "validate_python_syntax",
+    result2 = dev_agent.run({
+        "task_id": "startup-read",
+        "title": "Leitura Inicial",
+        "description": "Ler AgentBase",
+        "action": "read_file",
         "file_path": core_file,
     })
-    print(f"  [qa] validacao: {result2.status.value}")
+    print(f"  [dev] read_file: {result2.status.value}")
 
     # Task 3: Coordenador delegates a plan
     result3 = coordenador.run({
         "task_id": "startup-plan",
         "title": "Plano Inicial",
         "action": "plan_and_execute",
-        "goal": "Listar os arquivos do projeto e em seguida fazer uma pesquisa de design systems para dashboards",
+        "goal": "Listar os arquivos Python em src/",
         "tasks": [
             {
                 "name": "list-src",
@@ -301,54 +278,42 @@ def run_demo_agents(registry):
                 },
                 "depends_on": [],
             },
-            {
-                "name": "research-dashboards",
-                "agent_id": "designer",
-                "task": {
-                    "task_id": "step-research",
-                    "action": "research_design_systems",
-                    "query": "dashboards para monitoramento de sistemas",
-                },
-                "depends_on": ["list-src"],
-            },
         ],
     })
     print(f"  [coordenador] plano: {result3.output.get('status', '?')}")
 
-    print("[Demo] ✅ Agentes reais executados com sucesso")
+    print("[Demo] Agentes reais executados com sucesso")
 
 
-def _demo_fallback(notifier):
+def _demo_fallback(notifier, project_id: str = "demo-onboarding"):
     """Fallback: emite eventos diretos se o loading de agentes falhar."""
     from src.protocols.schema import AgentEvent, AgentStatus, AgentRole
 
-    print("[Demo] → Fallback: emitindo eventos simulados")
+    print("[Demo] -> Fallback: emitindo eventos simulados")
 
     for agent_id, role, msg in [
         ("coordenador", AgentRole.COORDINATOR, "Iniciando pipeline"),
         ("dev", AgentRole.WORKER, "Analisando estrutura"),
-        ("qa", AgentRole.WORKER, "Verificando dependencias"),
     ]:
         notifier.emit(AgentEvent(
             agent_id=agent_id, agent_role=role,
             status=AgentStatus.RUNNING, task_id="startup",
-            project_id="AFP-Team", message=msg,
+            project_id=project_id, message=msg,
         ))
         time.sleep(1)
 
     for agent_id, msg in [
         ("coordenador", "Ambiente configurado"),
         ("dev", "Estrutura analisada"),
-        ("qa", "Dependencias OK"),
     ]:
         notifier.emit(AgentEvent(
             agent_id=agent_id, agent_role=AgentRole.WORKER,
             status=AgentStatus.COMPLETED, task_id="startup",
-            project_id="AFP-Team", message=msg,
+            project_id=project_id, message=msg,
         ))
         time.sleep(1)
 
-    print("[Demo] ✅ Fallback concluido")
+    print("[Demo] Fallback concluido")
 
 
 def _start_mcp_server(port: int = 8081):

@@ -253,11 +253,7 @@ class RPCClient:
         """
         self._conn = connection
         self._timeout = timeout
-        self._correlation_id: Optional[str] = None
         self._queue: Optional[str] = None
-        import uuid
-
-        self._correlation_id = str(uuid.uuid4())
 
     def call(self, routing_key: str, message: dict) -> Optional[dict]:
         """Envia uma requisição RPC e aguarda a resposta via polling basic_get.
@@ -289,29 +285,41 @@ class RPCClient:
 
         ch.queue_bind(queue=self._queue, exchange="afp", routing_key=reply_rk)
 
+        import uuid
+
+        correlation_id = str(uuid.uuid4())
         msg = dict(message)
-        msg["correlation_id"] = self._correlation_id
+        msg["correlation_id"] = correlation_id
         msg["reply_to"] = reply_rk
 
         pub = Publisher(self._conn)
-        pub.publish(routing_key, msg)
+        if not pub.publish(routing_key, msg):
+            logger.warning("RPCClient falhou ao publicar em %s", routing_key)
+            ch.queue_unbind(queue=self._queue, exchange="afp", routing_key=reply_rk)
+            return None
 
         deadline = time.time() + self._timeout
         while time.time() < deadline:
             try:
                 method_frame, properties, body = ch.basic_get(
-                    queue=self._queue, auto_ack=True
+                    queue=self._queue, auto_ack=False
                 )
                 if method_frame and body:
+                    ch.basic_ack(delivery_tag=method_frame.delivery_tag)
                     reply = json.loads(body.decode("utf-8"))
-                    if reply.get("correlation_id") == self._correlation_id:
+                    if reply.get("correlation_id") == correlation_id:
                         ch.queue_unbind(
                             queue=self._queue, exchange="afp", routing_key=reply_rk
                         )
                         return reply
-            except Exception:
-                pass
-            time.sleep(0.2)
+                    logger.debug(
+                        "RPCClient descartou reply com correlation_id=%s (esperado=%s)",
+                        reply.get("correlation_id"),
+                        correlation_id,
+                    )
+            except Exception as exc:
+                logger.debug("RPCClient poll error: %s", exc)
+            time.sleep(0.1)
 
         logger.warning(
             "RPCClient timeout apos %.1fs aguardando reply em %s (rk=%s)",

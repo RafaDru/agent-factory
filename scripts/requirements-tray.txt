@@ -1,0 +1,5 @@
+# Dependencias do icone na bandeja (Windows)
+# pip install -r scripts/requirements-tray.txt
+pystray>=0.19.5
+Pillow>=10.0.0
+winotify>=1.1.0

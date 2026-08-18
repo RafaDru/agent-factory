@@ -3,7 +3,7 @@ import time
 import inspect
 import traceback
 from abc import abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 from pathlib import Path
 
@@ -17,6 +17,8 @@ from src.sdk.decision import DecisionEngine, RuleBasedEngine, DecisionContext
 from src.sdk.hooks import HookRegistry, HookPoint, HookContext
 from src.sdk.context_tree import hook_context_triage, hook_persist_learning
 from src.llm import get_provider, LLMProvider
+from src.protocols.mission import load_mission_record, save_mission_record
+from src.protocols.schema import MissionRecord, MissionStatus
 
 MISSIONS_DIR = Path(".agent-factory") / "missions"
 GLOBAL_CONTEXT_FILE = "GLOBAL_CONTEXT.md"
@@ -306,6 +308,55 @@ class StandardBaseAgent(AgentBase):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
         return str(path)
+
+    def write_mission_status(
+        self,
+        mission_id: str,
+        status: MissionStatus,
+        *,
+        goal: str = "",
+        objective: str = "",
+        task_count: int = 0,
+        completed: int = 0,
+        failed: int = 0,
+        skipped: int = 0,
+        message: str = "",
+        finalize: bool = False,
+    ) -> str:
+        """Grava status.json canonico da missao."""
+        mission_dir = self.get_mission_dir(mission_id)
+        existing = load_mission_record(mission_dir)
+        now = datetime.now(timezone.utc)
+
+        if existing:
+            record = existing.touch(
+                status=status,
+                goal=goal or existing.goal,
+                objective=objective or existing.objective,
+                task_count=task_count or existing.task_count,
+                completed=completed,
+                failed=failed,
+                skipped=skipped,
+                message=message or existing.message,
+                completed_at=now if finalize else existing.completed_at,
+            )
+        else:
+            record = MissionRecord(
+                mission_id=mission_id,
+                project_id=self.project_id,
+                status=status,
+                goal=goal,
+                objective=objective,
+                task_count=task_count,
+                completed=completed,
+                failed=failed,
+                skipped=skipped,
+                message=message,
+                started_at=now,
+                updated_at=now,
+                completed_at=now if finalize else None,
+            )
+        return save_mission_record(mission_dir, record)
 
     def load_all_contexts(self, mission_id: str, task_id: str) -> dict[str, str]:
         """Carrega os 3 niveis de contexto e retorna como dict."""

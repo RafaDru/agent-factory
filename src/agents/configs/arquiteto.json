@@ -2,7 +2,7 @@
   "id": "arquiteto",
   "role": "architect",
   "description": "Arquitetura: revisao arquitetural, padroes, coerencia tecnica",
-  "llm_provider": "auto",
+  "llm_provider": "opencode:deepseek-v4-flash",
   "actions": {
     "read_file": {
       "description": "Le arquivo para revisao arquitetural",

@@ -122,7 +122,7 @@ O caminho exato do `CONTEXTO.md` é configurável — a árvore de pastas do pro
 }
 ```
 
-Arquivo típico: [`contexts/afp-team/project.json`](../contexts/afp-team/project.json).
+Arquivo de referencia: [`contexts/demo-onboarding/project.json`](../contexts/demo-onboarding/project.json).
 
 ### Código Python (opcional)
 
@@ -231,16 +231,16 @@ AFP **complementa** Cursor/OpenCode — não substitui. Use Cursor para codar; A
 
 ---
 
-## AFP-Team vs produto
+## Demo vs produto
 
-| | AFP-Team | Produto AFP |
+| | demo-onboarding | Produto AFP |
 |---|---|---|
-| Propósito | Dogfood — evoluir a plataforma | Runtime genérico para qualquer org |
-| Agentes | dev, qa, designer, coordenador… | Configuráveis pelo usuário |
-| Local | `contexts/afp-team/` | `contexts/{seu-projeto}/` |
-| Papéis fixos | Referência de implementação | **Não** prescreve dev/qa como único modelo |
+| Proposito | Validar setup e primeira missao | Runtime generico para qualquer org |
+| Agentes | coordenador + dev (minimo) | Configuraveis pelo usuario |
+| Local | `contexts/demo-onboarding/` (versionado) | `contexts/{seu-projeto}/` (local) |
+| Papeis fixos | Exemplo apenas | **Nao** prescreve dev/qa como unico modelo |
 
-Projetos do usuário (PTA, CR-10 SE, solar…) são registrados em `contexts/*/project.json` — são **clientes** da plataforma, não o produto central.
+Projetos de negocio ficam em `contexts/` **localmente** — nao sao commitados no repo publico. Ver [contexts/README.md](../contexts/README.md).
 
 ---
 
@@ -263,14 +263,14 @@ Roadmap detalhado: [backlog.md](backlog.md).
 agent-factory/
 ├── src/
 │   ├── agents/          coordinator.py (built-in) + worker.py + runtime.py
-│   ├── agents/configs/  defaults declarativos (dogfood AFP-Team)
+│   ├── agents/configs/  defaults declarativos para DeclarativeWorker
 │   ├── sdk/             AgentFactory, StandardBaseAgent
 │   ├── eventbus/        AMQP / RPC
 │   ├── mcp/             MCP Server
 │   ├── llm/             SmartRouter
 │   ├── registry.py      projetos e referências
 │   └── loader.py        import dinâmico
-├── contexts/            registros de projetos (incl. AFP-Team)
+├── contexts/            _template/ + demo-onboarding/ (projetos locais gitignored)
 ├── dashboard-react/     Console AFP (React)
 ├── docs/                documentação (este arquivo)
 ├── start_afp.ps1        startup Windows (Standard stack)

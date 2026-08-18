@@ -298,3 +298,26 @@ def register_project(config: ProjectConfig) -> str:
 def get_project_notifier(project_id: str) -> Optional[EventNotifier]:
     """Shortcut para obter notifier de um projeto."""
     return get_registry().get_notifier(project_id)
+
+
+def ensure_project_notifier(project_id: str) -> EventNotifier:
+    """Notifier canonico (.agent-factory/events/) para runtimes e MCP."""
+    from src.project_discovery import register_discovered_projects
+
+    registry = get_registry()
+    register_discovered_projects(registry)
+    notifier = registry.get_notifier(project_id)
+    if notifier is not None:
+        return notifier
+
+    registry.register(
+        ProjectConfig(
+            project_id=project_id,
+            name=project_id,
+            description=f"Projeto auto-registrado para runtime ({project_id})",
+        )
+    )
+    notifier = registry.get_notifier(project_id)
+    if notifier is None:
+        raise RuntimeError(f"Nao foi possivel criar notifier para {project_id}")
+    return notifier

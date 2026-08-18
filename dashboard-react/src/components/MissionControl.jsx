@@ -59,7 +59,8 @@ function MissionCard({ mission }) {
             color={
               mission.status === 'running' ? 'success'
                 : mission.status === 'failed' ? 'danger'
-                  : mission.status === 'completed' ? 'primary' : 'subdued'
+                  : mission.status === 'partial' ? 'warning'
+                    : mission.status === 'completed' ? 'primary' : 'subdued'
             }
           >
             {mission.status}

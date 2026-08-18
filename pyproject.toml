@@ -1,6 +1,6 @@
 [project]
 name = "agent-factory"
-version = "2.0.0"
+version = "3.0.0"
 description = "Framework reutilizável para orquestração de agentes autônomos com segregação de projetos"
 readme = "README.md"
 license = "MIT"

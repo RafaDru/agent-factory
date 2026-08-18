@@ -159,7 +159,7 @@ def run_runtime_for(agent_class_path: str, agent_id: str, project_id: str,
                     queue_name: Optional[str] = None, amqp_url: str = DEFAULT_URL):
     """
     Inicia um runtime para um agente especifico, carregando a classe dinamicamente.
-    Uso: python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev AFP-Team
+    Uso: python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev demo-onboarding
     """
     import importlib
 
@@ -167,9 +167,16 @@ def run_runtime_for(agent_class_path: str, agent_id: str, project_id: str,
     module = importlib.import_module(module_path)
     agent_class = getattr(module, class_name)
 
-    from src.protocols.events import EventNotifier
-    notifier = EventNotifier(project_id)
-    agent = agent_class(project_id=project_id, notifier=notifier, agent_id=agent_id)
+    from src.registry import ensure_project_notifier
+    from src.agents.llm_config import load_agent_llm_provider, apply_llm_config
+
+    notifier = ensure_project_notifier(project_id)
+    llm_provider = load_agent_llm_provider(agent_id)
+    agent_kwargs = {"project_id": project_id, "notifier": notifier, "agent_id": agent_id}
+    if llm_provider:
+        agent_kwargs["llm_provider"] = llm_provider
+    agent = agent_class(**agent_kwargs)
+    apply_llm_config(agent, agent_id)
 
     queue = queue_name or f"{agent_id}-tasks"
     runtime = AgentRuntime(
@@ -199,4 +206,4 @@ if __name__ == "__main__":
                         sys.argv[4] if len(sys.argv) > 4 else None)
     else:
         print("Uso: python -m src.agents.runtime <module.class> <agent_id> <project_id> [queue_name]")
-        print("Ex:  python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev AFP-Team")
+        print("Ex:  python -m src.agents.runtime src.agents.worker.DeclarativeWorker dev demo-onboarding")

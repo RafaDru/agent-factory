@@ -2,7 +2,7 @@
   "id": "dev",
   "role": "worker",
   "description": "Implementacao: codigo, arquivos, scripts, git",
-  "llm_provider": "auto",
+  "llm_provider": "opencode:deepseek-v4-flash",
   "actions": {
     "read_file": {
       "description": "Le conteudo de um arquivo",

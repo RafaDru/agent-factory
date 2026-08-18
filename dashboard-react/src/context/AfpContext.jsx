@@ -65,7 +65,7 @@ export function AfpProvider({ children }) {
       dispatch({
         type: 'LOAD_SUCCESS',
         projects,
-        missions,
+        missions: missions.missions || missions || [],
         providers: eventPayload.providers || {},
       });
       dispatch({ type: 'BOOTSTRAP_EVENTS', events: eventPayload.events || [] });

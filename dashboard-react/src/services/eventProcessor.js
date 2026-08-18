@@ -14,6 +14,14 @@ function createAgentState() {
   };
 }
 
+const TERMINAL_MISSION = new Set(['completed', 'partial', 'failed', 'cancelled']);
+
+function missionStatusFromApi(apiObj) {
+  const s = String(apiObj?.status || '').toLowerCase();
+  if (TERMINAL_MISSION.has(s) || s === 'running' || s === 'planned') return s;
+  return 'running';
+}
+
 function normalizeStatus(status) {
   if (!status) return 'ready';
   const s = String(status).toLowerCase();
@@ -161,9 +169,9 @@ function rebuildMissionsData(agentsState, missionsApi, prevMissionsData, latestE
       const apiObj = apiMissions[missionId] || {};
       missionsData[missionId] = {
         id: missionId,
-        projectId: event.projectId || event.payload?.project_id || 'unknown',
+        projectId: apiObj.project_id || event.projectId || event.payload?.project_id || 'unknown',
         objective: apiObj.objective || apiObj.objetivo || '',
-        status: apiObj.status === 'completed' ? 'completed' : 'running',
+        status: missionStatusFromApi(apiObj),
         timestamp: event.timestamp,
         tasks: {},
         delegations: [],
@@ -223,7 +231,35 @@ function rebuildMissionsData(agentsState, missionsApi, prevMissionsData, latestE
     if (tasks.some((t) => t.status === 'running')) mission.status = 'running';
     else if (tasks.length && tasks.every((t) => t.status === 'completed')) mission.status = 'completed';
     else if (tasks.some((t) => t.status === 'failed')) mission.status = 'failed';
+
+    // Status canonico do coordenador (payload ou API)
+    const payloadStatus = event.payload?.mission_status;
+    if (payloadStatus && TERMINAL_MISSION.has(String(payloadStatus).toLowerCase())) {
+      mission.status = String(payloadStatus).toLowerCase();
+    }
+    if (/Missao concluida:/i.test(msg)) mission.status = 'completed';
+    if (/Missao parcial:/i.test(msg)) mission.status = 'partial';
+    if (/Missao falhou:/i.test(msg)) mission.status = 'failed';
   }
+
+  // API status.json prevalece sobre inferencia quando terminal
+  Object.entries(apiMissions).forEach(([id, apiObj]) => {
+    const canonical = missionStatusFromApi(apiObj);
+    if (!missionsData[id]) {
+      missionsData[id] = {
+        id,
+        projectId: apiObj.project_id || 'unknown',
+        objective: apiObj.objective || '',
+        status: canonical,
+        timestamp: apiObj.updated_at || apiObj.started_at || null,
+        tasks: {},
+        delegations: [],
+      };
+    } else if (TERMINAL_MISSION.has(canonical)) {
+      missionsData[id].status = canonical;
+    }
+    if (apiObj.objective) missionsData[id].objective = apiObj.objective;
+  });
 
   return missionsData;
 }

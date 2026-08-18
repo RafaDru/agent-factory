@@ -18,11 +18,22 @@ try {
     else { Write-Host "[WARN] Dashboard (8080): $($r.StatusCode)" -ForegroundColor Yellow }
 } catch { Write-Host "[FAIL] Dashboard (8080): $($_.Exception.Message)" -ForegroundColor Red; $exitCode = 1 }
 
-# 3. MCP (port 8081)
+# 3. MCP (port 8081) — nao usar /sse (bloqueia); verificar porta TCP
 try {
-    $r = Invoke-WebRequest -Uri "http://localhost:8081/" -UseBasicParsing -TimeoutSec 3
-    Write-Host "[OK] MCP (8081): $($r.StatusCode)" -ForegroundColor Green
-} catch { Write-Host "[WARN] MCP (8081): $($_.Exception.Message)" -ForegroundColor Yellow }
+    $tcp = New-Object System.Net.Sockets.TcpClient
+    $iar = $tcp.BeginConnect("localhost", 8081, $null, $null)
+    $ok = $iar.AsyncWaitHandle.WaitOne(2000, $false)
+    if ($ok -and $tcp.Connected) {
+        Write-Host "[OK] MCP (8081): porta aberta" -ForegroundColor Green
+        $tcp.Close()
+    } else {
+        Write-Host "[FAIL] MCP (8081): porta fechada ou timeout" -ForegroundColor Red
+        $exitCode = 1
+    }
+} catch {
+    Write-Host "[FAIL] MCP (8081): $($_.Exception.Message)" -ForegroundColor Red
+    $exitCode = 1
+}
 
 # 4. Processos AFP
 $pids = @()
@@ -41,7 +52,8 @@ if ($pids.Count -eq 0) {
     if ($dead.Count -eq 0) {
         Write-Host "[OK] Processos: $alive/$($pids.Count) vivos" -ForegroundColor Green
     } else {
-        Write-Host "[WARN] Processos: $alive/$($pids.Count) vivos. Mortos: $($dead -join ', ')" -ForegroundColor Yellow
+        Write-Host "[FAIL] Processos: $alive/$($pids.Count) vivos. Mortos: $($dead -join ', ')" -ForegroundColor Red
+        $exitCode = 1
     }
 }
 

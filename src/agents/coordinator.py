@@ -19,6 +19,7 @@ from src.protocols.schema import (
     TaskOutput,
     OutputStatus,
     Decision,
+    MissionStatus,
 )
 from src.sdk.base import StandardBaseAgent
 from src.sdk.decision import DecisionEngine, RuleBasedEngine
@@ -29,12 +30,12 @@ from src.eventbus.amqp import AMQPConnection, RPCClient
 
 class AgentFactoryCoordinator(StandardBaseAgent):
     """
-    Coordenador do projeto AFP-Team.
+    Coordenador generico da plataforma AFP.
     Recebe objetivos de alto nivel, gera planos via LLM e delega
-    para os workers do time (dev, qa, designer).
+    para os workers registrados no projeto (`contexts/{proj}/project.json`).
     """
 
-    _DEFAULT_LLM = "auto"
+    _DEFAULT_LLM = "opencode:deepseek-v4-flash"
 
     ACTIONS: dict = {}
 
@@ -108,10 +109,12 @@ class AgentFactoryCoordinator(StandardBaseAgent):
         agent_ids = (
             " | ".join(sorted(subs.keys()))
             if subs
-            else "dev | qa | designer | negocios | arquiteto"
+            else "dev"
         )
 
-        return f"""Voce e o coordenador do projeto Agent Factory Platform Team (AFP-Team).
+        working_dir = str(getattr(self, "working_dir", None) or Path.cwd())
+
+        return f"""Voce e o coordenador do projeto {self.project_id}.
 Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 
 ## Subordinados Disponiveis
@@ -120,18 +123,15 @@ Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 ## Acoes dos Subordinados{actions_desc}
 
 ## Regras de Orquestracao
-1. Delegue ao `dev` para implementar incrementalmente (write_file/refactor_code)
-2. Delegue ao `qa` para validar (review_code, analyze_project)
-3. Delegue ao `designer` para pesquisa UX e prototipos
-4. Delegue ao `negocios` para analise de prioridades e requisitos
-5. Delegue ao `arquiteto` para revisao arquitetural
-6. NUNCA implemente codigo diretamente — delegue ao dev
-7. Outputs de tarefas anteriores sao automaticamente passados como contexto para dependentes
-8. Se uma task falhar no RPC, o coordenador tentara acao alternativa automaticamente
-9. Consulte o contexto da arvore (INDEX.md + tree/) para backlog, licoes, e padroes de delegacao
+1. Delegue tarefas apenas aos subordinados listados acima
+2. Use acoes validas de cada agente (consulte a lista de acoes)
+3. NUNCA implemente codigo diretamente — delegue ao worker adequado
+4. Outputs de tarefas anteriores sao automaticamente passados como contexto para dependentes
+5. Se uma task falhar no RPC, o coordenador tentara acao alternativa automaticamente
+6. Consulte o contexto da arvore (INDEX.md + tree/) para backlog, licoes, e padroes de delegacao
 
 ## Diretorio de trabalho
-C:/Users/rafae/agent-factory
+{working_dir}
 
 ## Formato de Resposta
 Responda com JSON contendo "plan" (lista de tarefas):
@@ -231,25 +231,22 @@ Regras:
         try:
             conn = AMQPConnection("amqp://afp:afp123@localhost:5672/")
             conn.connect()
-            rpc = RPCClient(conn, timeout=30.0)
+            rpc = RPCClient(conn, timeout=120.0)
             response = rpc.call(f"task.run.{agent_id}", subtask)
             conn.close()
 
-            # O runtime retorna: {status, agent_id, result: {output, summary, rationale, ...}}
-            rb = response.get("result", {}) if response else {}
-            rb_status = (
-                "success" if response and response.get("status") == "ok" else "failure"
+            step_result = self._task_output_from_rpc(response)
+            rb = step_result.details or {}
+            agent_status = (
+                "success" if step_result.status == OutputStatus.SUCCESS else "failure"
             )
-            agent_status = rb.get("status", rb_status)
-            if agent_status in ("completed", "success"):
-                agent_status = "success"
             return {
                 "status": agent_status,
                 "agent_id": agent_id,
                 "action": subtask.get("action"),
-                "result": rb.get("output", rb.get("details", rb)),
-                "rationale": rb.get("summary", ""),
-                "summary": rb.get("summary", ""),
+                "result": rb.get("output", rb),
+                "rationale": step_result.summary or step_result.rationale or "",
+                "summary": step_result.summary or "",
             }
         except Exception as e:
             logger = __import__("logging").getLogger(__name__)
@@ -541,6 +538,16 @@ Regras:
             encoding="utf-8",
         )
 
+        objective_preview = goal.strip()[:200] if goal else ""
+        self.write_mission_status(
+            mission_id,
+            MissionStatus.RUNNING,
+            goal=goal,
+            objective=objective_preview,
+            task_count=len(tasks),
+            message=f"Missao iniciada: {mission_id}",
+        )
+
         self.notifier.emit(
             AgentEvent(
                 agent_id=self.agent_id,
@@ -659,37 +666,7 @@ Regras:
                     response = rpc.call(f"task.run.{agent_id}", current_subtask)
                     conn.close()
 
-                    if response and response.get("result"):
-                        reply_msg = response["result"]
-                        agent_output = reply_msg.get(
-                            "output", reply_msg.get("result", {})
-                        )
-                        if isinstance(agent_output, dict):
-                            status = (
-                                OutputStatus.SUCCESS
-                                if agent_output.get("status")
-                                in ("ok", "success", "completed")
-                                else OutputStatus.FAILURE
-                            )
-                            summary = agent_output.get(
-                                "summary", agent_output.get("rationale", "")
-                            )
-                            details = agent_output
-                        else:
-                            status = (
-                                OutputStatus.SUCCESS
-                                if reply_msg.get("status") == "ok"
-                                else OutputStatus.FAILURE
-                            )
-                            summary = str(agent_output)
-                            details = reply_msg
-                    else:
-                        raise Exception("RPC sem resposta")
-                    step_result = TaskOutput(
-                        status=status,
-                        summary=summary,
-                        details=details,
-                    )
+                    step_result = self._task_output_from_rpc(response)
                     break
 
                 except Exception as e:
@@ -784,6 +761,7 @@ Regras:
                 "_output_path": str(
                     self.get_task_output_dir(mission_id, task_id, agent_id)
                 ),
+                "_task_id": task_id,
             }
             results.append(entry)
 
@@ -803,6 +781,50 @@ Regras:
         total = len(tasks)
         accepted = sum(1 for r in results if r.get("decision") in ("accept", "skip"))
         failed = sum(1 for r in results if r["status"] in ("failure", "rejected"))
+        skipped = total - accepted - failed
+
+        if failed == 0 and accepted > 0:
+            mission_status = MissionStatus.COMPLETED
+            mission_msg = f"Missao concluida: {mission_id}"
+            emit_status = AgentStatus.COMPLETED
+        elif failed > 0 and accepted > 0:
+            mission_status = MissionStatus.PARTIAL
+            mission_msg = f"Missao parcial: {mission_id}"
+            emit_status = AgentStatus.COMPLETED
+        else:
+            mission_status = MissionStatus.FAILED
+            mission_msg = f"Missao falhou: {mission_id}"
+            emit_status = AgentStatus.FAILED
+
+        self.write_mission_status(
+            mission_id,
+            mission_status,
+            goal=goal,
+            objective=objective_preview,
+            task_count=total,
+            completed=accepted,
+            failed=failed,
+            skipped=skipped,
+            message=mission_msg,
+            finalize=True,
+        )
+        self.notifier.emit(
+            AgentEvent(
+                agent_id=self.agent_id,
+                agent_role=self.role,
+                status=emit_status,
+                task_id="mission-complete",
+                project_id=self.project_id,
+                mission_id=mission_id,
+                message=mission_msg,
+                payload={
+                    "mission_status": mission_status.value,
+                    "completed": accepted,
+                    "failed": failed,
+                    "skipped": skipped,
+                },
+            )
+        )
 
         # Auto-reflexao ao final da missao
         try:
@@ -836,9 +858,90 @@ Regras:
             "total_steps": total,
             "completed": accepted,
             "failed": failed,
-            "skipped": total - accepted - failed,
+            "skipped": skipped,
+            "mission_status": mission_status.value,
             "steps": results,
         }
+
+    @staticmethod
+    def _task_output_from_rpc(response: Optional[dict]) -> TaskOutput:
+        """Converte envelope RPC do runtime em TaskOutput."""
+        if not response:
+            raise RuntimeError("RPC sem resposta")
+
+        envelope_status = response.get("status")
+        body = response.get("result")
+        if body is None:
+            if envelope_status == "ok":
+                return TaskOutput.success(summary="RPC concluido sem payload")
+            raise RuntimeError(response.get("error") or "RPC sem corpo de resultado")
+
+        if not isinstance(body, dict):
+            return TaskOutput.success(summary=str(body), details={"result": body})
+
+        # TaskResult serializado pelo runtime (agent.run -> model_dump)
+        if "agent_id" in body and ("output" in body or "status" in body):
+            inner = body.get("output") or {}
+            if isinstance(inner, dict) and inner.get("status"):
+                parsed = TaskOutput.from_execute_output(inner)
+                if parsed.status != OutputStatus.SUCCESS:
+                    return parsed
+            agent_status = str(body.get("status", envelope_status or "")).lower()
+            inner_status = str(inner.get("status", "")).lower() if isinstance(inner, dict) else ""
+            failed = agent_status in ("failed", "error") or inner_status in (
+                "error",
+                "failure",
+                "failed",
+                "rejected",
+            )
+            if failed:
+                err = (
+                    (inner.get("error") if isinstance(inner, dict) else None)
+                    or body.get("summary")
+                    or "Falha no agente"
+                )
+                return TaskOutput.failure(rationale=str(err), details=body)
+            summary = (
+                body.get("summary")
+                or (inner.get("summary") if isinstance(inner, dict) else None)
+                or (inner.get("rationale") if isinstance(inner, dict) else None)
+                or ""
+            )
+            return TaskOutput(
+                status=OutputStatus.SUCCESS,
+                summary=summary,
+                rationale=(inner.get("rationale") if isinstance(inner, dict) else summary)
+                or summary,
+                details=inner if isinstance(inner, dict) and inner else body,
+            )
+
+        agent_output = body.get("output", body.get("result", body))
+        if isinstance(agent_output, dict):
+            ok = agent_output.get("status", envelope_status) in (
+                "ok",
+                "success",
+                "completed",
+                None,
+            )
+            summary = agent_output.get("summary") or agent_output.get("rationale") or ""
+            if not ok and agent_output.get("status") in ("error", "failure", "failed"):
+                return TaskOutput.failure(
+                    rationale=agent_output.get("error") or summary or "Falha no agente",
+                    details=agent_output,
+                )
+            return TaskOutput(
+                status=OutputStatus.SUCCESS if ok else OutputStatus.FAILURE,
+                summary=summary,
+                rationale=agent_output.get("rationale", summary),
+                details=agent_output,
+            )
+
+        ok = envelope_status == "ok"
+        return TaskOutput(
+            status=OutputStatus.SUCCESS if ok else OutputStatus.FAILURE,
+            summary=str(agent_output),
+            details=body,
+        )
 
     ACTION_ALTERNATIVES = {
         "refactor_code": [
@@ -925,11 +1028,17 @@ Regras:
         for s in steps:
             step_name = s.get("step", "")
             agent_id = s.get("agent_id", "")
-            out_dir = self.get_task_output_dir(mission_id, step_name, agent_id)
-            result_file = out_dir / "result.md"
-            if result_file.exists():
-                details += f"\n\n## Resultado: {step_name} ({agent_id})\n\n"
-                details += result_file.read_text(encoding="utf-8")[:2000]
+            task_id = s.get("_task_id") or step_name
+            if not mission_id or not task_id or not agent_id:
+                continue
+            try:
+                out_dir = self.get_task_output_dir(mission_id, task_id, agent_id)
+                result_file = out_dir / "result.md"
+                if result_file.exists():
+                    details += f"\n\n## Resultado: {step_name} ({agent_id})\n\n"
+                    details += result_file.read_text(encoding="utf-8")[:2000]
+            except (TypeError, OSError) as e:
+                details += f"\n\n## Resultado: {step_name} — indisponivel ({e})\n"
 
         summary = "\n".join(summary_lines)
 
@@ -961,28 +1070,29 @@ Regras:
             reflection = f"Missao {mission_id}: {len(accepted)} aceitas, {len(failed)} falhas. {summary[:500]}"
 
         # Persistir na arvore de contexto
-        tree = ContextTree(self.project_id, self.agent_id)
-        tree.ensure_initialized()
+        try:
+            tree = ContextTree(self.project_id, self.agent_id)
+            tree.ensure_initialized()
 
-        # Persistir como licoes
-        fake_output = TaskOutput.success(summary=reflection[:200])
-        tree.persist_learning(
-            {"action": "reflect_on_mission", "title": f"missao-{mission_id}"},
-            fake_output,
-            reflection,
-        )
+            fake_output = TaskOutput.success(summary=reflection[:200])
+            tree.persist_learning(
+                {"action": "reflect_on_mission", "title": f"missao-{mission_id}"},
+                fake_output,
+                reflection,
+            )
 
-        # Tentar classificar em dominios especificos
-        for domain in ("planejamento", "delegacao", "priorizacao"):
-            if domain in reflection.lower():
-                tree.persist_learning(
-                    {
-                        "action": "reflect_on_mission",
-                        "title": f"missao-{mission_id}-{domain}",
-                    },
-                    fake_output,
-                    reflection,
-                )
+            for domain in ("planejamento", "delegacao", "priorizacao"):
+                if domain in reflection.lower():
+                    tree.persist_learning(
+                        {
+                            "action": "reflect_on_mission",
+                            "title": f"missao-{mission_id}-{domain}",
+                        },
+                        fake_output,
+                        reflection,
+                    )
+        except Exception as e:
+            reflection += f"\n\n(persistencia tree falhou: {e})"
 
         # Persistir reflexao em tree/licoes.md (nao em CONTEXTO.md que agora e enxuto)
         tree_path = (

@@ -9,10 +9,19 @@ from pathlib import Path
 from typing import Optional
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parent.parent
+
+
 def _resolve_path(path_str: str) -> str:
-    """Resolve ~/ e caminhos relativos."""
+    """Resolve ~/ e caminhos relativos a raiz do repositorio AFP."""
+    if not path_str:
+        return str(_repo_root())
     if path_str.startswith("~/"):
         return str(Path.home() / path_str[2:])
+    p = Path(path_str)
+    if not p.is_absolute():
+        return str((_repo_root() / p).resolve())
     return path_str
 
 
@@ -30,6 +39,9 @@ def discover_projects(contexts_dir: Path = Path("contexts")) -> list[dict]:
         return projects
 
     for proj_file in sorted(contexts_dir.rglob("project.json")):
+        # Ignorar templates e pastas privadas (ex.: contexts/_template/)
+        if any(part.startswith("_") for part in proj_file.parts):
+            continue
         try:
             data = json.loads(proj_file.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, Exception):
