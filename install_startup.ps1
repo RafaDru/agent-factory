@@ -13,8 +13,8 @@ REM 1. Abra PowerShell como administrador
 REM 2. Execute: .\uninstall_startup.ps1
 REM ============================================
 
-# Configurações
-$AgentFactoryPath = "C:\Users\rafae\agent-factory"
+# Configurações — ajuste para o caminho do seu clone
+$AgentFactoryPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ScriptName = "AgentFactory"
 $TaskName = "AgentFactoryStartup"
 
@@ -34,4 +34,4 @@ Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Se
 
 Write-Host "Agent Factory configurado para iniciar com o Windows!"
 Write-Host "Para iniciar agora, execute: python start_dashboard.py"
-Write-Host "Dashboard estará disponível em: http://localhost:8080?project=pta"
+Write-Host "Dashboard estara disponivel em: http://localhost:8080"

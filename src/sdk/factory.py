@@ -136,7 +136,9 @@ class AgentFactory:
 
     @staticmethod
     def _llm_fallback(task: dict, agent: StandardBaseAgent, config: AgentDef) -> TaskOutput:
-        """Quando o action nao tem handler Python, usa LLM para decidir."""
+        """Quando o action nao tem handler Python, usa LLM com tool-calling para executar."""
+        import json, logging
+        logger = logging.getLogger(__name__)
         action = task.get("action", "")
         action_def = config.actions.get(action)
 
@@ -146,7 +148,6 @@ class AgentFactory:
                 available_actions=list(config.actions.keys()),
             )
 
-        # Tentar usar LLM provider do agente (procura em _llm_provider ou _llm)
         provider: Optional[LLMProvider] = getattr(agent, '_llm_provider', None) or getattr(agent, '_llm', None)
         if provider is None or not provider.is_available():
             return TaskOutput.failure(
@@ -156,14 +157,8 @@ class AgentFactory:
                 available_actions=list(config.actions.keys()),
             )
 
-        # Construir prompt para o LLM
         task_params = {k: v for k, v in task.items() if k not in ('action', 'task_id', 'title')}
-        params_desc = "\n".join(
-            f"  {k}: {v}" for k, v in action_def.params.items()
-        ) if action_def.params else "  (parametros livres)"
-        extra_input = "\n".join(
-            f"  {k}: {v}" for k, v in task_params.items()
-        ) if task_params else "  (nenhum)"
+        tools = AgentFactory._build_tools_schema(config)
 
         prompt = f"""Voce e o agente '{config.id}' — {config.description or 'sem descricao'}.
 
@@ -173,35 +168,136 @@ class AgentFactory:
 ## Acao solicitada
 {action_def.description or action}
 
-## Parametros esperados
-{params_desc}
-
 ## Dados recebidos
-{extra_input}
+{json.dumps(task_params, ensure_ascii=False, indent=2) if task_params else '(nenhum)'}
 
-## Tarefa
-Com base nos dados acima, execute a acao '{action}'.
-Responda de forma direta e objetiva. Se houver erros, indique claramente.
+## Instrucoes
+1. Analise a acao solicitada e os dados recebidos.
+2. Use as ferramentas disponiveis para executar a acao (ex: read_file, write_file, edit_file).
+3. Leia arquivos antes de modifica-los para entender o contexto.
+4. Ao final, responda com um resumo do que foi feito.
 """
 
+        messages = [{"role": "user", "content": prompt}]
+        max_iterations = 15
+        step_count = 0
+        final_content = ""
+        all_tool_results = []
+        last_resp = None
+
         try:
-            resp = provider.chat(
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.3,
-                max_tokens=2048,
-            )
-            return TaskOutput.success(
-                summary=f"LLM ({config.llm_provider}): {resp.content[:120].strip()}...",
-                rationale=resp.content,
-                raw_response=resp.content,
-                model=resp.model,
-                usage=resp.usage,
+            while step_count < max_iterations:
+                step_count += 1
+                kwargs = {}
+                if tools:
+                    kwargs["tools"] = tools
+
+                resp = provider.chat(
+                    messages=messages,
+                    temperature=0.3,
+                    max_tokens=4096,
+                    **kwargs,
+                )
+                last_resp = resp
+
+                if resp.tool_calls:
+                    for tc in resp.tool_calls:
+                        fn_name = tc["function"]["name"]
+                        try:
+                            fn_args = json.loads(tc["function"]["arguments"])
+                        except json.JSONDecodeError:
+                            fn_args = {}
+
+                        tool_task = {"action": fn_name, **fn_args}
+                        logger.info("LLM tool call: %s args=%s", fn_name, fn_args)
+
+                        try:
+                            tool_result = agent.execute(tool_task)
+                            if isinstance(tool_result, TaskOutput):
+                                result_data = tool_result.summary or tool_result.rationale or str(tool_result.details)
+                            else:
+                                result_data = str(tool_result)
+                        except Exception as e:
+                            result_data = f"Erro: {e}"
+
+                        all_tool_results.append({"tool": fn_name, "args": fn_args, "result": str(result_data)[:500]})
+
+                        messages.append({
+                            "role": "assistant",
+                            "content": None,
+                            "tool_calls": [{
+                                "id": tc.get("id", f"call_{step_count}"),
+                                "type": "function",
+                                "function": {"name": fn_name, "arguments": tc["function"]["arguments"]},
+                            }],
+                        })
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc.get("id", f"call_{step_count}"),
+                            "content": str(result_data)[:2000],
+                        })
+                else:
+                    final_content = resp.content
+                    break
+
+            if final_content and last_resp:
+                return TaskOutput.success(
+                    summary=f"LLM ({config.llm_provider}): {final_content[:200].strip()}...",
+                    rationale=final_content,
+                    details={"steps": step_count, "tool_calls": len(all_tool_results), "results": all_tool_results},
+                    raw_response=final_content,
+                    model=last_resp.model,
+                    usage=last_resp.usage,
+                )
+            return TaskOutput.failure(
+                rationale=f"LLM nao produziu resposta final apos {step_count} iteracoes",
+                details={"tool_calls": all_tool_results},
             )
         except Exception as e:
+            logger.exception("LLM tool-calling falhou")
             return TaskOutput.failure(
                 rationale=f"LLM fallback falhou: {e}",
                 available_actions=list(config.actions.keys()),
+                details={"tool_calls": all_tool_results} if all_tool_results else None,
             )
+
+    @staticmethod
+    def _build_tools_schema(config: AgentDef) -> list[dict]:
+        """Converte acoes do agente em schema OpenAI function-calling."""
+        import json
+        tools = []
+        _type_map = {"str": "string", "int": "integer", "float": "number", "bool": "boolean", "list": "array", "dict": "object"}
+
+        for name, act in config.actions.items():
+            if not act.handler:
+                continue
+            properties = {}
+            required = []
+            for pname, pdesc in (act.params or {}).items():
+                pdesc_lower = pdesc.lower()
+                is_required = "obrigatorio" in pdesc_lower or "required" in pdesc_lower
+                ptype = "string"
+                for kw, js_type in _type_map.items():
+                    if kw in pdesc_lower:
+                        ptype = js_type
+                        break
+                properties[pname] = {"type": ptype, "description": pdesc}
+                if is_required:
+                    required.append(pname)
+
+            tools.append({
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": act.description or name,
+                    "parameters": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": required,
+                    },
+                },
+            })
+        return tools
 
     @staticmethod
     def _inject_skill(agent: StandardBaseAgent, skill_name: str, config: AgentDef):

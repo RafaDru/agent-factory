@@ -1,73 +1,62 @@
-// C:\Users\rafae\agent-factory/dashboard-react/src/components/ProjectCard.jsx
 import React from 'react';
 import {
-  EuiCard,
+  EuiPanel,
   EuiHealth,
-  EuiBadge,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiIcon,
   EuiText,
-  EuiButtonIcon,
+  EuiBadge,
+  EuiIcon,
 } from '@elastic/eui';
 
-const ProjectCard = ({ projectId, events, status, onToggleExpand }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false);
+function ProjectCard({ project, aggregateStatus, runningCount, eventCount, onClick }) {
+  const title = project.project_name || project.project_id;
+  const team = project.team_name || project.team_id;
 
-  const handleToggleExpand = () => {
-    setIsExpanded(!isExpanded);
-    onToggleExpand();
-  };
-
-  const getBadgeColor = () => {
-    switch (status.status) {
-      case 'running':
-        return 'success';
-      case 'completed':
-        return 'primary';
-      case 'failed':
-        return 'danger';
-      default:
-        return 'subdued';
-    }
-  };
+  const healthColor = {
+    running: 'success',
+    completed: 'primary',
+    failed: 'danger',
+    ready: 'subdued',
+  }[aggregateStatus] || 'subdued';
 
   return (
-    <EuiCard layout="compact" hasShadow={false}>
-      <EuiFlexGroup>
+    <EuiPanel
+      paddingSize="m"
+      onClick={onClick}
+      style={{
+        cursor: 'pointer',
+        borderLeft: aggregateStatus === 'running' ? '4px solid #22d3ee' : undefined,
+        boxShadow: aggregateStatus === 'running' ? '0 0 16px rgba(34,211,238,0.2)' : undefined,
+      }}
+    >
+      <EuiFlexGroup alignItems="center" gutterSize="s">
         <EuiFlexItem grow={false}>
-          <EuiHealth color={getBadgeColor()}>{status.status}</EuiHealth>
+          <EuiText size="l">{project.icon || '📦'}</EuiText>
         </EuiFlexItem>
         <EuiFlexItem>
-          <EuiText>
-            <h2>{projectId}</h2>
-          </EuiText>
+          <EuiText><h3>{title}</h3></EuiText>
+          <EuiText size="s" color="subdued">{team}</EuiText>
         </EuiFlexItem>
         <EuiFlexItem grow={false}>
-          <EuiText>
-            <p>Total de eventos: {events.length}</p>
-          </EuiText>
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiButtonIcon
-            iconType={isExpanded ? 'arrowUp' : 'arrowDown'}
-            onClick={handleToggleExpand}
-          />
+          <EuiHealth color={healthColor}>{aggregateStatus}</EuiHealth>
         </EuiFlexItem>
       </EuiFlexGroup>
-      {isExpanded && (
-        <EuiFlexGroup>
-          {events.slice(-5).map((event, index) => (
-            <EuiFlexItem key={index}>
-              <EuiText>
-                <p>{event.message}</p>
-              </EuiText>
-            </EuiFlexItem>
-          ))}
-        </EuiFlexGroup>
-      )}
-    </EuiCard>
+      <EuiFlexGroup gutterSize="s" style={{ marginTop: 12 }}>
+        <EuiFlexItem grow={false}>
+          <EuiBadge color={runningCount ? 'success' : 'hollow'}>
+            {runningCount} running
+          </EuiBadge>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false}>
+          <EuiText size="xs" color="subdued">{eventCount} eventos</EuiText>
+        </EuiFlexItem>
+        <EuiFlexItem grow={false} style={{ marginLeft: 'auto' }}>
+          <EuiIcon type="arrowRight" />
+        </EuiFlexItem>
+      </EuiFlexGroup>
+    </EuiPanel>
   );
-};
+}
 
 export default ProjectCard;

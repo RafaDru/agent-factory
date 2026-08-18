@@ -1,211 +1,149 @@
 # Agent Factory Platform
 
-**Orquestrador de agentes de IA autonomes.** Delega objetivos para agentes
-especializados via Event Bus (RabbitMQ), cada um com seu proprio contexto
-e LLM. Painel em tempo real, MCP Server para integracao com IDEs/LLMs.
+**Runtime de organizacao agentica** — orquestra times de agentes de IA cujas
+identidades **moram nos projetos de origem**, nao na plataforma.
 
-> Beta — v3.0.0
-
----
-
-## O que e e como opera
-
-A AFP e um orquestrador. Ela recebe um objetivo em linguagem natural e
-delega a execucao para agentes especializados que trabalham autonomamente.
-
-```
-Humano / LLM (OpenCode, Claude, Cursor, etc.)
-  │
-  ▼  "run_objective(project='...', objective='...')"
-AFP MCP Server (porta 8081)
-  │
-  ├── Coordenador (built-in, codigo proprio)
-  │     │  1. Recebe objetivo
-  │     │  2. Gera plano (DAG de tarefas) via LLM
-  │     │  3. Delega para workers via RabbitMQ
-  │     │
-  │     ├──► RabbitMQ ──► AgentRuntime (processo separado)
-  │     │     task.run.dev           │  Carrega CONTEXTO.md
-  │     │     task.run.qa            │  Usa seu proprio LLM
-  │     │     task.run.designer      │  Executa e responde
-  │     │     ...                    │
-  │     │  4. Consolida resultados
-  │     │  5. Reflete e persiste aprendizado
-  │     │
-  │     └──► Resultado estruturado
-  │
-  └── Dashboard (http://localhost:8082)
-        Eventos em tempo real via SSE
-```
-
-## Componentes
-
-| Componente | Descricao |
-|---|---|
-| **Coordenador** | Unico componente com codigo proprio. Planeja a DAG, delega via Event Bus, reflete e aprende. |
-| **Workers** | Agentes genericos criados pelo `AgentFactory`. Identidade e comportamento vêm do `CONTEXTO.md`. |
-| **AgentRuntime** | Processo separado que consome fila RabbitMQ, carrega o agente, executa a tarefa e publica o resultado. |
-| **RabbitMQ** | Espinha dorsal da comunicacao: filas `task.run.{agent_id}` para delegacao, `task.result.{agent_id}` para resposta. |
-| **MCP Server** | Gateway externo (SSE na porta 8081). Expoe `run_objective`, `run_agent`, etc. como ferramentas MCP. |
-| **Dashboard** | UI web em tempo real (porta 8082). Missoes, eventos, status dos agentes. |
-
-## Papeis
-
-| Papel | Origem | Natureza |
-|---|---|---|
-| **Coordenador** | AFP (built-in) | Codigo fixo (`src/agents/coordinator.py`). Logica de DAG, delegacao, reflexao. |
-| **Workers** (dev, qa, designer, negocios, arquiteto, etc.) | Projeto do usuario | Contexto declarativo (`CONTEXTO.md`). Um unico `DeclarativeAgent` generico. |
-
-O coordenador e **parte da plataforma**, nao configurado pelo usuario.
-Os workers sao **definidos pelo usuario** — ele cria os CONTEXTO.md com
-o proposito e as acoes de cada papel.
+> Beta — v3.0.0 · Early adopters welcome · [Quick Start](docs/QUICKSTART.md) · [Contributing](CONTRIBUTING.md)
 
 ---
 
-## Usando a Plataforma com um Projeto Externo
+## Principio central
 
-### 1. Configure o projeto
+> **Factory = execucao e comunicacao. Agentes = nos projetos.**
 
-Em `contexts/meu-projeto/project.json`:
+A AFP fornece coordenador, event bus, MCP, roteamento de LLM e Console AFP.
+Cada projeto registra seus agentes via `contexts/{proj}/project.json` e
+`CONTEXTO.md` — a Factory referencia e executa, sem acoplar dominio de negocio.
+
+**Arquitetura:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+---
+
+## Em 30 segundos
+
+```
+IDE (Cursor / OpenCode)
+  │  MCP run_objective
+  ▼
+AFP — Coordenador → DAG → Workers
+  │                      ↑ CONTEXTO.md do projeto
+  ▼
+Console AFP (:8080) — Mission Control em tempo real
+```
+
+| Peca | O que faz |
+|------|-----------|
+| **Coordenador** | Planeja, delega, consolida (codigo fixo da plataforma) |
+| **Workers** | Executam tarefas — identidade vem do projeto |
+| **MCP** (:8081) | Gateway para IDEs |
+| **RabbitMQ** | Bus de delegacao (opcional — ha fallback in-process) |
+| **SmartRouter** | Groq, OpenCode Zen, Ollama, OpenRouter… |
+
+---
+
+## Quick start
+
+**Pre-requisitos:** Python 3.11+, Docker (opcional), chave LLM (ex.: Groq ou OpenCode Zen).
+
+```powershell
+# 1. Instalar dependencias
+pip install -e ".[llm,dev]"
+
+# 2. Event bus (modo Standard)
+docker compose up -d rabbitmq
+
+# 3. Stack AFP + primeira missao (humano ou IA)
+.\scripts\first-mission.ps1
+
+# 4. Console API
+# http://localhost:8080
+
+# 5. MCP (IDE)
+# http://127.0.0.1:8081/sse
+```
+
+Sem Docker: o coordenador usa **fallback in-process** quando RabbitMQ nao
+esta disponivel. Ver [docs/ARCHITECTURE.md#modos-de-execucao](docs/ARCHITECTURE.md#modos-de-execucao).
+
+**Console React** (opcional): `cd dashboard-react && npm install && npm run dev` → `:5173`
+
+---
+
+## Registrar um projeto
+
+O repositorio publico inclui apenas `_template/` e `demo-onboarding/`.
+Projetos de negocio ficam **locais** (nao commitados).
+
+```powershell
+.\scripts\scaffold_project.ps1 -ProjectId "meu-projeto" -ProjectName "Meu Projeto"
+```
+
+Estrutura gerada em `contexts/meu-projeto/`:
 
 ```json
 {
   "project_id": "meu-projeto",
-  "project_name": "Meu Projeto",
-  "working_dir": "/caminho/para/meu/projeto",
+  "working_dir": ".",
   "agents": [
     {
-      "agent_id": "dev",
-      "context_file": "agentes/dev/CONTEXTO.md",
-      "llm_provider": "auto"
+      "agent_id": "coordenador",
+      "module_path": "src/agents/coordinator.py",
+      "class_name": "AgentFactoryCoordinator"
     },
     {
-      "agent_id": "qa",
-      "context_file": "agentes/qa/CONTEXTO.md",
-      "llm_provider": "auto"
+      "agent_id": "dev",
+      "module_path": "src/agents/worker.py",
+      "class_name": "DeclarativeWorker"
     }
   ]
 }
 ```
 
-### 2. Crie os contextos dos agentes
+Edite `coordenador/CONTEXTO.md` e `dev/CONTEXTO.md` com o dominio do **seu** repositório.
 
-`agentes/dev/CONTEXTO.md`:
-```markdown
-# Dev — Meu Projeto
-
-## Proposito
-Agente de desenvolvimento. Opera arquivos, scripts e git.
-
-## Acoes Disponiveis
-| Acao | Descricao |
-|------|-----------|
-| read_file | Le conteudo de um arquivo |
-| write_file | Escreve conteudo em arquivo |
-| run_script | Executa script Python |
-| run_git | Executa comandos git |
-```
-
-### 3. Inicie a plataforma
-
-```bash
-docker compose up -d rabbitmq   # Event Bus
-python start_agent_factory.py   # MCP + Dashboard
-python -m src.agents.runtime src.agents.factory_dev.DevAgent dev meu-projeto
-```
-
-### 4. Envie um objetivo
-
-```bash
-# Via MCP (do OpenCode/Claude/Cursor)
-run_objective(project_id="meu-projeto", objective="Adicionar testes no modulo X")
-```
+Guia completo: [docs/QUICKSTART.md](docs/QUICKSTART.md)
 
 ---
 
-## Estrutura de Diretorios
+## Estrutura deste repositorio
 
 ```
 agent-factory/
-├── src/                    # Codigo da plataforma
-│   ├── agents/
-│   │   ├── coordinator.py  # Unico com codigo proprio
-│   ├── sdk/
-│   │   ├── base.py         # StandardBaseAgent
-│   │   └── factory.py      # AgentFactory (cria workers genericos)
-│   ├── eventbus/
-│   │   └── amqp.py         # RabbitMQ: publisher, consumer, RPC
-│   ├── mcp/
-│   │   └── server.py       # MCP Gateway (SSE)
-│   └── registry.py         # Projetos e referencias
+├── src/                 # Plataforma (coordinator, MCP, bus, LLM)
 ├── contexts/
-│   ├── afp-team/           # Time meta (come a propria comida)
-│   └── seu-projeto/        # Seus agentes
-├── .agent-factory/         # Dados gerados (eventos, missoes, arvore)
-├── docker-compose.yml      # RabbitMQ
-└── AGENTS.md               # Fluxo de delegacao recursiva
+│   ├── _template/       # Template para novos projetos
+│   └── demo-onboarding/ # Exemplo minimo versionado
+├── dashboard-react/     # Console AFP (React)
+├── docs/ARCHITECTURE.md # Arquitetura canonica
+├── AGENTS.md            # Guia para agentes IA (MCP, delegacao)
+└── start_afp.ps1        # Startup Windows (default: demo-onboarding)
 ```
-
-## A Estrutura de Pastas do Projeto do Usuario "Pouco Importa"
-
-A unica exigencia e que cada agente tenha seu `CONTEXTO.md` acessivel
-no caminho indicado pelo `project.json`. A arvore de diretorios ao
-redor e irrelevante:
-
-```
-/qualquer/pasta/
-  ├── docs/meu_time/dev/CONTEXTO.md
-  ├── config/qa.md                  ← so renomear a referencia
-  └── qualquer/pasta/negocios.md
-
-project.json so precisa apontar:
-  {
-    "agent_id": "negocios",
-    "context_file": "qualquer/pasta/negocios.md"
-  }
-```
-
-## Como Funciona a Execucao de um Worker
-
-1. `AgentFactory.build()` le as configuracoes do `project.json`
-2. Em tempo de execucao, carrega o `CONTEXTO.md` como identidade
-3. O `AgentRuntime` recebe uma task via RabbitMQ
-4. Usa o LLM configurado para decidir como executar
-5. Toda evolucao (licoes, padroes) persiste em `.agent-factory/[projeto]/tree/`
-
-Cada execucao soma: **identidade original** (CONTEXTO.md) + **memoria acumulada** (arvore de contexto).
 
 ---
 
-## MCP Server
+## Documentacao
 
-```bash
-python start_agent_factory.py --mcp
-# Servidor em http://127.0.0.1:8081/sse
-# Endpoint POST: /messages/?session_id=X
-```
-
-### Tools
-
-| Tool | Descricao |
-|------|-----------|
-| `list_projects` | Lista projetos registrados |
-| `run_objective` | Envia objetivo ao coordenador |
-| `run_agent` | Executa tarefa em um agente |
-| `read_events` | Le eventos recentes |
-
-Veja [AGENTS.md](AGENTS.md) para o fluxo completo de delegacao.
+| Doc | Para que |
+|-----|----------|
+| [docs/AI_ONBOARDING.md](docs/AI_ONBOARDING.md) | **IAs (Cursor/Claude/OpenCode)** — MCP e primeira missao |
+| [docs/QUICKSTART.md](docs/QUICKSTART.md) | **Comece aqui** — setup e primeira missao |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitetura, modos, componentes |
+| [docs/playbook-onboarding.md](docs/playbook-onboarding.md) | Onboarding de projeto novo |
+| [contexts/README.md](contexts/README.md) | O que versionar vs. manter local |
+| [AGENTS.md](AGENTS.md) | Como agentes IA operam a AFP via MCP |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Como contribuir (OSS) |
+| [docs/backlog.md](docs/backlog.md) | Roadmap e epics |
 
 ---
 
-## Roadmap
+## Roadmap (resumo)
 
-- [ ] Tela de configuracao visual: declarar estrutura de projeto + times +
-  agentes via UI, com explorer para navegar ate os `CONTEXTO.md` de cada
-  agente e exibir seu conteudo de forma humanizada
-- [ ] Documentacao oficial em site
-- [ ] CLI tooling
-- [ ] Plugin system
+- [x] Confiabilidade operacional (E-012 — RPC, SSE, notifier)
+- [ ] Onboarding e replicacao (E-013 — Lite, runbook)
+- [ ] Agent Card — org configuravel visualmente
+- [ ] CLI tooling (E-006)
+
+Detalhes: [docs/backlog.md](docs/backlog.md)
 
 ---
 

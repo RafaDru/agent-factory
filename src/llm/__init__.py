@@ -63,6 +63,7 @@ class LLMResponse:
     usage: dict[str, int]  # prompt_tokens, completion_tokens, total_tokens
     finish_reason: str
     raw: Optional[dict] = None
+    tool_calls: Optional[list[dict]] = None
 
 
 class LLMProvider(ABC):
@@ -135,9 +136,25 @@ class GroqProvider(LLMProvider):
         
         choice = response.choices[0]
         usage = response.usage
-        
+        content = choice.message.content or ""
+
+        tool_calls = None
+        if hasattr(choice.message, 'tool_calls') and choice.message.tool_calls:
+            tool_calls = []
+            for tc in choice.message.tool_calls:
+                tool_calls.append({
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                })
+            if not content and tool_calls:
+                content = f"[tool_calls: {len(tool_calls)}]"
+
         return LLMResponse(
-            content=choice.message.content,
+            content=content,
             model=response.model,
             usage={
                 "prompt_tokens": usage.prompt_tokens if usage else 0,
@@ -146,6 +163,7 @@ class GroqProvider(LLMProvider):
             },
             finish_reason=choice.finish_reason,
             raw=response.model_dump(),
+            tool_calls=tool_calls,
         )
     
     def is_available(self) -> bool:
@@ -197,8 +215,28 @@ class OllamaProvider(LLMProvider):
             **kwargs
         )
         
+        msg = response.get("message", {})
+        content = msg.get("content", "") or ""
+
+        tool_calls = None
+        raw_tc = msg.get("tool_calls")
+        if raw_tc:
+            tool_calls = []
+            for tc in raw_tc:
+                fn = tc.get("function", {})
+                tool_calls.append({
+                    "id": tc.get("id", ""),
+                    "type": "function",
+                    "function": {
+                        "name": fn.get("name", ""),
+                        "arguments": json.dumps(fn.get("arguments", {})),
+                    }
+                })
+            if not content:
+                content = f"[tool_calls: {len(tool_calls)}]"
+
         return LLMResponse(
-            content=response["message"]["content"],
+            content=content,
             model=response["model"],
             usage={
                 "prompt_tokens": response.get("prompt_eval_count", 0),
@@ -207,6 +245,7 @@ class OllamaProvider(LLMProvider):
             },
             finish_reason="stop",
             raw=response,
+            tool_calls=tool_calls,
         )
     
     def is_available(self) -> bool:
@@ -329,9 +368,25 @@ class OpenAICompatibleProvider(LLMProvider):
         
         choice = response.choices[0]
         usage = response.usage
-        
+        content = choice.message.content or ""
+
+        tool_calls = None
+        if hasattr(choice.message, 'tool_calls') and choice.message.tool_calls:
+            tool_calls = []
+            for tc in choice.message.tool_calls:
+                tool_calls.append({
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                })
+            if not content and tool_calls:
+                content = f"[tool_calls: {len(tool_calls)}]"
+
         return LLMResponse(
-            content=choice.message.content or "",
+            content=content,
             model=response.model or model,
             usage={
                 "prompt_tokens": usage.prompt_tokens if usage else 0,
@@ -340,6 +395,7 @@ class OpenAICompatibleProvider(LLMProvider):
             },
             finish_reason=choice.finish_reason or "stop",
             raw=response.model_dump() if hasattr(response, "model_dump") else None,
+            tool_calls=tool_calls,
         )
     
     def is_available(self) -> bool:

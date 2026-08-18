@@ -16,6 +16,7 @@ from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
 
 from ..protocols.events import EventNotifier
+from ..protocols.mission import build_mission_api_entry
 from ..registry import get_registry
 from ..llm import PROVIDER_MAP
 
@@ -743,11 +744,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps(projects, ensure_ascii=False).encode("utf-8"))
 
     def _serve_missions(self) -> None:
-        """Endpoint para listar todas as missões ativas com seu progresso.
-
-        Returns:
-            None: Envia resposta com lista de missões
-        """
+        """Endpoint para listar todas as missões ativas com seu progresso."""
         missions_dir = Path(".agent-factory") / "missions"
         missions = []
 
@@ -755,72 +752,20 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             for mission_dir in sorted(missions_dir.iterdir(), reverse=True):
                 if not mission_dir.is_dir() or mission_dir.name.startswith("_"):
                     continue
+                try:
+                    missions.append(build_mission_api_entry(mission_dir))
+                except Exception as exc:
+                    missions.append(
+                        {
+                            "id": mission_dir.name,
+                            "mission_id": mission_dir.name,
+                            "status": "failed",
+                            "objective": "",
+                            "error": str(exc),
+                        }
+                    )
 
-                # Contar tasks e coletar status
-                tasks_out = mission_dir / "output" / "tasks"
-                task_count = 0
-                task_statuses = []
-
-                if tasks_out.exists():
-                    for task_dir in sorted(tasks_out.iterdir()):
-                        if task_dir.is_dir():
-                            task_count += 1
-
-                            # Verificar status de cada agente na task
-                            for agent_dir in task_dir.iterdir():
-                                if agent_dir.is_dir():
-                                    result = agent_dir / "result.md"
-                                    if result.exists():
-                                        txt = result.read_text(encoding="utf-8")
-                                        if "**Status:** success" in txt:
-                                            st = "completed"
-                                        elif "**Status:** failure" in txt:
-                                            st = "failed"
-                                        else:
-                                            st = "pending"
-
-                                        task_statuses.append({
-                                            "task": task_dir.name,
-                                            "agent": agent_dir.name,
-                                            "status": st,
-                                        })
-
-                # Calcular estatísticas
-                completed = sum(1 for t in task_statuses if t["status"] == "completed")
-                failed = sum(1 for t in task_statuses if t["status"] == "failed")
-
-                # Extrair objetivo da missão
-                ctx_path = mission_dir / "input" / "Mission_Context.md"
-                objective = ""
-
-                if ctx_path.exists():
-                    content = ctx_path.read_text(encoding="utf-8")
-                    lines = content.split("\n")
-
-                    # Procurar pela seção de objetivo
-                    for i, line in enumerate(lines):
-                        if line.startswith("## Objetivo Cur"):
-                            # Pegar as próximas linhas até próxima seção
-                            j = i + 1
-                            while j < len(lines) and not lines[j].startswith("##"):
-                                if lines[j].strip():
-                                    objective += lines[j] + "\n"
-                                j += 1
-                            break
-
-                missions.append({
-                    "id": mission_dir.name,
-                    "objective": objective.strip()[:200],  # Limitar a 200 caracteres
-                    "task_count": task_count,
-                    "completed": completed,
-                    "failed": failed,
-                    "task_statuses": task_statuses,
-                })
-
-        data = {
-            "missions": missions,
-            "total": len(missions),
-        }
+        data = {"missions": missions, "total": len(missions)}
 
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -881,9 +826,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
         """Smoke test: emite eventos via notifier para testar SSE."""
         import time
         from src.protocols.schema import AgentEvent, AgentStatus
-        notifier = self.notifiers.get("AFP-Team")
+        project_id = "demo-onboarding"
+        if project_id not in self.notifiers and self.notifiers:
+            project_id = next(iter(self.notifiers.keys()))
+        notifier = self.notifiers.get(project_id)
         if not notifier:
-            self.send_error(500, "No AFP-Team notifier found")
+            self.send_error(500, f"No notifier found for project {project_id}")
             return
 
         steps = [
@@ -917,7 +865,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     agent_role="worker",
                     status=status,
                     task_id=f"smoke-{step_idx}",
-                    project_id="AFP-Team",
+                    project_id=project_id,
                     message=message,
                 )
                 notifier.emit(event)
@@ -934,7 +882,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                     agent_role="coordinator" if agent_id == "coordenador" else "worker",
                     status=status,
                     task_id=delegation_id,
-                    project_id="AFP-Team",
+                    project_id=project_id,
                     message=message,
                 )
                 notifier.emit(event)
@@ -1064,7 +1012,6 @@ class DashboardServer:
         """Consome eventos do RabbitMQ e repassa aos notifiers locais."""
         try:
             from src.eventbus.amqp import AMQPConnection
-            import pika
 
             conn = AMQPConnection()
             conn.connect()
@@ -1072,45 +1019,50 @@ class DashboardServer:
             if not ch or not ch.is_open:
                 return
 
-            # Consumir de todos os projetos registrados
+            queue_name = "dashboard-events-all"
+            ch.queue_declare(queue=queue_name, durable=False, auto_delete=True)
+            ch.queue_bind(
+                queue=queue_name, exchange="afp", routing_key="event.broadcast.#"
+            )
+
             project_ids = list(DashboardHandler.notifiers.keys())
-            queues = []
-            for pid in project_ids:
-                q = f"dashboard-events-{pid}"
-                ch.queue_declare(queue=q, durable=False, auto_delete=True)
-                ch.queue_bind(queue=q, exchange="afp", routing_key=f"event.broadcast.{pid}")
-                queues.append((q, pid))
-
-            if not queues:
-                conn.close()
-                return
-
-            print(f"  RabbitMQ bridge: escutando eventos de {project_ids}")
+            print(
+                f"  RabbitMQ bridge: event.broadcast.# -> SSE "
+                f"(projetos registrados: {project_ids or 'nenhum'})"
+            )
 
             def _on_message(_ch, method, _props, body):
                 pid = None
-                for q_name, q_pid in queues:
-                    if method.routing_key == f"event.broadcast.{q_pid}":
-                        pid = q_pid
-                        break
-                if pid and pid in DashboardHandler.notifiers:
-                    try:
-                        from ..protocols.schema import AgentEvent
-                        event = AgentEvent.model_validate_json(body)
-                        DashboardHandler.notifiers[pid].emit(event, _from_rabbitmq=True)
-                    except Exception:
-                        pass
+                rk = getattr(method, "routing_key", "") or ""
+                if rk.startswith("event.broadcast."):
+                    pid = rk.split(".", 2)[-1]
+                try:
+                    from ..protocols.schema import AgentEvent
+
+                    event = AgentEvent.model_validate_json(body)
+                    pid = pid or event.project_id
+                    notifier = DashboardHandler.notifiers.get(pid)
+                    if notifier is None and pid:
+                        from src.registry import ensure_project_notifier
+
+                        notifier = ensure_project_notifier(pid)
+                        DashboardHandler.notifiers[pid] = notifier
+                    if notifier is not None:
+                        notifier.emit(event, _from_rabbitmq=True)
+                except Exception as exc:
+                    print(f"[Dashboard] RabbitMQ bridge ignorou evento: {exc}")
                 _ch.basic_ack(delivery_tag=method.delivery_tag)
 
-            for q_name, _ in queues:
-                ch.basic_consume(queue=q_name, on_message_callback=_on_message, auto_ack=False)
+            ch.basic_consume(
+                queue=queue_name, on_message_callback=_on_message, auto_ack=False
+            )
 
             thread = threading.Thread(target=ch.start_consuming, daemon=True)
             thread.start()
             self._rabbitmq_thread = thread
             self._rabbitmq_conn = conn
-        except Exception:
-            pass  # RabbitMQ indisponivel
+        except Exception as exc:
+            print(f"  RabbitMQ bridge indisponivel: {exc}")
 
     def start(self) -> None:
         """Inicia o servidor HTTP.

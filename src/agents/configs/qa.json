@@ -2,7 +2,7 @@
   "id": "qa",
   "role": "worker",
   "description": "Qualidade: testes, lint, revisao, validacao",
-  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
+  "llm_provider": "opencode:deepseek-v4-flash",
   "actions": {
     "run_tests": {
       "description": "Executa pytest com saida detalhada",

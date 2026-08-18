@@ -12,7 +12,15 @@ from typing import Any, Optional
 
 from src.agents.base import StructuredError
 from src.protocols.events import EventNotifier
-from src.protocols.schema import AgentEvent, AgentStatus, AgentRole, TaskOutput, OutputStatus, Decision
+from src.protocols.schema import (
+    AgentEvent,
+    AgentStatus,
+    AgentRole,
+    TaskOutput,
+    OutputStatus,
+    Decision,
+    MissionStatus,
+)
 from src.sdk.base import StandardBaseAgent
 from src.sdk.decision import DecisionEngine, RuleBasedEngine
 from src.sdk.context_tree import ContextTree
@@ -22,19 +30,21 @@ from src.eventbus.amqp import AMQPConnection, RPCClient
 
 class AgentFactoryCoordinator(StandardBaseAgent):
     """
-    Coordenador do projeto AFP-Team.
+    Coordenador generico da plataforma AFP.
     Recebe objetivos de alto nivel, gera planos via LLM e delega
-    para os workers do time (dev, qa, designer).
+    para os workers registrados no projeto (`contexts/{proj}/project.json`).
     """
 
-    _DEFAULT_LLM = "auto"
+    _DEFAULT_LLM = "opencode:deepseek-v4-flash"
 
     ACTIONS: dict = {}
 
     def get_actions(self) -> dict:
         """Retorna ACTIONS com agent_id dinâmico baseado nos subordinados reais."""
         subs = sorted(self._subordinates.keys())
-        subs_str = " | ".join(subs) if subs else "dev | qa | designer | negocios | arquiteto"
+        subs_str = (
+            " | ".join(subs) if subs else "dev | qa | designer | negocios | arquiteto"
+        )
         return {
             "delegate": {
                 "description": f"Delega tarefa para um subordinado ({subs_str}) e retorna resultado",
@@ -68,15 +78,19 @@ class AgentFactoryCoordinator(StandardBaseAgent):
     def _build_system_prompt(self) -> str:
         """Gera dinamicamente o PLAN_SYSTEM_PROMPT com base nos subordinados reais."""
         subs = self._subordinates
-        subs_list = "\n".join(
-            f"- {aid}: {self._describe_agent(subs[aid])}"
-            for aid in sorted(subs.keys())
-        ) if subs else (
-            "- dev: Implementacao de codigo, scripts, edicao\n"
-            "- qa: Testes, revisao de codigo, qualidade\n"
-            "- designer: Pesquisa UX, prototipos, analise visual\n"
-            "- negocios: Backlog, priorizacao, validacao de requisitos\n"
-            "- arquiteto: Revisao arquitetural, padroes, coerencia tecnica"
+        subs_list = (
+            "\n".join(
+                f"- {aid}: {self._describe_agent(subs[aid])}"
+                for aid in sorted(subs.keys())
+            )
+            if subs
+            else (
+                "- dev: Implementacao de codigo, scripts, edicao\n"
+                "- qa: Testes, revisao de codigo, qualidade\n"
+                "- designer: Pesquisa UX, prototipos, analise visual\n"
+                "- negocios: Backlog, priorizacao, validacao de requisitos\n"
+                "- arquiteto: Revisao arquitetural, padroes, coerencia tecnica"
+            )
         )
 
         actions_desc = ""
@@ -92,9 +106,15 @@ class AgentFactoryCoordinator(StandardBaseAgent):
                 for act_name in sorted(acoes.keys()):
                     actions_desc += f"- `{act_name}`\n"
 
-        agent_ids = " | ".join(sorted(subs.keys())) if subs else "dev | qa | designer | negocios | arquiteto"
+        agent_ids = (
+            " | ".join(sorted(subs.keys()))
+            if subs
+            else "dev"
+        )
 
-        return f"""Voce e o coordenador do projeto Agent Factory Platform Team (AFP-Team).
+        working_dir = str(getattr(self, "working_dir", None) or Path.cwd())
+
+        return f"""Voce e o coordenador do projeto {self.project_id}.
 Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 
 ## Subordinados Disponiveis
@@ -103,16 +123,15 @@ Sua funcao e gerar um plano de execucao em formato JSON a partir de um objetivo.
 ## Acoes dos Subordinados{actions_desc}
 
 ## Regras de Orquestracao
-1. Delegue ao `dev` para implementar incrementalmente (write_file/refactor_code)
-2. Delegue ao `qa` para validar (review_code, analyze_project)
-3. Delegue ao `designer` para pesquisa UX e prototipos
-4. Delegue ao `negocios` para analise de prioridades e requisitos
-5. Delegue ao `arquiteto` para revisao arquitetural
-6. NUNCA implemente codigo diretamente — delegue ao dev
-7. Outputs de tarefas anteriores sao automaticamente passados como contexto para dependentes
+1. Delegue tarefas apenas aos subordinados listados acima
+2. Use acoes validas de cada agente (consulte a lista de acoes)
+3. NUNCA implemente codigo diretamente — delegue ao worker adequado
+4. Outputs de tarefas anteriores sao automaticamente passados como contexto para dependentes
+5. Se uma task falhar no RPC, o coordenador tentara acao alternativa automaticamente
+6. Consulte o contexto da arvore (INDEX.md + tree/) para backlog, licoes, e padroes de delegacao
 
 ## Diretorio de trabalho
-C:/Users/rafae/agent-factory
+{working_dir}
 
 ## Formato de Resposta
 Responda com JSON contendo "plan" (lista de tarefas):
@@ -122,7 +141,7 @@ Responda com JSON contendo "plan" (lista de tarefas):
   "plan": [
     {{
       "name": "exemplo-analise",
-      "agent_id": "{next(iter(subs.keys())) if subs else 'dev'}",
+      "agent_id": "{next(iter(subs.keys())) if subs else "dev"}",
       "task": {{
         "task_id": "exemplo-analise",
         "title": "Exemplo de task",
@@ -162,8 +181,9 @@ Regras:
         agents: Optional[dict[str, StandardBaseAgent]] = None,
         **kwargs,
     ):
+        _aid = kwargs.pop("agent_id", "coordenador")
         super().__init__(
-            agent_id="coordenador",
+            agent_id=_aid,
             project_id=project_id,
             notifier=notifier,
             role=AgentRole.COORDINATOR,
@@ -211,27 +231,30 @@ Regras:
         try:
             conn = AMQPConnection("amqp://afp:afp123@localhost:5672/")
             conn.connect()
-            rpc = RPCClient(conn, timeout=30.0)
+            rpc = RPCClient(conn, timeout=120.0)
             response = rpc.call(f"task.run.{agent_id}", subtask)
             conn.close()
 
-            # O runtime retorna: {status, agent_id, result: {output, summary, rationale, ...}}
-            rb = response.get("result", {}) if response else {}
-            rb_status = "success" if response and response.get("status") == "ok" else "failure"
-            agent_status = rb.get("status", rb_status)
-            if agent_status in ("completed", "success"):
-                agent_status = "success"
+            step_result = self._task_output_from_rpc(response)
+            rb = step_result.details or {}
+            agent_status = (
+                "success" if step_result.status == OutputStatus.SUCCESS else "failure"
+            )
             return {
                 "status": agent_status,
                 "agent_id": agent_id,
                 "action": subtask.get("action"),
-                "result": rb.get("output", rb.get("details", rb)),
-                "rationale": rb.get("rationale", rb.get("summary", "")),
-                "summary": rb.get("summary", rb.get("rationale", "")),
+                "result": rb.get("output", rb),
+                "rationale": step_result.summary or step_result.rationale or "",
+                "summary": step_result.summary or "",
             }
         except Exception as e:
             logger = __import__("logging").getLogger(__name__)
-            logger.debug("Event Bus delegation falhou para %s: %s. Usando in-process.", agent_id, e)
+            logger.debug(
+                "Event Bus delegation falhou para %s: %s. Usando in-process.",
+                agent_id,
+                e,
+            )
             output = self.delegate(agent_id, subtask)
             return {
                 "status": output.status.value,
@@ -249,20 +272,25 @@ Regras:
             user_prompt += f"\n## Contexto\n{context}\n"
         user_prompt += "\nGere o plano JSON para atingir este objetivo."
 
-        self.notifier.emit(AgentEvent(
-            agent_id=self.agent_id,
-            agent_role=self.role,
-            status=AgentStatus.RUNNING,
-            task_id="llm-plan",
-            project_id=self.project_id,
-            message=f"Gerando plano via LLM para: {goal[:100]}",
-        ))
+        self.notifier.emit(
+            AgentEvent(
+                agent_id=self.agent_id,
+                agent_role=self.role,
+                status=AgentStatus.RUNNING,
+                task_id="llm-plan",
+                project_id=self.project_id,
+                message=f"Gerando plano via LLM para: {goal[:100]}",
+            )
+        )
 
         system_prompt = self._build_system_prompt()
 
         try:
             if not self._llm:
-                raise StructuredError("Coordenador sem LLM provider configurado.", error_type="misconfiguration")
+                raise StructuredError(
+                    "Coordenador sem LLM provider configurado.",
+                    error_type="misconfiguration",
+                )
 
             resp = self._llm.chat(
                 messages=[
@@ -272,14 +300,22 @@ Regras:
                 temperature=0.3,
                 max_tokens=16384,
             )
-            model_used = resp.model if hasattr(resp, 'model') and resp.model else type(self._llm).__name__
-            self.notifier.emit(AgentEvent(
-                agent_id=self.agent_id, agent_role=self.role,
-                status=AgentStatus.RUNNING, task_id="llm-model",
-                project_id=self.project_id,
-                message=f"Modelo: {model_used}",
-                metrics={"model": model_used},
-            ))
+            model_used = (
+                resp.model
+                if hasattr(resp, "model") and resp.model
+                else type(self._llm).__name__
+            )
+            self.notifier.emit(
+                AgentEvent(
+                    agent_id=self.agent_id,
+                    agent_role=self.role,
+                    status=AgentStatus.RUNNING,
+                    task_id="llm-model",
+                    project_id=self.project_id,
+                    message=f"Modelo: {model_used}",
+                    metrics={"model": model_used},
+                )
+            )
         except Exception as e:
             raise StructuredError(
                 message=f"Erro ao chamar LLM para gerar plano: {e}",
@@ -325,13 +361,16 @@ Regras:
     def _generate_mission_id(self, goal: str) -> str:
         """Gera um ID de missao legivel a partir do objetivo."""
         import re
-        words = re.findall(r'\w+', goal.lower())
+
+        words = re.findall(r"\w+", goal.lower())
         # Pega palavras significativas (≥3 chars), max 6
         sig = [w for w in words if len(w) >= 3][:6]
         slug = "-".join(sig) if sig else "missao"
         return f"missao-{slug}"
 
-    def _build_mission_context(self, goal: str, context: str, tasks: list[dict], mission_id: str = "") -> str:
+    def _build_mission_context(
+        self, goal: str, context: str, tasks: list[dict], mission_id: str = ""
+    ) -> str:
         """Monta o Mission_Context.md com objetivo curado, contexto e plano."""
         title = mission_id or self._generate_mission_id(goal)
         lines = [
@@ -369,8 +408,17 @@ Regras:
             if rationale and len(str(rationale)) > 50:
                 return str(rationale)
             # Se tiver review/codigo/analise, usar
-            for rich_key in ("review", "html_code", "code", "analysis", "suggestions",
-                             "plan", "design_systems", "artifact_content", "content"):
+            for rich_key in (
+                "review",
+                "html_code",
+                "code",
+                "analysis",
+                "suggestions",
+                "plan",
+                "design_systems",
+                "artifact_content",
+                "content",
+            ):
                 val = result.get(rich_key, "")
                 if val and len(str(val)) > 50:
                     return str(val)[:4000]
@@ -387,8 +435,14 @@ Regras:
             return f"```json\n{json.dumps(result, ensure_ascii=False, indent=2)[:2000]}\n```"
         return str(result)[:2000]
 
-    def _build_task_context(self, goal: str, step_name: str, subtask: dict,
-                             agent_id: str, dependency_outputs: dict[str, dict]) -> str:
+    def _build_task_context(
+        self,
+        goal: str,
+        step_name: str,
+        subtask: dict,
+        agent_id: str,
+        dependency_outputs: dict[str, dict],
+    ) -> str:
         """Monta o Task_Context.md para um agente especifico."""
         lines = [
             f"# Task Context — {step_name}",
@@ -404,7 +458,9 @@ Regras:
         if dependency_outputs:
             lines += ["", "## Insumos de Tarefas Anteriores"]
             for dep_name, dep_data in dependency_outputs.items():
-                result_content = self._extract_result_content(dep_data.get("result", ""))
+                result_content = self._extract_result_content(
+                    dep_data.get("result", "")
+                )
                 if result_content:
                     lines += [
                         f"",
@@ -412,7 +468,9 @@ Regras:
                         "",
                         result_content,
                     ]
-        task_params = {k: v for k, v in subtask.items() if k not in ("action", "title", "task_id")}
+        task_params = {
+            k: v for k, v in subtask.items() if k not in ("action", "title", "task_id")
+        }
         if task_params:
             lines += ["", "## Parâmetros da Tarefa"]
             lines += [f"- {k}: {v}" for k, v in task_params.items()]
@@ -423,14 +481,18 @@ Regras:
         context = task.get("context", "")
         tasks = task.get("tasks", None)
 
-        self.notifier.emit(AgentEvent(
-            agent_id=self.agent_id,
-            agent_role=self.role,
-            status=AgentStatus.RUNNING,
-            task_id="plan",
-            project_id=self.project_id,
-            message=f"Executando plano: {goal[:120]}" if goal else "Executando plano",
-        ))
+        self.notifier.emit(
+            AgentEvent(
+                agent_id=self.agent_id,
+                agent_role=self.role,
+                status=AgentStatus.RUNNING,
+                task_id="plan",
+                project_id=self.project_id,
+                message=f"Executando plano: {goal[:120]}"
+                if goal
+                else "Executando plano",
+            )
+        )
 
         # 1. Gerar plano via LLM se tasks nao foi fornecido
         if tasks is None:
@@ -443,8 +505,17 @@ Regras:
                     doc_path=self.get_doc_path(),
                     hint="Use 'goal' para gerar plano via LLM ou 'tasks' para fornecer manualmente.",
                 )
+            # Incluir contexto da arvore (carregado pelo hook_context_triage) no prompt do LLM
+            tree_domains = task.get("_context_tree_domains", [])
+            if tree_domains:
+                tree_context = "\n\n## Contexto da Arvore\n\n" + "\n\n".join(
+                    tree_domains
+                )
+                enriched_context = (context + tree_context) if context else tree_context
+            else:
+                enriched_context = context
             try:
-                tasks = self._plan_with_llm(goal, context)
+                tasks = self._plan_with_llm(goal, enriched_context)
             except StructuredError:
                 raise
             except Exception as e:
@@ -467,15 +538,27 @@ Regras:
             encoding="utf-8",
         )
 
-        self.notifier.emit(AgentEvent(
-            agent_id=self.agent_id,
-            agent_role=self.role,
-            status=AgentStatus.RUNNING,
-            task_id="exec-plan",
-            project_id=self.project_id,
-            mission_id=mission_id,
-            message=f"Missao '{mission_id}': {len(tasks)} tarefas. Contexto salvo em {ctx_path}",
-        ))
+        objective_preview = goal.strip()[:200] if goal else ""
+        self.write_mission_status(
+            mission_id,
+            MissionStatus.RUNNING,
+            goal=goal,
+            objective=objective_preview,
+            task_count=len(tasks),
+            message=f"Missao iniciada: {mission_id}",
+        )
+
+        self.notifier.emit(
+            AgentEvent(
+                agent_id=self.agent_id,
+                agent_role=self.role,
+                status=AgentStatus.RUNNING,
+                task_id="exec-plan",
+                project_id=self.project_id,
+                mission_id=mission_id,
+                message=f"Missao '{mission_id}': {len(tasks)} tarefas. Contexto salvo em {ctx_path}",
+            )
+        )
 
         results = []
         completed_ids = set()
@@ -490,12 +573,14 @@ Regras:
 
             missing = [d for d in depends_on if d not in completed_ids]
             if missing:
-                results.append({
-                    "step": step_name,
-                    "agent_id": agent_id,
-                    "status": "skipped",
-                    "reason": f"Dependencias nao concluidas: {missing}",
-                })
+                results.append(
+                    {
+                        "step": step_name,
+                        "agent_id": agent_id,
+                        "status": "skipped",
+                        "reason": f"Dependencias nao concluidas: {missing}",
+                    }
+                )
                 continue
 
             if "title" not in subtask:
@@ -503,18 +588,23 @@ Regras:
 
             # 4. Coletar outputs das dependecias e montar Task_Context.md
             dependency_outputs = {
-                dep: step_outputs[dep]
-                for dep in depends_on if dep in step_outputs
+                dep: step_outputs[dep] for dep in depends_on if dep in step_outputs
             }
-            task_ctx = self._build_task_context(goal, step_name, subtask, agent_id, dependency_outputs)
+            task_ctx = self._build_task_context(
+                goal, step_name, subtask, agent_id, dependency_outputs
+            )
             tc_path = self.save_task_context(mission_id, task_id, agent_id, task_ctx)
 
             # Injetar caminhos dos contextos no subtask para o agente consumir
             enriched_subtask = dict(subtask)
             enriched_subtask["_mission_id"] = mission_id
             enriched_subtask["_task_id"] = task_id
-            enriched_subtask["_mission_context_path"] = str(self.get_mission_context_path(mission_id))
-            enriched_subtask["_task_context_path"] = str(self.get_task_context_path(mission_id, task_id, agent_id))
+            enriched_subtask["_mission_context_path"] = str(
+                self.get_mission_context_path(mission_id)
+            )
+            enriched_subtask["_task_context_path"] = str(
+                self.get_task_context_path(mission_id, task_id, agent_id)
+            )
 
             if dependency_outputs:
                 enriched_subtask["_dependency_outputs"] = dependency_outputs
@@ -522,61 +612,119 @@ Regras:
                 dep_text = "## Outputs de tarefas anteriores\n\n"
                 for dep_name, dep_data in dependency_outputs.items():
                     dep_text += f"### {dep_name} ({dep_data.get('agent_id', '?')})\n"
-                    dep_text += self._extract_result_content(dep_data.get("result", ""))[:3000] + "\n\n"
+                    dep_text += (
+                        self._extract_result_content(dep_data.get("result", ""))[:3000]
+                        + "\n\n"
+                    )
                 enriched_subtask["_dependency_context"] = dep_text
 
-            self.notifier.emit(AgentEvent(
-                agent_id=self.agent_id, agent_role=self.role,
-                status=AgentStatus.RUNNING,
-                task_id=task_id,
-                project_id=self.project_id,
-                mission_id=mission_id,
-                message=f"Passo '{subtask['title']}' -> {agent_id}. Task_Context: {tc_path}",
-            ))
+            self.notifier.emit(
+                AgentEvent(
+                    agent_id=self.agent_id,
+                    agent_role=self.role,
+                    status=AgentStatus.RUNNING,
+                    task_id=task_id,
+                    project_id=self.project_id,
+                    mission_id=mission_id,
+                    message=f"Passo '{subtask['title']}' -> {agent_id}. Task_Context: {tc_path}",
+                )
+            )
 
             max_attempts = 2
             step_result = None
             step_error = None
 
+            alternative_attempted = False
+
             for attempt in range(1, max_attempts + 1):
                 try:
+                    current_subtask = dict(enriched_subtask)
+
+                    # Na segunda tentativa, tentar acao alternativa
+                    if attempt > 1 and not alternative_attempted:
+                        original_action = current_subtask.get("action", "")
+                        alt_action = self._try_alternative_action(current_subtask)
+                        if alt_action:
+                            alternative_attempted = True
+                            original_action = current_subtask.get("action", "")
+                            current_subtask["action"] = alt_action.get("action")
+                            self.notifier.emit(
+                                AgentEvent(
+                                    agent_id=self.agent_id,
+                                    agent_role=self.role,
+                                    status=AgentStatus.RUNNING,
+                                    task_id=task_id,
+                                    project_id=self.project_id,
+                                    mission_id=mission_id,
+                                    message=f"Tentando acao alternativa '{alt_action.get('action')}' ao inves de '{original_action}'",
+                                )
+                            )
+
                     conn = AMQPConnection()
                     conn.connect()
                     rpc = RPCClient(conn, timeout=120.0)
-                    response = rpc.call(f"task.run.{agent_id}", enriched_subtask)
+                    response = rpc.call(f"task.run.{agent_id}", current_subtask)
                     conn.close()
 
-                    if response and response.get("result"):
-                        rd = response["result"]
-                        status = OutputStatus.SUCCESS if rd.get("status") != "error" else OutputStatus.FAILURE
-                        tr = TaskOutput(
-                            status=status,
-                            summary=rd.get("summary", rd.get("output", {}).get("summary", "")),
-                            details=rd.get("output", rd),
-                        )
-                    else:
-                        raise Exception("RPC sem resposta")
-                    to = TaskOutput(status=OutputStatus.SUCCESS, summary=tr.summary, details=tr.output)
-                    if tr.status == AgentStatus.FAILED:
-                        to.status = OutputStatus.FAILURE
-                        to.rationale = tr.summary
-                    step_result = to
+                    step_result = self._task_output_from_rpc(response)
                     break
+
                 except Exception as e:
                     step_error = str(e)
                     if attempt < max_attempts:
-                        self.notifier.emit(AgentEvent(
-                            agent_id=self.agent_id, agent_role=self.role,
-                            status=AgentStatus.RUNNING,
-                            task_id=task_id,
-                            project_id=self.project_id,
-                            mission_id=mission_id,
-                            message=f"Retry {attempt}/{max_attempts} para '{subtask['title']}'",
-                        ))
+                        self.notifier.emit(
+                            AgentEvent(
+                                agent_id=self.agent_id,
+                                agent_role=self.role,
+                                status=AgentStatus.RUNNING,
+                                task_id=task_id,
+                                project_id=self.project_id,
+                                mission_id=mission_id,
+                                message=f"Retry {attempt}/{max_attempts} para '{subtask['title']}'",
+                            )
+                        )
                     continue
 
             if step_result is None:
-                step_result = TaskOutput.failure(rationale=step_error or "Falha apos todas as tentativas")
+                # Fallback in-process (como _delegate faz) antes de declarar falha
+                self.notifier.emit(
+                    AgentEvent(
+                        agent_id=self.agent_id,
+                        agent_role=self.role,
+                        status=AgentStatus.RUNNING,
+                        task_id=task_id,
+                        project_id=self.project_id,
+                        mission_id=mission_id,
+                        message=f"RPC falhou, tentando delegacao in-process para '{subtask['title']}'",
+                    )
+                )
+                try:
+                    inprocess_output = self.delegate(agent_id, subtask)
+                    step_result = TaskOutput(
+                        status=OutputStatus.SUCCESS
+                        if inprocess_output.status == OutputStatus.SUCCESS
+                        else OutputStatus.FAILURE,
+                        summary=inprocess_output.summary
+                        or step_error
+                        or "Falha apos todas as tentativas",
+                        rationale=inprocess_output.summary or "",
+                        details=inprocess_output.output or {},
+                    )
+                except Exception as ie:
+                    self.notifier.emit(
+                        AgentEvent(
+                            agent_id=self.agent_id,
+                            agent_role=self.role,
+                            status=AgentStatus.COMPLETED,
+                            task_id=task_id,
+                            project_id=self.project_id,
+                            mission_id=mission_id,
+                            message=f"Fallback in-process tambem falhou: {ie}",
+                        )
+                    )
+                    step_result = TaskOutput.failure(
+                        rationale=f"RPC e fallback in-process falharam: {step_error} / {ie}"
+                    )
 
             decision, justification, _ = self.handle_subordinate_result(
                 result=step_result,
@@ -589,7 +737,9 @@ Regras:
             )
 
             # 5. Salvar resultado em output/tasks/<task_id>/<agent_id>/result.md
-            body = step_result.rationale or json.dumps(step_result.details or {}, ensure_ascii=False, indent=2)
+            body = step_result.rationale or json.dumps(
+                step_result.details or {}, ensure_ascii=False, indent=2
+            )
             result_content = (
                 f"# Resultado — {step_name}\n\n"
                 f"**Agente:** {agent_id}\n"
@@ -608,7 +758,10 @@ Regras:
                 "decision": decision.value,
                 "justification": justification,
                 "_mission_id": mission_id,
-                "_output_path": str(self.get_task_output_dir(mission_id, task_id, agent_id)),
+                "_output_path": str(
+                    self.get_task_output_dir(mission_id, task_id, agent_id)
+                ),
+                "_task_id": task_id,
             }
             results.append(entry)
 
@@ -628,35 +781,209 @@ Regras:
         total = len(tasks)
         accepted = sum(1 for r in results if r.get("decision") in ("accept", "skip"))
         failed = sum(1 for r in results if r["status"] in ("failure", "rejected"))
+        skipped = total - accepted - failed
+
+        if failed == 0 and accepted > 0:
+            mission_status = MissionStatus.COMPLETED
+            mission_msg = f"Missao concluida: {mission_id}"
+            emit_status = AgentStatus.COMPLETED
+        elif failed > 0 and accepted > 0:
+            mission_status = MissionStatus.PARTIAL
+            mission_msg = f"Missao parcial: {mission_id}"
+            emit_status = AgentStatus.COMPLETED
+        else:
+            mission_status = MissionStatus.FAILED
+            mission_msg = f"Missao falhou: {mission_id}"
+            emit_status = AgentStatus.FAILED
+
+        self.write_mission_status(
+            mission_id,
+            mission_status,
+            goal=goal,
+            objective=objective_preview,
+            task_count=total,
+            completed=accepted,
+            failed=failed,
+            skipped=skipped,
+            message=mission_msg,
+            finalize=True,
+        )
+        self.notifier.emit(
+            AgentEvent(
+                agent_id=self.agent_id,
+                agent_role=self.role,
+                status=emit_status,
+                task_id="mission-complete",
+                project_id=self.project_id,
+                mission_id=mission_id,
+                message=mission_msg,
+                payload={
+                    "mission_status": mission_status.value,
+                    "completed": accepted,
+                    "failed": failed,
+                    "skipped": skipped,
+                },
+            )
+        )
 
         # Auto-reflexao ao final da missao
         try:
-            self._reflect_on_mission({
-                "mission_id": mission_id,
-                "goal": goal,
-                "steps": results,
-            })
+            self._reflect_on_mission(
+                {
+                    "mission_id": mission_id,
+                    "goal": goal,
+                    "steps": results,
+                }
+            )
         except Exception as e:
-            self.notifier.emit(AgentEvent(
-                agent_id=self.agent_id, agent_role=self.role,
-                status=AgentStatus.COMPLETED,
-                task_id="reflect",
-                project_id=self.project_id,
-                mission_id=mission_id,
-                message=f"Reflexao falhou (nao critico): {e}",
-            ))
+            self.notifier.emit(
+                AgentEvent(
+                    agent_id=self.agent_id,
+                    agent_role=self.role,
+                    status=AgentStatus.COMPLETED,
+                    task_id="reflect",
+                    project_id=self.project_id,
+                    mission_id=mission_id,
+                    message=f"Reflexao falhou (nao critico): {e}",
+                )
+            )
 
         return {
-            "status": "ok" if failed == 0 and accepted > 0 else ("partial" if failed > 0 else "error"),
+            "status": "ok"
+            if failed == 0 and accepted > 0
+            else ("partial" if failed > 0 else "error"),
             "mission_id": mission_id,
             "mission_context_path": str(ctx_path),
             "goal": goal,
             "total_steps": total,
             "completed": accepted,
             "failed": failed,
-            "skipped": total - accepted - failed,
+            "skipped": skipped,
+            "mission_status": mission_status.value,
             "steps": results,
         }
+
+    @staticmethod
+    def _task_output_from_rpc(response: Optional[dict]) -> TaskOutput:
+        """Converte envelope RPC do runtime em TaskOutput."""
+        if not response:
+            raise RuntimeError("RPC sem resposta")
+
+        envelope_status = response.get("status")
+        body = response.get("result")
+        if body is None:
+            if envelope_status == "ok":
+                return TaskOutput.success(summary="RPC concluido sem payload")
+            raise RuntimeError(response.get("error") or "RPC sem corpo de resultado")
+
+        if not isinstance(body, dict):
+            return TaskOutput.success(summary=str(body), details={"result": body})
+
+        # TaskResult serializado pelo runtime (agent.run -> model_dump)
+        if "agent_id" in body and ("output" in body or "status" in body):
+            inner = body.get("output") or {}
+            if isinstance(inner, dict) and inner.get("status"):
+                parsed = TaskOutput.from_execute_output(inner)
+                if parsed.status != OutputStatus.SUCCESS:
+                    return parsed
+            agent_status = str(body.get("status", envelope_status or "")).lower()
+            inner_status = str(inner.get("status", "")).lower() if isinstance(inner, dict) else ""
+            failed = agent_status in ("failed", "error") or inner_status in (
+                "error",
+                "failure",
+                "failed",
+                "rejected",
+            )
+            if failed:
+                err = (
+                    (inner.get("error") if isinstance(inner, dict) else None)
+                    or body.get("summary")
+                    or "Falha no agente"
+                )
+                return TaskOutput.failure(rationale=str(err), details=body)
+            summary = (
+                body.get("summary")
+                or (inner.get("summary") if isinstance(inner, dict) else None)
+                or (inner.get("rationale") if isinstance(inner, dict) else None)
+                or ""
+            )
+            return TaskOutput(
+                status=OutputStatus.SUCCESS,
+                summary=summary,
+                rationale=(inner.get("rationale") if isinstance(inner, dict) else summary)
+                or summary,
+                details=inner if isinstance(inner, dict) and inner else body,
+            )
+
+        agent_output = body.get("output", body.get("result", body))
+        if isinstance(agent_output, dict):
+            ok = agent_output.get("status", envelope_status) in (
+                "ok",
+                "success",
+                "completed",
+                None,
+            )
+            summary = agent_output.get("summary") or agent_output.get("rationale") or ""
+            if not ok and agent_output.get("status") in ("error", "failure", "failed"):
+                return TaskOutput.failure(
+                    rationale=agent_output.get("error") or summary or "Falha no agente",
+                    details=agent_output,
+                )
+            return TaskOutput(
+                status=OutputStatus.SUCCESS if ok else OutputStatus.FAILURE,
+                summary=summary,
+                rationale=agent_output.get("rationale", summary),
+                details=agent_output,
+            )
+
+        ok = envelope_status == "ok"
+        return TaskOutput(
+            status=OutputStatus.SUCCESS if ok else OutputStatus.FAILURE,
+            summary=str(agent_output),
+            details=body,
+        )
+
+    ACTION_ALTERNATIVES = {
+        "refactor_code": [
+            {"action": "read_file", "description": "Ler arquivo antes de refatorar"}
+        ],
+        "edit_file": [
+            {"action": "read_file", "description": "Ler arquivo antes de editar"}
+        ],
+        "write_file": [
+            {"action": "read_file", "description": "Ler diretorio para contexto"}
+        ],
+        "run_tests": [
+            {"action": "list_directory", "description": "Listar diretorio de testes"}
+        ],
+        "review_code": [
+            {"action": "read_file", "description": "Ler arquivo para revisar"}
+        ],
+        "delegate": [
+            {
+                "action": "get_capabilities",
+                "description": "Verificar capacidades do agente",
+            }
+        ],
+    }
+
+    @staticmethod
+    def _try_alternative_action(subtask: dict) -> Optional[dict]:
+        """
+        Se a acao original falhou, sugere uma acao alternativa.
+        Retorna dict com 'action' e possiveis parametros, ou None.
+        """
+        original = subtask.get("action", "")
+        alt = AgentFactoryCoordinator.ACTION_ALTERNATIVES.get(original)
+        if not alt:
+            return None
+        candidate = dict(alt[0])
+        # Preservar file_path se existir
+        if "file_path" in subtask and candidate["action"] == "read_file":
+            candidate["file_path"] = subtask["file_path"]
+        candidate["_original_action"] = original
+        candidate["_reason"] = f"Tentativa alternativa apos falha de '{original}'"
+        return candidate
 
     def _reflect_on_mission(self, task: dict) -> dict:
         mission_id = task.get("mission_id", "")
@@ -674,7 +1001,12 @@ Regras:
             )
 
         # Montar sumario dos resultados
-        summary_lines = [f"# Retrospectiva da Missao: {mission_id}", "", f"**Objetivo:** {goal}", ""]
+        summary_lines = [
+            f"# Retrospectiva da Missao: {mission_id}",
+            "",
+            f"**Objetivo:** {goal}",
+            "",
+        ]
         accepted = []
         failed = []
         for s in steps:
@@ -696,11 +1028,17 @@ Regras:
         for s in steps:
             step_name = s.get("step", "")
             agent_id = s.get("agent_id", "")
-            out_dir = self.get_task_output_dir(mission_id, step_name, agent_id)
-            result_file = out_dir / "result.md"
-            if result_file.exists():
-                details += f"\n\n## Resultado: {step_name} ({agent_id})\n\n"
-                details += result_file.read_text(encoding="utf-8")[:2000]
+            task_id = s.get("_task_id") or step_name
+            if not mission_id or not task_id or not agent_id:
+                continue
+            try:
+                out_dir = self.get_task_output_dir(mission_id, task_id, agent_id)
+                result_file = out_dir / "result.md"
+                if result_file.exists():
+                    details += f"\n\n## Resultado: {step_name} ({agent_id})\n\n"
+                    details += result_file.read_text(encoding="utf-8")[:2000]
+            except (TypeError, OSError) as e:
+                details += f"\n\n## Resultado: {step_name} — indisponivel ({e})\n"
 
         summary = "\n".join(summary_lines)
 
@@ -732,47 +1070,55 @@ Regras:
             reflection = f"Missao {mission_id}: {len(accepted)} aceitas, {len(failed)} falhas. {summary[:500]}"
 
         # Persistir na arvore de contexto
-        tree = ContextTree(self.project_id, self.agent_id)
-        tree.ensure_initialized()
+        try:
+            tree = ContextTree(self.project_id, self.agent_id)
+            tree.ensure_initialized()
 
-        # Persistir como licoes
-        fake_output = TaskOutput.success(summary=reflection[:200])
-        tree.persist_learning(
-            {"action": "reflect_on_mission", "title": f"missao-{mission_id}"},
-            fake_output,
-            reflection,
-        )
-
-        # Tentar classificar em dominios especificos
-        for domain in ("planejamento", "delegacao", "priorizacao"):
-            if domain in reflection.lower():
-                tree.persist_learning(
-                    {"action": "reflect_on_mission", "title": f"missao-{mission_id}-{domain}"},
-                    fake_output,
-                    reflection,
-                )
-
-        # Atualizar CONTEXTO.md com resumo
-        ctx_path = self.get_doc_path()
-        if Path(ctx_path).exists():
-            current = Path(ctx_path).read_text(encoding="utf-8")
-            marker = "## Retrospectiva de Missoes"
-            entry = (
-                f"\n### {mission_id}\n"
-                f"- **Objetivo**: {goal[:100]}\n"
-                f"- **Resultado**: {len(accepted)}/{len(steps)} tarefas aceitas\n"
+            fake_output = TaskOutput.success(summary=reflection[:200])
+            tree.persist_learning(
+                {"action": "reflect_on_mission", "title": f"missao-{mission_id}"},
+                fake_output,
+                reflection,
             )
-            if failed:
-                entry += f"- **Falhas**: {', '.join(failed)}\n"
-            entry += f"- **Reflexao**: {reflection[:300]}\n"
 
+            for domain in ("planejamento", "delegacao", "priorizacao"):
+                if domain in reflection.lower():
+                    tree.persist_learning(
+                        {
+                            "action": "reflect_on_mission",
+                            "title": f"missao-{mission_id}-{domain}",
+                        },
+                        fake_output,
+                        reflection,
+                    )
+        except Exception as e:
+            reflection += f"\n\n(persistencia tree falhou: {e})"
+
+        # Persistir reflexao em tree/licoes.md (nao em CONTEXTO.md que agora e enxuto)
+        tree_path = (
+            Path("contexts") / self.project_id / self.agent_id / "tree" / "licoes.md"
+        )
+        tree_path.parent.mkdir(parents=True, exist_ok=True)
+        entry = (
+            f"\n### {mission_id}\n"
+            f"- **Objetivo**: {goal[:100]}\n"
+            f"- **Resultado**: {len(accepted)}/{len(steps)} tarefas aceitas\n"
+        )
+        if failed:
+            entry += f"- **Falhas**: {', '.join(failed)}\n"
+        entry += f"- **Reflexao**: {reflection[:300]}\n"
+
+        if tree_path.exists():
+            current = tree_path.read_text(encoding="utf-8")
+            marker = "## Consolidado"
             if marker in current:
                 head, _, tail = current.partition(marker + "\n")
                 updated = head + marker + "\n" + entry + "\n" + tail
             else:
-                updated = current + "\n\n---\n\n" + marker + "\n" + entry
-
-            Path(ctx_path).write_text(updated, encoding="utf-8")
+                updated = current + "\n" + entry
+        else:
+            updated = f"# Licoes — {self.agent_id} — {self.project_id}\n\n## Consolidado\n{entry}\n"
+        tree_path.write_text(updated, encoding="utf-8")
 
         return {
             "status": "ok",

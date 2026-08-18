@@ -2,7 +2,7 @@
   "id": "firmware",
   "role": "worker",
   "description": "Firmware e hardware CR-10 SE: SSH, Klipper, logs, comandos GCode, bed mesh",
-  "llm_provider": "opencode_zen/deepseek-v4-flash-free",
+  "llm_provider": "auto",
   "actions": {
     "ssh_command": {
       "description": "Executa comando SSH na impressora (192.168.18.200) via paramiko",

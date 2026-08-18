@@ -33,6 +33,7 @@ O dashboard agora se chama **Console AFP**. Telas:
 - **Aprendizado**: `contexts/{projeto}/{agente}/tree/` (persiste apos compactacao)
 
 ## Documentos de Referencia
+- `docs/ARCHITECTURE.md` — Arquitetura canonica (principio: agentes no projeto)
 - `docs/console-afp-schema.md` — Schema canonico completo
 - `docs/console-afp-requisitos.md` — Requisitos detalhados
 - `docs/backlog.md` — Backlog operacional

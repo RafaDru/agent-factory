@@ -1,16 +1,33 @@
 # Backlog — Agent Factory Platform
 
+> **Atualizado:** 27/07/2026 — foco em operação estável e replicação.
+
 ## Prioridades (definidas pelo time de negocios)
 
 | Prioridade | Epic | Justificativa |
 |------------|------|---------------|
-| 1 | E-002 | Fundacional: sem configuracao, nada funciona |
-| 2 | E-001 | Diferencial principal, maior valor percebido |
-| 3 | E-010 | UI Refresh: hierarquia visual, grupos colapsaveis, responsividade |
-| 4 | E-003 | Experiencia integrada, depende de E-002 e E-001 |
-| 5 | E-004 | Diagnostico, secundario ao monitoramento |
-| 6 | E-005 | Suporte, ja em andamento |
-| 7 | E-006 | Baixo valor no momento, postergavel |
+| 1 | **E-012** | Confiabilidade: sem RPC/SSE estáveis, agentes não operam |
+| 2 | **E-013** | Onboarding/replicação: levar AFP a outros projetos |
+| 3 | E-010 | UI Refresh (desbloqueado após E-012) |
+| 4 | E-003 | Home e navegação integrada |
+| 5 | E-004 | Log e debug dedicado |
+| 6 | E-006 | CLI tooling |
+| 7 | E-015 | Spawn sub-session (worker autônomo) |
+
+### Concluídos (base operacional)
+
+| Epic | Status |
+|------|--------|
+| E-002 Configuração (projetos, agentes, LLM) | ✅ |
+| E-001 Mission Control (Global + Local) | ✅ |
+| E-007 Gestão de modelos e API keys | ✅ |
+| E-008 Remover Interaction Flow | ✅ |
+| E-009 Isolamento entre projetos | ✅ |
+| E-011 System Tray (Windows) | ✅ |
+| E-005 Documentação e schema canônico | ✅ (contínuo) |
+| E-014 Ciclo de vida de missão (`status.json`) | ✅ parcial |
+
+---
 
 ## Infra-Estrutura
 
@@ -25,160 +42,151 @@ Cinco modelos rodando localmente via Ollama (GPU 6GB VRAM | RAM 40 GB):
 | `qwen3-vl:8b` 🏆 | 6.1 GB | 5.6 GB ⚠️ | ~107s | Visão, OCR, imagens | — |
 | `gemma4` | 9.6 GB | 5.0 GB ⚠️ | ~48s | Tool calling, multimodal | Designer |
 
-**Configuração por agente:**
-| Agente | Modelo | Provider |
-|--------|--------|----------|
-| Coordenador | DeepSeek R1 (8B) | `ollama:deepseek-r1:8b` |
-| Arquiteto | Phi-4 | `ollama:phi4` |
-| Designer | Gemma 4 | `ollama:gemma4` |
-| Dev | DeepSeek R1 (8B) | `ollama:deepseek-r1:8b` |
-| QA | DeepSeek R1 (8B) | `ollama:deepseek-r1:8b` |
-| Negócios | Phi-4 | `ollama:phi4` |
+**Configuração por agente:** ver `docs/modelos-locais-benchmark.md`.
 
-> **Nota:** Modelos `deepseek-coder-v2` (8.9 GB) e `gemma3:4b` (3.3 GB) foram removidos por desempenho inferior. Ver `docs/modelos-locais-benchmark.md`. |
+---
 
-### E-007: Gestão de Modelos e API Keys
-**Prioridade:** 5
-**Status:** Implementado ✅
+## Epicos — Plataforma (operação e replicação)
 
-- **Auto-discovery Ollama**: scan local via `/api/llm/ollama-models` ✅
-- **API Keys UI**: formulario add/remove via `/api/llm/api-keys` ✅
-- **Teste de conectividade**: botao "Testar" via `POST /api/llm/test` ✅
-- **Seletor de modelo melhorado**: modal LLM com metadados (tipo, benchmark, tarefas) ✅
-- **Fallback automático**: postergado
-
-## Epicos
-
-### E-001: Console AFP — Live Stream (Monitoramento em Tempo Real)
-**Prioridade:** 2
-**Status:** Design
-
-Implementar o Live Stream no Console AFP com:
-- Agentes com "ar humanoide" e indicadores graficos de interacao
-- 1 card por agente, 1 estado por vez (running/completed/failed/idle)
-- Cadeia de delegacao visual (quem acionou quem)
-- Missoes em andamento em destaque
-- Missoes concluidas descem para Historico (compacto, expansivel)
-- Detalhes sob demanda (modal/expansivel)
-- Correcao do bug de cards duplicados (Live vs Log)
-
-### E-002: Console AFP — Configuracao de Projetos, Times e Agentes
+### E-012: Confiabilidade da Plataforma
 **Prioridade:** 1
-**Status:** Implementado ✅
+**Status:** Em andamento (fixes 27/07 aplicados)
 
-Tela de configuracao no Console AFP com:
-- Aba "Projetos": lista projetos, edita metadados (project_id, name, team, working_dir, description) ✅
-- Aba "Agentes": seleciona projeto + agente, visualiza metadados, configura LLM provider/model ✅
-- Aba "LLM Providers": configuracao rapida de provider por agente com dropdown (auto/local_multi/cloud/groq/ollama/opencode_zen) ✅
-- Preview de agentes com emoji, role e metadados ✅
-- Integrado ao sistema de navegacao existente (botao ⚙️ no header) ✅
-- Usa endpoints REST existentes (/api/agent-config POST, /api/projects GET) ✅
-- Consistencia visual com o dashboard (glass morphism, neon accents, dark theme) ✅
+Garantir que missões autônomas completem de ponta a ponta.
 
-### E-008: Remover Interaction Flow, manter apenas Mission Control
-**Prioridade:** 4
-**Status:** Implementado ✅
+| Item | Descricao | Status |
+|------|-----------|--------|
+| A | Runtimes usam notifier canônico (`.agent-factory/events/`) | ✅ |
+| B | RPCClient: correlation_id por chamada, poll seguro | ✅ |
+| C | Coordinator: parsing TaskResult do runtime | ✅ |
+| D | Bridge SSE ← RabbitMQ (`event.broadcast.#`) | ✅ |
+| E | Reflexão: persistência tree tolerante a falhas | ✅ |
+| F | Testes RPC parsing | ✅ |
+| I | RPC: `needs_direction` não conta como success | ✅ (27/07) |
+| G | Healthcheck + restart automático (tray/start_afp) | ✅ (27/07) |
+| H | Coordinator retry inteligente (não repetir mesma ação) | 📋 |
+| J | LLM AFP-Team → `opencode:deepseek-v4-flash` (Go) | ✅ (27/07) |
+| K | Tool-calling loop (15 iter sem resposta final) | 📋 |
 
-Remocao completa: funcao `renderTimeline()`, div `.timeline-panel`, CSS exclusivo.
-Mission Control permanece como unica interface de visualizacao de missoes.
+### E-013: Onboarding e Replicação de Projetos
+**Prioridade:** 2
+**Status:** Backlog
 
-### E-009: Isolamento de estado entre projetos
-**Prioridade:** 4
-**Status:** Implementado ✅
+Formalizar como levar AFP a um projeto novo (PTA, CR-10 SE, Solar…).
 
-Corrigida poluicao de estado entre projetos no dashboard:
-- `state.agentsState` agora usa chave `projectId:agentId` via helper `agentKey()`
-- Cache-Control adicionado ao HTML server response
-- Bugs: `info` → `statusInfo` em template, `agentKeyStr` TDZ corrigido
+| Item | Descricao | Status |
+|------|-----------|--------|
+| A | Playbook: register → `contexts/{proj}/` → primeira missão | ✅ |
+| B | Template `contexts/_template/` + `scripts/scaffold_project.ps1` | ✅ (27/07) |
+| C | Formalizar Modo Lite (default onboarding, sem RabbitMQ) | 📋 |
+| D | Scaffold `.agent-factory/` no projeto alvo | 📋 |
+| E | Agent Card — org configurável (papéis arbitrários) | 📋 |
+| F | Runbook operacional (start, verify RPC, troubleshoot SSE) | 📋 |
 
-### E-003: Console AFP — Home e Navegacao
-**Prioridade:** 3
-**Status:** Design
+**Exemplos versionados:** `contexts/{_template,demo-onboarding}/`
 
-- Home com visao geral do AFP
-- Mini sumarios dos projetos (clicaveis → pagina de detalhe)
-- Navegacao entre telas (Home, Projetos, Configuracao, Live Stream, Log)
-- Consistencia visual entre todas as telas
+Projetos de negocio ficam locais (nao commitados). Ver [contexts/README.md](../contexts/README.md).
+
+### E-014: Ciclo de Vida de Missão
+**Prioridade:** 2
+**Status:** Parcial ✅
+
+| Item | Descricao | Status |
+|------|-----------|--------|
+| A | Enum `MissionStatus` + `status.json` | ✅ |
+| B | API `/api/missions` expõe status | ✅ |
+| C | React + tray consomem status formal | ✅ |
+| D | Eventos terminais canônicos (concluida/parcial/falhou) | ✅ |
+| E | `/api/missions` expõe `status` de `status.json` | ✅ (27/07) |
+| F | Histórico compacto no Mission Control | 📋 |
+
+### E-015: Spawn Sub-Session (Worker Autônomo)
+**Prioridade:** 7
+**Status:** Backlog
+
+Worker como mini-sessão LLM autônoma (AGENTS.md step 5).
+
+---
+
+## Epicos — Console AFP (produto)
+
+### E-001: Console AFP — Live Stream / Mission Control
+**Status:** ✅ Implementado
+
+### E-002: Console AFP — Configuração
+**Status:** ✅ Implementado
+
+### E-003: Console AFP — Home e Navegação
+**Prioridade:** 4 | **Status:** Design
 
 ### E-004: Console AFP — Log e Debug
-**Prioridade:** 4
-**Status:** Design
+**Prioridade:** 5 | **Status:** Design
 
-Tela de Log separada do Live Stream com:
-- Tabela: Timestamp | Agente | Status | Tarefa | Mensagem
-- Filtros por agente, tipo, periodo
-- Busca textual
-- Exportacao (opcional)
+### E-005: Documentação e Schema Canônico
+**Status:** ✅ Em manutenção contínua
 
-### E-005: Documentacao e Schema Canonico
-**Prioridade:** Medium
-**Status:** Em Andamento
-
-- `docs/console-afp-schema.md` — Schema canonico dos conceitos ✅
-- `docs/console-afp-requisitos.md` — Requisitos detalhados ✅
-- Contextos de negocios e designer atualizados ✅
-- AGENTS.md atualizado com novos conceitos ✅
+- `docs/console-afp-schema.md`, `docs/console-afp-requisitos.md`
+- `docs/opendesign-cursor.md`, `AGENTS.md`, `MEMORIA.md`
 
 ### E-006: CLI Tooling
-**Prioridade:** Low
-**Status:** Backlog
+**Prioridade:** 6 | **Status:** Backlog
 
-Interface de linha de comando para gerenciar projetos, iniciar
-runtimes, e enviar objetivos sem depender do MCP ou Console AFP.
+### E-007: Gestão de Modelos e API Keys
+**Status:** ✅ Implementado
 
-### E-011: System Tray Icon para AFP (Windows)
-**Prioridade:** 2
-**Status:** Backlog
+### E-008: Remover Interaction Flow
+**Status:** ✅ Implementado
 
-Icone na bandeja do sistema (ao lado do relogio) para controlar o AFP:
+### E-009: Isolamento de estado entre projetos
+**Status:** ✅ Implementado
 
-**Funcionalidades:**
-- Icone do AFP na system tray (area de notificacao do Windows)
-- Menu de contexto com: Iniciar, Parar, Reiniciar, Abrir Dashboard
-- Indicador visual de status: rodando (verde), parado (vermelho), ocupado (amarelo)
-- Tooltip com info basica: PID, uptime, agentes ativos
-- Iniciar automaticamente com o Windows (opcional)
-
-**Tecnologia sugerida:** `pystray` + `PIL` (gerar icone via codigo, sem依赖 de .ico externo) ou `tkinter` nativo.
-
-**Dependencias:**
-- Usar `start_afp.ps1` como backend (start/stop ja implementados)
-- Ler `.agent-factory/afp.pid` para status
-- Ler eventos em `.agent-events/AFP-Team/events.jsonl` para indicador de atividade
-
-### E-010: Console AFP — UI Refresh (Hierarquia, Grupos, Responsividade)
+### E-010: Console AFP — UI Refresh
 **Prioridade:** 3
-**Status:** Parcial (A e E executados, 6 bloqueados por bug RPC)
+**Status:** Parcial (A e E ✅; B–H desbloqueados após E-012)
 
-Refresh de UI baseado na Design Evaluation (`docs/design-evaluation.md`):
+| Item | Descricao | Agente | Status |
+|------|-----------|--------|--------|
+| A | Borda lateral colorida por status | designer | ✅ |
+| B | Grupos colapsáveis no Team Detail | designer | 📋 |
+| C | Timer condicional (só RUNNING) | designer | 📋 |
+| D | Config em abas (Provedores / Keys / Ollama) | designer+dev | 📋 |
+| E | Breadcrumb navegáveis | dev | ✅ |
+| F | Modal LLM contextual | designer | 📋 |
+| G | Responsividade 3/2/1 colunas | dev | 📋 |
+| H | Logs Panel no card do agente | designer+dev | 📋 |
 
-| Item | Descricao | Agente |
-|------|-----------|--------|
-| A | Borda lateral colorida por status no card do agente | designer |
-| B | Grupos colapsaveis (coord/upstream/downstream) no Team Detail | designer |
-| C | Timer condicional (so aparece quando RUNNING) | designer |
-| D | Config reorganizada em abas (Provedores / API Keys / Ollama) | designer+dev |
-| E | Breadcrumb navegaveis em todos os niveis | dev |
-| F | Modal LLM com header contextual (nome do agente + projeto) | designer |
-| G | Responsividade (3/2/1 colunas conforme viewport) | dev |
-| H | Logs Panel integrado ao card do agente (visual) | designer+dev |
+### E-011: System Tray Icon (Windows)
+**Status:** ✅ Implementado
 
-**Dependencias:**
-- B depende de A (borda de status define a identidade visual)
-- D depende de E (navegacao breadcrumb para voltar)
-- H depende de G (responsividade do layout)
+```powershell
+.\start_afp_tray.ps1
+# pythonw scripts/afp_tray.py
+```
 
 ---
 
 ## Bugs Conhecidos
 
-| Bug | Impacto | Afeta |
-|-----|---------|-------|
-| RPC reply nao retorna ao coordinator | Tasks dependentes de E-010 bloqueadas | coordinator, runtime |
-| Reflexao falha ao salvar arvore de contexto | Coordinator termina com warning nao critico | coordinator |
-| Agente aparece como "worker" nos eventos | Dificulta identificar qual runtime executou | dashboard, events |
-| SSE/Mission Control nao consome eventos do RabbitMQ | Monitor nao reflete em tempo real | dashboard |
+| Bug | Impacto | Status |
+|-----|---------|--------|
+| Runtimes gravavam em `.agent-events/` (dashboard lia `.agent-factory/events/`) | SSE/REST não refletiam agentes | ✅ Corrigido (E-012-A) |
+| RPC reply parsing frágil / timeout curto em delegate | Missões falhavam silenciosamente | ✅ Corrigido (E-012-B/C) |
+| Bridge SSE não consumia RabbitMQ | Monitor cego em tempo real | ✅ Corrigido (E-012-D) |
+| Reflexão crashava ao persistir tree | Warning pós-missão | ✅ Corrigido (E-012-E) |
+| `/api/missions` retornava `status=None` | Console não mostrava status canônico | ✅ Corrigido (E-014-E) |
+| Missão `completed` com steps `needs_direction` | Falso positivo — artefato não criado | ✅ Corrigido (E-012-I) |
+| Agente aparece como "worker" nos eventos | Identificação difícil no dashboard | 📋 |
+| Servidores caem silenciosamente (`pythonw`) | Tray degradado/offline | 📋 (E-012-G) |
+| Coordinator repete mesma ação no retry | Loop ineficiente | 📋 (E-012-H) |
 
 ## Issues Abertas no GitHub
 
-- (todas fechadas — proximas issues serao criadas a partir dos epicos acima)
+- (todas fechadas — próximas issues a partir dos épicos acima)
+
+## Fonte de verdade operacional
+
+| Documento | Papel |
+|-----------|-------|
+| `docs/backlog.md` | Este arquivo — épicos e prioridades |
+| `contexts/afp-team/coordenador/tree/priorizacao.md` | Espelho para o agente coordenador |
+| `docs/ARCHITECTURE.md` | Princípios Standard vs Lite, separação Factory/agentes |

@@ -317,25 +317,16 @@ The delegating agent (or parent LLM) should:
 
 ---
 
-## Project Types
+## Project Types (public repo)
 
-### AFP-Team (Agent Factory Platform Team)
-**Purpose:** A equipe de agentes que evolui a própria Agent Factory Platform de forma recursiva. Este é o projeto meta, onde a plataforma constrói a si mesma.
-**Agents:** `coordenador` (orquestrador), `dev` (desenvolvimento), `qa` (qualidade), `designer` (UX/UI). Cada agente possui seu próprio LLM provider para raciocínio autônomo.
+### demo-onboarding (default)
+**Purpose:** Minimal example to validate setup and first mission after clone.
+**Agents:** `coordenador`, `dev`
+**Path:** `contexts/demo-onboarding/`
 
-### pta
-**Purpose:** Build and evolve the Personal Trainer App with AI and computer vision.
-**Agents:** coordenador, frontend-mobile, visao-computacional, ui-ux, qa, renderizacao, research, code-executor
-
-### cr10se
-**Purpose:** Optimizar e monitorar a impressora 3D Creality CR-10 SE com Klipper.
-**Agentes:** coordenador (orchestrator), klipper (comunicacao SSH/WS), pipeline (STL->GCode->print), visao (monitoramento OpenCV), resume (retomada de impressao), qa (qualidade/diagnostico)
-**Working Directory:** `C:\Users\rafae\Documents\Impressao 3D`
-
-**Contexto:** CR-10 SE (F003), Klipper v1.1.0.28, IP 192.168.18.200, SSH root/Creality2023.
-**Parametros:** max_velocity 200, max_accel 2000, PA 0.030, 210°C bico / 65°C mesa, Flow 115%, Speed 50%.
-
----
+### Your project (local, gitignored)
+Scaffold with `.\scripts\scaffold_project.ps1 -ProjectId "meu-projeto" -ProjectName "Meu Projeto"`.
+See `contexts/README.md` and `docs/playbook-onboarding.md`.
 
 
 
@@ -349,7 +340,7 @@ The delegating agent (or parent LLM) should:
 | 4 | All agents with native LLM provider | ✅ Done |
 | 5 | Spawn sub-session mechanism (worker as mini-LLM) | ⏳ Planned |
 | 6 | Update all context files with new flow | ✅ Done |
-| 7 | Recursive self-improvement via AFP-Team | 🎯 Goal |
+| 7 | Recursive self-improvement via dogfood projects | Local only |
 | 8 | Console AFP — Live Stream, Configuracao, Log | 📋 Planned |
 
 ---
@@ -358,6 +349,7 @@ The delegating agent (or parent LLM) should:
 
 | Documento | Conteudo |
 |-----------|----------|
+| `docs/ARCHITECTURE.md` | **Arquitetura canonica** — principios, componentes, modos Standard/Lite |
 | `MEMORIA.md` | **Memoria imutavel** — releia apos compactacao para restaurar conceitos essenciais |
 | `docs/console-afp-schema.md` | Schema canonico dos conceitos (Missao, Tarefa, Delegacao, Live Stream, Log) |
 | `docs/console-afp-requisitos.md` | Requisitos detalhados do Console AFP |

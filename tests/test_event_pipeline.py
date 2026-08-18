@@ -80,12 +80,11 @@ def test_notify_sse_removes_dead_client(notifier):
         EventNotifier.unregister_sse_client(dead)
 
 
-def test_registry_notifier_shared_with_agents(notifier):
-    """Registry.get_notifier() retorna mesmo notifier usado por load_agent."""
-    from src.registry import get_registry
+def test_registry_notifier_shared_with_agents():
+    """Registry.get_notifier() retorna notifier apos auto-discovery."""
+    from src.registry import ensure_project_notifier
 
-    registry = get_registry()
-    n = registry.get_notifier("AFP-Team")
+    n = ensure_project_notifier("demo-onboarding")
     assert n is not None
 
 

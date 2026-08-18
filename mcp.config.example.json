@@ -1,0 +1,15 @@
+{
+  "_comment": "Copie para a IDE. Cursor: .cursor/mcp.json (ja incluso no repo). Claude Desktop: claude_desktop_config.json.",
+  "mcpServers": {
+    "agent-factory-sse": {
+      "_note": "Requer stack no ar: .\\start_afp.ps1 -Restart",
+      "url": "http://127.0.0.1:8081/sse"
+    },
+    "agent-factory-stdio": {
+      "_note": "MCP sozinho (fallback in-process, sem RabbitMQ). cwd = raiz do repo.",
+      "command": "python",
+      "args": ["-m", "src.mcp.server"],
+      "cwd": "REPLACE_WITH_REPO_ROOT"
+    }
+  }
+}
